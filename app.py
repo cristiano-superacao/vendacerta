@@ -2,6 +2,7 @@
 import os
 import sys
 import re
+from io import BytesIO
 from dotenv import load_dotenv
 
 # Carregar variáveis de ambiente do arquivo .env
@@ -125,7 +126,6 @@ if ENABLE_EXCEL_CHECK:
         import pandas as pd
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment
-        from io import BytesIO
         EXCEL_AVAILABLE = True
         EXCEL_ERROR_MESSAGE = None
         print("✅ Bibliotecas Excel carregadas com sucesso")
