@@ -8,7 +8,6 @@ nixPkgs = [
     "python311Packages.pip",
     "postgresql_16",
     "stdenv.cc.cc.lib",
-    "gcc",
     "zlib",
     "libjpeg",
     "freetype",
