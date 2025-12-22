@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}OS {{ os.numero_os }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('lista_ordens_servico') }}">Ordens de Serviço</a></li>
+                    <li class="breadcrumb-item active">{{ os.numero_os }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h2><i class="bi bi-clipboard-data"></i> OS {{ os.numero_os }}</h2>
+            <p class="text-muted mb-0">{{ os.titulo }}</p>
+        </div>
+        <div class="col-md-6 text-end">
+            {% if current_user.cargo in ['admin', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
+            <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}" class="btn btn-success">
+                <i class="bi bi-check-lg"></i> Aprovar OS
+            </a>
+            {% endif %}
+            {% if os.pode_editar(current_user) %}
+            <a href="{{ url_for('atualizar_ordem_servico', id=os.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil-square"></i> Atualizar Andamento
+            </a>
+            {% endif %}
+            {% if os.status == 'concluida' and not os.avaliacao_cliente and current_user.cargo == 'admin' %}
+            <a href="{{ url_for('avaliar_ordem_servico', id=os.id) }}" class="btn btn-primary">
+                <i class="bi bi-star-fill"></i> Avaliar Atendimento
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Badges de Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            {% if os.status == 'aguardando_aprovacao' %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fs-6 me-2">Aguardando Aprovação</span>
+            {% elif os.status == 'aprovada' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fs-6 me-2">Aprovada</span>
+            {% elif os.status == 'em_andamento' %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill fs-6 me-2">Em Andamento</span>
+            {% elif os.status == 'aguardando_peca' %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill fs-6 me-2">Aguardando Peça</span>
+            {% elif os.status == 'concluida' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fs-6 me-2">Concluída</span>
+            {% elif os.status == 'cancelada' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fs-6 me-2">Cancelada</span>
+            {% endif %}
+
+            {% if os.prioridade == 'urgente' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fs-6">Urgente</span>
+            {% elif os.prioridade == 'alta' %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fs-6">Alta Prioridade</span>
+            {% elif os.prioridade == 'normal' %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill fs-6">Prioridade Normal</span>
+            {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill fs-6">Baixa Prioridade</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Coluna Esquerda: Informações Principais -->
+        <div class="col-lg-8">
+            <!-- Informações do Cliente -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-person-fill"></i> Informações do Cliente</h5>
+                </div>
+                <div class="card-body">
+                    {% if os.cliente %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nome:</strong> {{ os.cliente.nome }}</p>
+                            <p><strong>CPF/CNPJ:</strong> {{ os.cliente.cpf or os.cliente.cnpj or '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Telefone:</strong> {{ os.cliente.telefone or '-' }}</p>
+                            <p><strong>Celular:</strong> {{ os.cliente.celular or '-' }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Cliente não vinculado</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Descrição do Problema -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Problema Relatado</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ os.descricao_problema }}</p>
+                </div>
+            </div>
+
+            <!-- Solução (se concluída) -->
+            {% if os.descricao_solucao %}
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-tools"></i> Solução Aplicada</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ os.descricao_solucao }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Feedback do Técnico -->
+            {% if os.feedback_tecnico %}
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-chat-text-fill"></i> Feedback do Técnico</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ os.feedback_tecnico }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Movimentos de Estoque -->
+            {% if movimentos %}
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-box-seam-fill"></i> Peças Utilizadas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Quantidade</th>
+                                    <th>Valor Unit.</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mov in movimentos %}
+                                <tr>
+                                    <td>{{ mov.produto.nome if mov.produto else '-' }}</td>
+                                    <td>{{ mov.quantidade }}</td>
+                                    <td>R$ {{ "%.2f"|format(mov.valor_unitario or 0) }}</td>
+                                    <td>R$ {{ "%.2f"|format(mov.valor_total or 0) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Motivo de Reprovação -->
+            {% if os.motivo_reprovacao %}
+            <div class="alert alert-danger border-0 shadow-sm">
+                <h6><i class="bi bi-x-circle-fill"></i> Motivo da Reprovação:</h6>
+                <p class="mb-0">{{ os.motivo_reprovacao }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Coluna Direita: Timeline e Informações Técnicas -->
+        <div class="col-lg-4">
+            <!-- Informações do Técnico -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-person-gear"></i> Técnico Responsável</h6>
+                </div>
+                <div class="card-body">
+                    {% if os.tecnico %}
+                        <p class="mb-1"><strong>{{ os.tecnico.nome }}</strong></p>
+                        <p class="small text-muted mb-0">{{ os.tecnico.especialidades or 'Técnico Geral' }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0">Técnico não atribuído</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Valores -->
+            {% if os.valor_total > 0 %}
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-currency-dollar"></i> Valores</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Mão de Obra:</span>
+                        <strong>R$ {{ "%.2f"|format(os.valor_mao_obra or 0) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Peças:</span>
+                        <strong>R$ {{ "%.2f"|format(os.valor_pecas or 0) }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Total:</strong></span>
+                        <strong class="text-success">R$ {{ "%.2f"|format(os.valor_total or 0) }}</strong>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Timeline -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-clock-history"></i> Histórico</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <i class="bi bi-plus-circle-fill text-primary"></i>
+                            <div>
+                                <strong>Criada</strong><br>
+                                <small>{{ os.data_abertura.strftime('%d/%m/%Y %H:%M') }}</small><br>
+                                <small class="text-muted">por {{ os.criada_por.nome if os.criada_por else 'Sistema' }}</small>
+                            </div>
+                        </div>
+
+                        {% if os.data_aprovacao %}
+                        <div class="timeline-item">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <div>
+                                <strong>Aprovada</strong><br>
+                                <small>{{ os.data_aprovacao.strftime('%d/%m/%Y %H:%M') }}</small><br>
+                                <small class="text-muted">por {{ os.aprovada_por.nome if os.aprovada_por else 'Sistema' }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if os.data_inicio %}
+                        <div class="timeline-item">
+                            <i class="bi bi-play-circle-fill text-info"></i>
+                            <div>
+                                <strong>Iniciada</strong><br>
+                                <small>{{ os.data_inicio.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if os.data_previsao %}
+                        <div class="timeline-item">
+                            <i class="bi bi-calendar-event-fill text-warning"></i>
+                            <div>
+                                <strong>Previsão de Conclusão</strong><br>
+                                <small>{{ os.data_previsao.strftime('%d/%m/%Y') }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if os.data_conclusao %}
+                        <div class="timeline-item">
+                            <i class="bi bi-flag-fill text-success"></i>
+                            <div>
+                                <strong>Concluída</strong><br>
+                                <small>{{ os.data_conclusao.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Avaliação -->
+            {% if os.avaliacao_cliente %}
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-star-fill"></i> Avaliação do Cliente</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        {% for i in range(1, 6) %}
+                            {% if i <= os.avaliacao_cliente %}
+                                <i class="bi bi-star-fill text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-star text-muted"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <p class="mb-0">{{ os.avaliacao_cliente }} de 5 estrelas</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 0;
+    bottom: -20px;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item:last-child::before {
+    display: none;
+}
+
+.timeline-item i {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    font-size: 16px;
+    background: white;
+}
+</style>
+{% endblock %}

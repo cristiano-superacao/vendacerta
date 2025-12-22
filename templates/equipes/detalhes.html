@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}{{ equipe.nome }} - Detalhes da Equipe{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho da Equipe -->
+<div class="card mb-4 bg-gradient-purple">
+    <div class="card-body text-white p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-diagram-3-fill"></i> {{ equipe.nome }}
+                </h1>
+                {% if equipe.descricao %}
+                <p class="mb-0 opacity-75 fs-5">{{ equipe.descricao }}</p>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('lista_equipes') }}" class="btn btn-light">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+        </div>
+
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3 bg-white bg-opacity-10 p-3 rounded">
+                    <i class="bi bi-person-check fs-2"></i>
+                    <div>
+                        <small class="opacity-75 d-block">Supervisor</small>
+                        <strong class="fs-5">{{ supervisor.nome }}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3 bg-white bg-opacity-10 p-3 rounded">
+                    <i class="bi bi-calendar3 fs-2"></i>
+                    <div>
+                        <small class="opacity-75 d-block">Período</small>
+                        <strong class="fs-5">
+                            {% set meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'] %}
+                            {{ meses[mes - 1] }}/{{ ano }}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if vendedores %}
+<!-- Estatísticas -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-people text-primary fs-1 mb-2"></i>
+                <h3 class="mb-0">{{ vendedores|length }}</h3>
+                <small class="text-muted">Vendedores</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-check text-info fs-1 mb-2"></i>
+                <h3 class="mb-0">{{ vendedores|selectattr('meta')|list|length }}</h3>
+                <small class="text-muted">Com Meta Definida</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-bullseye text-success fs-1 mb-2"></i>
+                <h3 class="mb-0">R$ {{ "{:,.2f}".format(vendedores|selectattr('meta')|sum(attribute='meta.valor_meta', start=0)) }}</h3>
+                <small class="text-muted">Meta Total</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-wallet2 text-warning fs-1 mb-2"></i>
+                <h3 class="mb-0">R$ {{ "{:,.2f}".format(vendedores|selectattr('meta')|sum(attribute='meta.comissao_total', start=0)) }}</h3>
+                <small class="text-muted">Comissão Total</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vendedores -->
+<h3 class="mb-3"><i class="bi bi-people"></i> Vendedores da Equipe</h3>
+
+<div class="row g-3">
+    {% for item in vendedores %}
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <!-- Header do Card -->
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-circle text-primary"></i> {{ item.vendedor.nome }}
+                    </h5>
+                    {% if item.meta %}
+                        <span class="badge
+                            {% if item.meta.status_comissao == 'Pago' %}bg-secondary
+                            {% elif item.meta.status_comissao == 'Aprovado' %}bg-success
+                            {% else %}bg-primary{% endif %}">
+                            {% if item.meta.status_comissao == 'Pago' %}<i class="bi bi-check-circle"></i>
+                            {% elif item.meta.status_comissao == 'Aprovado' %}<i class="bi bi-check"></i>
+                            {% else %}<i class="bi bi-clock"></i>{% endif %}
+                            {{ item.meta.status_comissao }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Info do Vendedor -->
+                <div class="mb-3">
+                    <p class="mb-1 small">
+                        <i class="bi bi-envelope text-muted"></i> {{ item.vendedor.email }}
+                    </p>
+                    {% if item.vendedor.telefone %}
+                    <p class="mb-0 small">
+                        <i class="bi bi-telephone text-muted"></i> {{ item.vendedor.telefone }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                {% if item.meta %}
+                <!-- Barra de Progresso -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Alcance</small>
+                        <small>
+                            <strong>{{ "{:.1f}".format(item.meta.percentual_alcance) }}%</strong>
+                            {% if item.meta.percentual_alcance < 50 %}🔴
+                            {% elif item.meta.percentual_alcance < 75 %}🟡
+                            {% elif item.meta.percentual_alcance < 100 %}🔵
+                            {% elif item.meta.percentual_alcance < 125 %}🟢
+                            {% else %}🟢✨{% endif %}
+                        </small>
+                    </div>
+                    <div class="progress progress-xs">
+                        <div class="progress-bar
+                            {% if item.meta.percentual_alcance >= 125 %}bg-success
+                            {% elif item.meta.percentual_alcance >= 100 %}bg-info
+                            {% elif item.meta.percentual_alcance >= 75 %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                            role="progressbar"
+                            data-percent="{{ '{:.1f}'.format(item.meta.percentual_alcance) }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estatísticas da Meta -->
+                <div class="row g-2 text-center">
+                    <div class="col-4">
+                        <div class="border rounded p-2">
+                            <small class="text-muted d-block">Meta</small>
+                            <strong class="small">R$ {{ "{:,.0f}".format(item.meta.valor_meta) }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border rounded p-2">
+                            <small class="text-muted d-block">Receita</small>
+                            <strong class="small">R$ {{ "{:,.0f}".format(item.meta.receita_alcancada) }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border rounded p-2 bg-success bg-opacity-10">
+                            <small class="text-muted d-block">Comissão</small>
+                            <strong class="small text-success">R$ {{ "{:,.0f}".format(item.meta.comissao_total) }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Sem Meta -->
+                <div class="text-center py-3 bg-light rounded">
+                    <i class="bi bi-clipboard-x text-muted fs-2"></i>
+                    <p class="mb-2 text-muted small">Sem meta definida para este período</p>
+                    <a href="{{ url_for('nova_meta') }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle"></i> Criar Meta
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Estado Vazio -->
+<div class="text-center py-5">
+    <i class="bi bi-people display-1 text-muted"></i>
+    <h3 class="mt-3">Nenhum vendedor nesta equipe</h3>
+    <p class="text-muted">Associe vendedores à equipe para começar</p>
+    <a href="{{ url_for('novo_vendedor') }}" class="btn btn-primary mt-3">
+        <i class="bi bi-plus-circle"></i> Adicionar Vendedor
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Anima barras de progresso
+document.addEventListener('DOMContentLoaded', function() {
+    const bars = document.querySelectorAll('.progress-bar');
+    bars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => {
+            bar.style.width = width;
+            bar.style.transition = 'width 0.6s ease';
+        }, 100);
+    });
+});
+</script>
+{% endblock %}

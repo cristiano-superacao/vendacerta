@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Metas</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .login-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Lado Esquerdo - Branding */
+        .login-left {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 200% 200%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .login-left::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            top: -25%;
+            left: -25%;
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .brand-icon {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .brand-icon i {
+            font-size: 4rem;
+            color: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .brand-content h1 {
+            font-size: 2.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .brand-content p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        /* Lado Direito - Formulário */
+        .login-right {
+            flex: 1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .login-form-container {
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .login-form-container h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-form-container .subtitle {
+            color: #718096;
+            font-size: 0.9375rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .form-control {
+            font-size: 0.9375rem;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+        }
+
+        .input-group-text {
+            background: #f7fafc;
+            border: 1.5px solid #e2e8f0;
+            border-right: none;
+            color: #718096;
+        }
+
+        .input-group .form-control {
+            border-left: none;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.875rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-login:hover::before {
+            left: 100%;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .quick-login-btns {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-quick {
+            flex: 1;
+            padding: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .form-footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+
+        .form-footer a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .divider {
+            color: #cbd5e0;
+            margin: 0 0.5rem;
+        }
+
+        /* Responsivo */
+        @media (max-width: 992px) {
+            .login-left {
+                display: none;
+            }
+
+            .login-right {
+                flex: 1;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .login-right {
+                padding: 2rem 1.5rem;
+            }
+
+            .login-form-container h2 {
+                font-size: 1.5rem;
+            }
+
+            .quick-login-btns {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Lado Esquerdo - Branding -->
+        <div class="login-left">
+            <div class="brand-content">
+                <div class="brand-icon">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+                <h1>Transforme Metas em<br>Conquistas Reais.</h1>
+                <p>Gestão completa de vendas, comissões, clientes, estoque e ordens de serviço. Inteligência integrada para seu time alcançar resultados extraordinários.</p>
+            </div>
+        </div>
+
+        <!-- Lado Direito - Formulário -->
+        <div class="login-right">
+            <div class="login-form-container">
+                <h2>Bem-vindo de volta</h2>
+                <p class="subtitle">Acesse sua conta para continuar</p>
+
+                <!-- Mensagens Flash -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email ou Usuário</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-envelope"></i>
+                            </span>
+                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
+                               placeholder="seu@email.com",
+                               autofocus=true) }}
+                        </div>
+                        {% if form.email.errors %}
+                            <div class="text-danger small mt-1">{{ form.email.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="senha" class="form-label">Senha</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            {{ form.senha(class="form-control" + (" is-invalid" if form.senha.errors else ""),
+                               placeholder="Sua senha") }}
+                        </div>
+                        {% if form.senha.errors %}
+                            <div class="text-danger small mt-1">{{ form.senha.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-login">
+                        Entrar no Sistema
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    <a href="{{ url_for('recuperar_senha') }}">Esqueceu a senha?</a>
+                    <span class="divider">|</span>
+                    <span>Não tem conta? <a href="{{ url_for('registro') }}">Criar conta</a></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function quickLogin(email, password) {
+            document.querySelector('input[name="email"]').value = email;
+            document.querySelector('input[name="senha"]').value = password;
+            document.querySelector('form').submit();
+        }
+    </script>
+</body>
+</html>

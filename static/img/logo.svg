@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+  <defs>
+    <!-- Gradiente principal -->
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradiente do alvo -->
+    <linearGradient id="targetGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff6b6b;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Sombra suave -->
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Ícone: Alvo com seta -->
+  <g transform="translate(30, 30)" filter="url(#shadow)">
+    <!-- Círculos do alvo -->
+    <circle cx="0" cy="0" r="24" fill="url(#logoGradient)" opacity="0.2"/>
+    <circle cx="0" cy="0" r="18" fill="url(#logoGradient)" opacity="0.4"/>
+    <circle cx="0" cy="0" r="12" fill="url(#logoGradient)" opacity="0.6"/>
+    <circle cx="0" cy="0" r="6" fill="url(#targetGradient)"/>
+    
+    <!-- Seta atravessando o alvo -->
+    <g transform="rotate(-45)">
+      <path d="M -2,-30 L 2,-30 L 2,20 L -2,20 Z" fill="#ffffff" opacity="0.9"/>
+      <path d="M 0,20 L -6,14 L 0,16 L 6,14 Z" fill="#ffd700"/>
+      <path d="M 0,-30 L -4,-24 L 0,-26 L 4,-24 Z" fill="#ffffff"/>
+    </g>
+  </g>
+  
+  <!-- Texto: SuaMeta -->
+  <g transform="translate(70, 0)">
+    <!-- "Sua" em peso regular -->
+    <text x="0" y="28" font-family="'Inter', 'Segoe UI', Arial, sans-serif" 
+          font-size="26" font-weight="600" fill="#2d3748">
+      Sua
+    </text>
+    
+    <!-- "Meta" em gradiente -->
+    <text x="50" y="28" font-family="'Inter', 'Segoe UI', Arial, sans-serif" 
+          font-size="26" font-weight="700" fill="url(#logoGradient)">
+      Meta
+    </text>
+    
+    <!-- Tagline -->
+    <text x="0" y="48" font-family="'Inter', 'Segoe UI', Arial, sans-serif" 
+          font-size="10" font-weight="500" fill="#718096" letter-spacing="1.5">
+      GESTÃO DE VENDAS
+    </text>
+  </g>
+  
+  <!-- Detalhe: Linha de crescimento -->
+  <g transform="translate(180, 20)" opacity="0.4">
+    <path d="M 0,15 L 8,12 L 16,8 L 24,5 L 32,0" 
+          stroke="url(#logoGradient)" stroke-width="2" fill="none" 
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="32" cy="0" r="2" fill="url(#targetGradient)"/>
+  </g>
+</svg>

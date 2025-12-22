@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de Vendas - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-graph-up-arrow text-primary me-2"></i>Relatório de Vendas
+            </h2>
+            <p class="text-muted mb-0">Análise detalhada de clientes e vendas do ano {{ ano }}</p>
+        </div>
+        <div class="btn-group">
+            <button onclick="window.print()" class="btn btn-outline-primary">
+                <i class="bi bi-printer me-2"></i>Imprimir
+            </button>
+            <a href="{{ url_for('exportar_clientes') }}" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                                <i class="bi bi-people-fill fs-3"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <small class="text-muted text-uppercase d-block mb-1">Total de Clientes</small>
+                            <h3 class="mb-0">{{ total_clientes }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 text-success rounded-3 p-3">
+                                <i class="bi bi-cart-check-fill fs-3"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <small class="text-muted text-uppercase d-block mb-1">Total de Compras</small>
+                            <h3 class="mb-0">{{ total_compras }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 text-warning rounded-3 p-3">
+                                <i class="bi bi-currency-dollar fs-3"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <small class="text-muted text-uppercase d-block mb-1">Valor Total</small>
+                            <h3 class="mb-0">R$ {{ "%.2f"|format(total_valor) }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light py-3">
+            <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Ano</label>
+                    <select name="ano" class="form-select">
+                        {% for y in range(2020, 2030) %}
+                            <option value="{{ y }}" {% if y == ano %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="verde" {% if filtros.status == 'verde' %}selected{% endif %}>🟢 Positivado</option>
+                        <option value="amarelo" {% if filtros.status == 'amarelo' %}selected{% endif %}>🟡 Atenção</option>
+                        <option value="vermelho" {% if filtros.status == 'vermelho' %}selected{% endif %}>🔴 Sem Compras</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Vendedor</label>
+                    <select name="vendedor_id" class="form-select">
+                        <option value="">Todos</option>
+                        {% for vendedor in vendedores %}
+                            <option value="{{ vendedor.id }}" {% if filtros.vendedor_id == vendedor.id %}selected{% endif %}>
+                                {{ vendedor.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Supervisor</label>
+                    <select name="supervisor_id" class="form-select">
+                        <option value="">Todos</option>
+                        {% for supervisor in supervisores %}
+                            <option value="{{ supervisor.id }}" {% if filtros.supervisor_id == supervisor.id %}selected{% endif %}>
+                                {{ supervisor.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Cidade</label>
+                    <input type="text" name="cidade" class="form-control" value="{{ filtros.cidade or '' }}"
+                           placeholder="Filtrar por cidade" list="cidades-list">
+                    <datalist id="cidades-list">
+                        {% for cidade in cidades %}
+                            <option value="{{ cidade }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Bairro</label>
+                    <input type="text" name="bairro" class="form-control" value="{{ filtros.bairro or '' }}"
+                           placeholder="Filtrar por bairro" list="bairros-list">
+                    <datalist id="bairros-list">
+                        {% for bairro in bairros %}
+                            <option value="{{ bairro }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+
+                <div class="col-12">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-2"></i>Filtrar
+                        </button>
+                        <a href="{{ url_for('relatorio_vendas') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Limpar Filtros
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela de Dados -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0">
+                <i class="bi bi-table me-2"></i>Detalhamento por Cliente
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            {% if relatorio %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0" id="tabelaRelatorio">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center" style="width: 60px;">#</th>
+                            <th>Nome do Cliente</th>
+                            <th>CPF</th>
+                            <th>CNPJ</th>
+                            <th>Cidade</th>
+                            <th>Bairro</th>
+                            <th>Vendedor</th>
+                            <th>Supervisor</th>
+                            <th class="text-center">Compras {{ ano }}</th>
+                            <th class="text-end">Valor Total</th>
+                            <th>Última Compra</th>
+                            <th>Formas Pgto</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in relatorio %}
+                        <tr>
+                            <td class="text-center">
+                                <a href="{{ url_for('ver_cliente', id=item.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                            <td>
+                                <strong>{{ item.nome }}</strong>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ item.cpf }}</small>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ item.cnpj }}</small>
+                            </td>
+                            <td>{{ item.cidade }}</td>
+                            <td>{{ item.bairro }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ item.vendedor }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ item.supervisor }}</span>
+                            </td>
+                            <td class="text-center">
+                                <strong class="fs-5 text-primary">{{ item.compras_ano }}</strong>
+                            </td>
+                            <td class="text-end">
+                                <strong class="text-success">R$ {{ "%.2f"|format(item.valor_total_ano) }}</strong>
+                            </td>
+                            <td>
+                                {% if item.ultima_compra %}
+                                    <div>
+                                        <strong>{{ item.ultima_compra.strftime('%d/%m/%Y') }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ item.dias_sem_compra }} dia{{ 's' if item.dias_sem_compra != 1 else '' }}
+                                        </small>
+                                    </div>
+                                {% else %}
+                                    <span class="text-danger">Nunca</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ item.formas_pagamento }}</small>
+                            </td>
+                            <td class="text-center">
+                                {% if item.status == 'verde' %}
+                                    <span class="badge bg-success">🟢 OK</span>
+                                {% elif item.status == 'amarelo' %}
+                                    <span class="badge bg-warning">🟡 Atenção</span>
+                                {% else %}
+                                    <span class="badge bg-danger">🔴 Crítico</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="8" class="text-end">TOTAIS:</th>
+                            <th class="text-center">
+                                <strong class="text-primary fs-5">{{ total_compras }}</strong>
+                            </th>
+                            <th class="text-end">
+                                <strong class="text-success fs-5">R$ {{ "%.2f"|format(total_valor) }}</strong>
+                            </th>
+                            <th colspan="3"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted opacity-50"></i>
+                <h5 class="text-muted mt-3">Nenhum resultado encontrado</h5>
+                <p class="text-muted">Ajuste os filtros e tente novamente</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    @media print {
+        .btn-group, .card-header, nav, .sidebar {
+            display: none !important;
+        }
+
+        .card {
+            border: 1px solid #dee2e6 !important;
+            box-shadow: none !important;
+        }
+
+        .table {
+            font-size: 10px;
+        }
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+
+    .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+</style>
+
+<script>
+    // Filtro rápido na tabela
+    document.addEventListener('DOMContentLoaded', function() {
+        // Adicionar busca rápida
+        const cardHeader = document.querySelector('.card-header');
+        if (cardHeader && document.getElementById('tabelaRelatorio')) {
+            const searchDiv = document.createElement('div');
+            searchDiv.className = 'd-flex justify-content-between align-items-center';
+            searchDiv.innerHTML = `
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Detalhamento por Cliente</h6>
+                <input type="text" class="form-control form-control-sm" id="buscaRapida"
+                       placeholder="Buscar na tabela..." style="max-width: 300px;">
+            `;
+            cardHeader.innerHTML = '';
+            cardHeader.appendChild(searchDiv);
+
+            // Função de busca
+            document.getElementById('buscaRapida').addEventListener('keyup', function(e) {
+                const termo = e.target.value.toLowerCase();
+                const linhas = document.querySelectorAll('#tabelaRelatorio tbody tr');
+
+                linhas.forEach(linha => {
+                    const texto = linha.textContent.toLowerCase();
+                    linha.style.display = texto.includes(termo) ? '' : 'none';
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

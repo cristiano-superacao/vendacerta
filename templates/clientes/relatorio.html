@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-file-earmark-bar-graph text-primary me-2"></i>{{ titulo }}</h2>
+            <p class="text-muted mb-0">Visão geral da carteira de clientes</p>
+        </div>
+        <div>
+            <a href="{{ url_for('lista_clientes') }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left me-2"></i>Voltar
+            </a>
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="bi bi-printer me-2"></i>Imprimir
+            </button>
+        </div>
+    </div>
+
+    <!-- Resumo Geral -->
+    {% set total_geral = relatorio|sum(attribute='total') %}
+    {% set verde_geral = relatorio|sum(attribute='verde') %}
+    {% set amarelo_geral = relatorio|sum(attribute='amarelo') %}
+    {% set vermelho_geral = relatorio|sum(attribute='vermelho') %}
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-people-fill display-4 text-primary mb-2"></i>
+                    <h3 class="mb-0">{{ total_geral }}</h3>
+                    <p class="text-muted mb-0">Total de Clientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle-fill display-4 text-success mb-2"></i>
+                    <h3 class="mb-0">{{ verde_geral }}</h3>
+                    <p class="text-muted mb-0">Positivados (Verde)</p>
+                    {% if total_geral > 0 %}
+                        <small class="text-success">{{ "%.1f"|format((verde_geral / total_geral * 100)) }}%</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle-fill display-4 text-warning mb-2"></i>
+                    <h3 class="mb-0">{{ amarelo_geral }}</h3>
+                    <p class="text-muted mb-0">Atenção (Amarelo)</p>
+                    {% if total_geral > 0 %}
+                        <small class="text-warning">{{ "%.1f"|format((amarelo_geral / total_geral * 100)) }}%</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-x-circle-fill display-4 text-danger mb-2"></i>
+                    <h3 class="mb-0">{{ vermelho_geral }}</h3>
+                    <p class="text-muted mb-0">Sem Compras (Vermelho)</p>
+                    {% if total_geral > 0 %}
+                        <small class="text-danger">{{ "%.1f"|format((vermelho_geral / total_geral * 100)) }}%</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Relatório por Vendedor -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0"><i class="bi bi-table me-2"></i>Desempenho por Vendedor</h6>
+        </div>
+        <div class="card-body p-0">
+            {% if relatorio %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="30%">Vendedor</th>
+                            <th width="10%" class="text-center">Total</th>
+                            <th width="12%" class="text-center">🟢 Verde</th>
+                            <th width="12%" class="text-center">🟡 Amarelo</th>
+                            <th width="12%" class="text-center">🔴 Vermelho</th>
+                            <th width="12%" class="text-end">% Positivado</th>
+                            <th width="12%" class="text-center">Desempenho</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in relatorio|sort(attribute='percentual_positivado', reverse=True) %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.vendedor.nome }}</strong>
+                                <br>
+                                <small class="text-muted">{{ item.vendedor.email }}</small>
+                            </td>
+                            <td class="text-center">
+                                <strong class="fs-5">{{ item.total }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success rounded-pill px-3 py-2">
+                                    {{ item.verde }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-warning rounded-pill px-3 py-2">
+                                    {{ item.amarelo }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-danger rounded-pill px-3 py-2">
+                                    {{ item.vermelho }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <strong class="fs-5 text-success">
+                                    {{ "%.1f"|format(item.percentual_positivado) }}%
+                                </strong>
+                            </td>
+                            <td class="text-center">
+                                {% if item.percentual_positivado >= 80 %}
+                                    <span class="badge bg-success">Excelente</span>
+                                {% elif item.percentual_positivado >= 60 %}
+                                    <span class="badge bg-info">Bom</span>
+                                {% elif item.percentual_positivado >= 40 %}
+                                    <span class="badge bg-warning">Regular</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Crítico</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th>TOTAL GERAL</th>
+                            <th class="text-center"><strong>{{ total_geral }}</strong></th>
+                            <th class="text-center"><strong>{{ verde_geral }}</strong></th>
+                            <th class="text-center"><strong>{{ amarelo_geral }}</strong></th>
+                            <th class="text-center"><strong>{{ vermelho_geral }}</strong></th>
+                            <th class="text-end">
+                                <strong>
+                                    {% if total_geral > 0 %}
+                                        {{ "%.1f"|format((verde_geral / total_geral * 100)) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </strong>
+                            </th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <p class="text-muted mt-3">Nenhum dado para exibir</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Gráfico de Barras (Visual) -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0"><i class="bi bi-bar-chart-fill me-2"></i>Distribuição de Status</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for item in (relatorio|sort(attribute='total', reverse=True))[:10] %}
+                <div class="col-12">
+                    <div class="mb-2">
+                        <small class="text-muted">{{ item.vendedor.nome }}</small>
+                    </div>
+                    <div class="progress" style="height: 30px;">
+                        {% if item.total > 0 %}
+                            {% set verde_pct = (item.verde / item.total * 100)|round(1) %}
+                            {% set amarelo_pct = (item.amarelo / item.total * 100)|round(1) %}
+                            {% set vermelho_pct = (item.vermelho / item.total * 100)|round(1) %}
+
+                            <div class="progress-bar bg-success" style="width: {{ verde_pct }}%"
+                                 title="Verde: {{ item.verde }} ({{ verde_pct }}%)">
+                                {% if verde_pct > 10 %}{{ item.verde }}{% endif %}
+                            </div>
+                            <div class="progress-bar bg-warning" style="width: {{ amarelo_pct }}%"
+                                 title="Amarelo: {{ item.amarelo }} ({{ amarelo_pct }}%)">
+                                {% if amarelo_pct > 10 %}{{ item.amarelo }}{% endif %}
+                            </div>
+                            <div class="progress-bar bg-danger" style="width: {{ vermelho_pct }}%"
+                                 title="Vermelho: {{ item.vermelho }} ({{ vermelho_pct }}%)">
+                                {% if vermelho_pct > 10 %}{{ item.vermelho }}{% endif %}
+                            </div>
+                        {% else %}
+                            <div class="progress-bar bg-secondary" style="width: 100%">Sem clientes</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Legenda -->
+    <div class="card border-0 shadow-sm mt-4 bg-light">
+        <div class="card-body">
+            <h6 class="mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>Legenda de Status</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <span class="badge bg-success me-2">🟢 Verde</span>
+                    <small class="text-muted">Comprou nos últimos 30 dias</small>
+                </div>
+                <div class="col-md-4">
+                    <span class="badge bg-warning me-2">🟡 Amarelo</span>
+                    <small class="text-muted">30 a 38 dias sem comprar</small>
+                </div>
+                <div class="col-md-4">
+                    <span class="badge bg-danger me-2">🔴 Vermelho</span>
+                    <small class="text-muted">Mais de 38 dias sem comprar</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .btn, .sidebar, .nav, .breadcrumb {
+            display: none !important;
+        }
+        .main-content {
+            margin-left: 0 !important;
+        }
+    }
+</style>
+{% endblock %}

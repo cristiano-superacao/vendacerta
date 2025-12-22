@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+metas.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.railway_db_url.txt
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Documentacao obsoleta (prevenir re-criacao)
+*_TEMP.md
+*_OLD.md
+*_BACKUP.md
+*.md.bak
+*_ANTIGO.md
+ANALISE_*.md
+!ANALISE_SISTEMA.md
+IMPLEMENTACAO_*.md
+CORRECAO_*.md
+VALIDACAO_TECNICA*.md
+!VALIDACAO_FINAL.md
+RESUMO_EXECUTIVO*.md
+!RESUMO_ORGANIZACAO.md
+
+# Scripts de limpeza
+limpar_documentacao.ps1
+limpar_documentacao.bat
+
+# Arquivos de teste
+test_*.pdf
+test_dashboard.pdf
+
+# Backups locais
+*.bkp
+backup_*.py
+
+# Local Netlify folder
+.netlify

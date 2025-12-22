@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+
+{% block title %}Backup e Restauração - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Modernizado -->
+    <div class="modern-header mb-4">
+        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">INSTITUCIONAL</p>
+        <h1 class="page-title-modern mb-2">
+            <i class="bi bi-hdd-stack"></i> Backup e Restauração
+        </h1>
+        <p class="text-muted mb-3">Super Administrador</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-building"></i> Empresas
+            </a>
+            <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-people"></i> Usuários
+            </a>
+            <a href="{{ url_for('backup_config_page') }}" class="btn btn-warning">
+                <i class="bi bi-gear-fill"></i> Configurar Agendamento
+            </a>
+            {% if not is_postgresql %}
+            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalUpload">
+                <i class="bi bi-upload"></i> Enviar Backup
+            </button>
+            <form method="POST" action="{{ url_for('criar_backup') }}" style="display: inline;">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-plus-circle"></i> Criar Backup
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('executar_backup_agora') }}" style="display: inline;">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-lightning-charge-fill"></i> Backup Agora
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('limpar_todos_clientes') }}" style="display: inline;" 
+                  onsubmit="return confirm('⚠️ ATENÇÃO: Esta ação irá remover TODOS os clientes e suas compras cadastradas!\n\nTem certeza que deseja continuar?');">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash-fill"></i> Limpar Clientes
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_postgresql %}
+    <!-- Informação para PostgreSQL -->
+    <div class="alert alert-info shadow-sm" style="border-radius: 12px; border-left: 4px solid #0dcaf0;">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="bi bi-info-circle-fill" style="font-size: 2rem;"></i>
+            </div>
+            <div>
+                <h5 class="alert-heading mb-2">
+                    <i class="bi bi-database"></i> Banco de Dados PostgreSQL
+                </h5>
+                <p class="mb-2">
+                    {{ db_info.mensagem }}. Os backups são criados automaticamente pelo serviço de nuvem.
+                </p>
+                <hr class="my-2">
+                <p class="mb-0">
+                    <strong>Tipo:</strong> {{ db_info.tipo }}<br>
+                    <strong>Como acessar:</strong> Acesse o painel do Railway → Banco de Dados → Aba "Backups"
+                </p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- Cards de Estatísticas -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #6366f1 !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-primary bg-opacity-10 text-primary position-absolute top-0 end-0 m-3">TOTAL</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-hdd-stack"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1">{{ backups|length }}</h3>
+                    <p class="stats-label-modern mb-0">TOTAL DE BACKUPS</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #10b981 !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-success bg-opacity-10 text-success position-absolute top-0 end-0 m-3">RECENTE</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1" style="font-size: 1.5rem;">
+                        {% if backups %}
+                            {{ backups[0].data.strftime('%d/%m %H:%M') }}
+                        {% else %}
+                            Nenhum
+                        {% endif %}
+                    </h3>
+                    <p class="stats-label-modern mb-0">MAIS RECENTE</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #f59e0b !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-warning bg-opacity-10 text-warning position-absolute top-0 end-0 m-3">ESPAÇO</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-file-earmark-binary"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1">
+                        {% set total = namespace(size=0) %}
+                        {% for backup in backups %}
+                            {% set total.size = total.size + backup.tamanho %}
+                        {% endfor %}
+                        {{ "%.2f"|format(total.size) }} KB
+                    </h3>
+                    <p class="stats-label-modern mb-0">ESPAÇO TOTAL</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Backups -->
+    <div class="row">
+        <div class="col-12">
+            {% if backups %}
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted ps-4">Nome do Arquivo</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted text-center">Data/Hora</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted text-center">Tamanho</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted text-center pe-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for backup in backups %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-file-earmark-zip text-primary me-2" style="font-size: 1.25rem;"></i>
+                                            <strong>{{ backup.nome }}</strong>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div>
+                                            <span class="badge bg-info">{{ backup.data.strftime('%d/%m/%Y') }}</span>
+                                        </div>
+                                        <small class="text-muted">{{ backup.data.strftime('%H:%M:%S') }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ backup.tamanho }} KB</span>
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('download_backup', nome=backup.nome) }}"
+                                               class="btn btn-outline-success"
+                                               title="Download">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-warning"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalRestaurar{{ loop.index }}"
+                                                    title="Restaurar">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalDeletar{{ loop.index }}"
+                                                    title="Deletar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Modal Restaurar -->
+                                <div class="modal fade" id="modalRestaurar{{ loop.index }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restaurar Backup
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        <strong>Atenção!</strong> Esta ação irá substituir o banco de dados atual.
+                                    </div>
+                                    <p><strong>Arquivo:</strong> {{ backup.nome }}</p>
+                                    <p><strong>Data:</strong> {{ backup.data.strftime('%d/%m/%Y às %H:%M:%S') }}</p>
+                                    <p><strong>Tamanho:</strong> {{ backup.tamanho }} KB</p>
+                                    <p class="text-muted mb-0">
+                                        <i class="bi bi-shield-check"></i>
+                                        Um backup de segurança do banco atual será criado automaticamente.
+                                    </p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <form method="POST" action="{{ url_for('restaurar_backup', nome=backup.nome) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Restaurar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Deletar -->
+                    <div class="modal fade" id="modalDeletar{{ loop.index }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="bi bi-trash"></i> Deletar Backup
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-danger">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                                    </div>
+                                    <p>Tem certeza que deseja deletar este backup?</p>
+                                    <p><strong>Arquivo:</strong> {{ backup.nome }}</p>
+                                    <p><strong>Data:</strong> {{ backup.data.strftime('%d/%m/%Y às %H:%M:%S') }}</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <form method="POST" action="{{ url_for('deletar_backup', nome=backup.nome) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="bi bi-trash"></i> Deletar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5 my-5">
+                <div class="icon-modern bg-secondary bg-opacity-10 text-secondary mx-auto mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-hdd-stack" style="font-size: 2.5rem;"></i>
+                </div>
+                <h5 class="text-muted mb-2">Nenhum backup encontrado</h5>
+                <p class="text-muted small mb-3">Clique no botão abaixo para criar seu primeiro backup do sistema</p>
+                <form method="POST" action="{{ url_for('criar_backup') }}" style="display: inline;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Criar Primeiro Backup
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Upload -->
+<div class="modal fade" id="modalUpload" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-upload"></i> Enviar Backup
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('upload_backup') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill"></i>
+                        Envie um arquivo de backup (.db) para restaurá-lo posteriormente.
+                    </div>
+                    <div class="mb-3">
+                        <label for="backup_file" class="form-label">Selecione o arquivo de backup:</label>
+                        <input type="file"
+                               class="form-control"
+                               id="backup_file"
+                               name="backup_file"
+                               accept=".db"
+                               required>
+                        <div class="form-text">
+                            Apenas arquivos .db são permitidos
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-upload"></i> Enviar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <!-- Informações Adicionais -->
+    <div class="card mt-4 shadow-sm border-0" style="border-radius: 12px;">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-question-circle"></i> Como funciona?
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="icon-modern bg-primary bg-opacity-10 text-primary me-3" style="width: 40px; height: 40px; font-size: 1.25rem;">
+                            <i class="bi bi-plus-circle"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Criar Backup</h6>
+                            <p class="text-muted small mb-0">Cria uma cópia de segurança do banco de dados atual. Recomenda-se criar backups antes de realizar mudanças importantes.</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-start">
+                        <div class="icon-modern bg-success bg-opacity-10 text-success me-3" style="width: 40px; height: 40px; font-size: 1.25rem;">
+                            <i class="bi bi-download"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Download</h6>
+                            <p class="text-muted small mb-0">Baixa o arquivo de backup para seu computador. Útil para armazenamento externo ou transferência.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="icon-modern bg-warning bg-opacity-10 text-warning me-3" style="width: 40px; height: 40px; font-size: 1.25rem;">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Restaurar</h6>
+                            <p class="text-muted small mb-0">Substitui o banco atual pelo backup selecionado. Um backup de segurança será criado automaticamente antes da restauração.</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-start">
+                        <div class="icon-modern bg-info bg-opacity-10 text-info me-3" style="width: 40px; height: 40px; font-size: 1.25rem;">
+                            <i class="bi bi-upload"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Enviar Backup</h6>
+                            <p class="text-muted small mb-0">Carrega um arquivo de backup externo para a lista de backups disponíveis.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-warning border-0 shadow-sm mt-4 mb-0">
+                <i class="bi bi-shield-exclamation"></i>
+                <strong>Importante:</strong> Mantenha sempre backups atualizados em local seguro. Em caso de perda de dados, os backups são sua única forma de recuperação.
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Header Moderno */
+.modern-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.page-title-modern {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0;
+}
+
+/* Cards de Estatísticas Modernos */
+.stats-card-modern {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.stats-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.icon-modern {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stats-value-modern {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+    line-height: 1;
+}
+
+.stats-label-modern {
+    font-size: 0.875rem;
+    color: #718096;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* Tabela */
+.table > tbody > tr {
+    transition: background-color 0.2s ease;
+}
+
+.table > tbody > tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+.table-light th {
+    background-color: #f8f9fa;
+    padding: 1rem 0.75rem;
+}
+
+.table td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+}
+
+/* Badges Modernos */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .page-title-modern {
+        font-size: 1.5rem;
+    }
+
+    .stats-value-modern {
+        font-size: 1.5rem;
+    }
+
+    .modern-header {
+        padding: 1.5rem;
+    }
+}
+</style>
+{% endblock %}

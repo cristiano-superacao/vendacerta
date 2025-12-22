@@ -1,0 +1,694 @@
+{% extends "base.html" %}
+
+{% block title %}Central de Ajuda - Sistema de Metas{% endblock %}
+
+{% block content %}
+<!-- Header Moderno -->
+<div class="modern-header mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">SUPORTE</p>
+            <h1 class="page-title-modern mb-2">
+                Central de Ajuda
+            </h1>
+            <p class="text-muted mb-0">Encontre respostas rápidas e tutoriais para usar o sistema.</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="input-group me-2" style="width: 300px;">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" class="form-control border-start-0 ps-0" placeholder="Pesquisar ajuda...">
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Categorias de Ajuda -->
+<div class="row g-4 mb-4">
+    <!-- Card 1: Primeiros Passos (Green) -->
+    <div class="col-md-4 col-lg-4">
+        <a href="#funcionalidades" class="text-decoration-none">
+            <div class="card-ajuda card-green">
+                <div class="icon-box bg-green-light">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <span class="card-label text-green">INÍCIO</span>
+                <h3 class="card-title-large">Primeiros Passos</h3>
+                <p class="card-desc mb-0">Como criar conta, fazer login e configurar seu perfil inicial.</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 2: Vendedores (Teal) -->
+    <div class="col-md-4 col-lg-4">
+        <a href="#funcionalidades" class="text-decoration-none">
+            <div class="card-ajuda card-teal">
+                <div class="icon-box bg-teal-light">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <span class="card-label text-teal">EQUIPE</span>
+                <h3 class="card-title-large">Vendedores</h3>
+                <p class="card-desc mb-0">Cadastrar, editar e gerenciar sua equipe de vendas.</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 3: Metas (Orange) -->
+    <div class="col-md-4 col-lg-4">
+        <a href="#funcionalidades" class="text-decoration-none">
+            <div class="card-ajuda card-orange">
+                <div class="icon-box bg-orange-light">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+                <span class="card-label text-orange">OBJETIVOS</span>
+                <h3 class="card-title-large">Metas</h3>
+                <p class="card-desc mb-0">Criar, atualizar e acompanhar o progresso das metas.</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 4: Comissões (Purple) -->
+    <div class="col-md-4 col-lg-4">
+        <a href="#funcionalidades" class="text-decoration-none">
+            <div class="card-ajuda card-purple">
+                <div class="icon-box bg-purple-light">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+                <span class="card-label text-purple">FINANCEIRO</span>
+                <h3 class="card-title-large">Comissões</h3>
+                <p class="card-desc mb-0">Entenda como funcionam os cálculos e pagamentos.</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 5: Relatórios (Blue) -->
+    <div class="col-md-4 col-lg-4">
+        <a href="#funcionalidades" class="text-decoration-none">
+            <div class="card-ajuda card-blue">
+                <div class="icon-box bg-blue-light">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                </div>
+                <span class="card-label text-blue">DADOS</span>
+                <h3 class="card-title-large">Relatórios</h3>
+                <p class="card-desc mb-0">Como gerar e exportar relatórios detalhados em PDF.</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- Card 6: Segurança (Red) -->
+    <div class="col-md-4 col-lg-4">
+        <a href="#faq" class="text-decoration-none">
+            <div class="card-ajuda card-red">
+                <div class="icon-box bg-red-light">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <span class="card-label text-red">PROTEÇÃO</span>
+                <h3 class="card-title-large">Segurança</h3>
+                <p class="card-desc mb-0">Recuperação de senha e dicas para manter a conta segura.</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="d-flex align-items-center text-muted fw-semibold">
+        <i class="bi bi-sliders me-2"></i> Filtros:
+    </div>
+    <div class="d-flex gap-2">
+        <select class="form-select form-select-sm border-0 bg-light" style="width: 150px;">
+            <option>Todos os Tópicos</option>
+            <option>Tutoriais</option>
+            <option>FAQ</option>
+        </select>
+        <select class="form-select form-select-sm border-0 bg-light" style="width: 150px;">
+            <option>Mais Recentes</option>
+            <option>Mais Acessados</option>
+        </select>
+    </div>
+</div>
+
+        <!-- Funcionalidades do Sistema -->
+        <div class="mb-4">
+            <h2 class="page-title-modern mb-2" id="funcionalidades">
+                <i class="bi bi-list-check me-2"></i>Funcionalidades do Sistema
+            </h2>
+            <p class="text-muted">Explore todas as funcionalidades disponíveis no sistema</p>
+        </div>
+
+        <div class="row g-4 mb-5" id="accordionFuncionalidades">
+    <!-- Autenticação -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAuth">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-shield-lock-fill text-primary fs-4 me-2"></i>
+                        <span class="fw-bold small">Autenticação</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseAuth" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Login Seguro</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Recuperação Senha</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> 4 Níveis Acesso</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Permissões</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Multi-tenant</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendedores -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVendedores">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-people-fill text-info fs-4 me-2"></i>
+                        <span class="fw-bold small">Vendedores</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseVendedores" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Cadastro Completo</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Criar/Editar Login</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Resetar Senha</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Ativar/Desativar</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Importação Excel</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metas -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMetas">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-bullseye text-success fs-4 me-2"></i>
+                        <span class="fw-bold small">Metas</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseMetas" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Criar/Editar Metas</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Importação Excel</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Filtros Período</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Status Comissão</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Exportar PDF</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comissões -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseComissoes">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-cash-coin text-warning fs-4 me-2"></i>
+                        <span class="fw-bold small">Comissões</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseComissoes" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Faixas Editáveis</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Cores Personaliz.</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Preview Real</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Cálculo Auto</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> API JSON</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equipes -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEquipes">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-diagram-3-fill text-primary fs-4 me-2"></i>
+                        <span class="fw-bold small">Equipes</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseEquipes" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Criar Equipes</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Vincular Supervisor</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Estatísticas</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Gestão Membros</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensagens -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMensagens">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-chat-dots-fill text-info fs-4 me-2"></i>
+                        <span class="fw-bold small">Mensagens</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseMensagens" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Envio Individual</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Envio Grupo</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> 4 Prioridades</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Notificações</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDashboard">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-graph-up text-success fs-4 me-2"></i>
+                        <span class="fw-bold small">Dashboard</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseDashboard" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> KPIs Tempo Real</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Gráficos</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Ranking</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Exportar PDF</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supervisores -->
+    <div class="col-md-6 col-lg-3">
+        <div class="accordion-item h-100 shadow-sm border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSupervisores">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-badge-fill text-warning fs-4 me-2"></i>
+                        <span class="fw-bold small">Supervisores</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapseSupervisores" class="accordion-collapse collapse" data-bs-parent="#accordionFuncionalidades">
+                <div class="accordion-body p-3 bg-light small">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Cadastro</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Vincular Equipes</li>
+                        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Importação Excel</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+        <!-- Perguntas Frequentes -->
+        <div class="mb-4">
+            <h2 class="page-title-modern mb-2" id="faq">
+                <i class="bi bi-question-circle me-2"></i>Perguntas Frequentes
+            </h2>
+            <p class="text-muted">Encontre respostas para as dúvidas mais comuns</p>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <!-- Coluna 1 -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="accordion" id="accordionFAQ1">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-0">
+                            <div class="accordion-item border-0">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        <i class="bi bi-target text-success me-2"></i>
+                                        <strong class="small">Quem pode lançar metas?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ1">
+                                    <div class="accordion-body small">
+                                        <strong>Administrador, Gerente e Supervisor</strong> podem criar, editar, deletar e importar metas. Vendedores podem apenas visualizar suas próprias metas.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item border-0 border-top">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        <i class="bi bi-calculator text-primary me-2"></i>
+                                        <strong class="small">Cálculo de comissões?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ1">
+                                    <div class="accordion-body small">
+                                        O sistema calcula automaticamente baseado nas <strong>faixas de comissão configuráveis</strong>. Quanto maior o percentual de alcance da meta, maior a comissão.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna 2 -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="accordion" id="accordionFAQ2">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-0">
+                            <div class="accordion-item border-0">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                        <i class="bi bi-person-plus text-info me-2"></i>
+                                        <strong class="small">Criar login vendedor?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ2">
+                                    <div class="accordion-body small">
+                                        Na lista de vendedores, clique no menu dropdown ao lado do vendedor e selecione <strong>"Criar Login de Acesso"</strong>. Preencha email e senha.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item border-0 border-top">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                        <i class="bi bi-pencil-square text-warning me-2"></i>
+                                        <strong class="small">Editar email vendedor?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ2">
+                                    <div class="accordion-body small">
+                                        Sim! No dropdown do vendedor, selecione <strong>"Editar Login"</strong>. Você pode alterar o email e a senha de acesso.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna 3 -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="accordion" id="accordionFAQ3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-0">
+                            <div class="accordion-item border-0">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                        <i class="bi bi-send text-success me-2"></i>
+                                        <strong class="small">Mensagens para equipe?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ3">
+                                    <div class="accordion-body small">
+                                        Acesse <strong>Mensagens > Enviar para Equipe</strong>, selecione a equipe, defina a prioridade e envie. Todos os vendedores da equipe receberão.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item border-0 border-top">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+                                        <i class="bi bi-flag text-primary me-2"></i>
+                                        <strong class="small">Status de comissão?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ3">
+                                    <div class="accordion-body small">
+                                        <strong class="text-warning">Pendente:</strong> Aguardando<br>
+                                        <strong class="text-info">Aprovado:</strong> Para pagamento<br>
+                                        <strong class="text-success">Pago:</strong> Já foi paga
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna 4 -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="accordion" id="accordionFAQ4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-0">
+                            <div class="accordion-item border-0">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq7">
+                                        <i class="bi bi-key text-danger me-2"></i>
+                                        <strong class="small">Recuperar senha?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq7" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ4">
+                                    <div class="accordion-body small">
+                                        Na tela de login, clique em <strong>"Esqueceu a senha?"</strong>, digite seu email e siga as instruções para criar uma nova senha.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item border-0 border-top">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq8">
+                                        <i class="bi bi-phone text-info me-2"></i>
+                                        <strong class="small">Funciona no celular?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq8" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ4">
+                                    <div class="accordion-body small">
+                                        Sim! O sistema é <strong>100% responsivo</strong> e funciona perfeitamente em smartphones, tablets e desktops. Pode instalar como PWA!
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Perguntas Adicionais e Cards de Suporte -->
+        <div class="row g-4 mt-4">
+            <!-- Perguntas Adicionais -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-gradient-primary text-white py-3">
+                        <h6 class="mb-0 fw-semibold">
+                            <i class="bi bi-question-circle-fill me-2"></i>Outras Dúvidas Frequentes
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="accordion accordion-flush" id="accordionFAQExtra">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq9">
+                                        <i class="bi bi-palette text-primary me-2"></i>
+                                        <strong>Como personalizar as faixas de comissão?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq9" class="accordion-collapse collapse" data-bs-parent="#accordionFAQExtra">
+                                    <div class="accordion-body">
+                                        Acesse <strong>Configurações > Faixas de Comissão</strong>. Você pode criar, editar e excluir faixas, definir percentuais, escolher cores e ver preview em tempo real.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq10">
+                                        <i class="bi bi-file-earmark-excel text-success me-2"></i>
+                                        <strong>Posso importar vendedores e metas via Excel?</strong>
+                                    </button>
+                                </h2>
+                                <div id="faq10" class="accordion-collapse collapse" data-bs-parent="#accordionFAQExtra">
+                                    <div class="accordion-body">
+                                        Sim! Use os botões <strong>"Importar Excel"</strong> nas páginas de Vendedores e Metas. Baixe o template, preencha e faça upload. O sistema valida automaticamente.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Cards -->
+            <div class="col-lg-4">
+                <div class="row g-3">
+                    <!-- Card de Suporte -->
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4 text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-headset text-primary" style="font-size: 3.5rem;"></i>
+                                </div>
+                                <h6 class="fw-semibold mb-2">Precisa de Ajuda?</h6>
+                                <p class="text-muted small mb-3">Nossa equipe está pronta para atender você!</p>
+                                <a href="https://wa.me/5511999999999" target="_blank" class="btn btn-success w-100 mb-3">
+                                    <i class="bi bi-whatsapp me-2"></i>Falar no WhatsApp
+                                </a>
+                                <div class="text-muted small">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Segunda a Sexta: 9h às 18h
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Informações do Sistema -->
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h6 class="fw-semibold mb-3 text-center">
+                                    <i class="bi bi-info-circle-fill text-info me-2"></i>Informações do Sistema
+                                </h6>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Versão:</span>
+                                        <span class="badge bg-success">v2.9.1</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Ambiente:</span>
+                                        <span class="badge bg-primary">Railway Cloud</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small">Tecnologias:</span>
+                                        <span class="text-muted small fw-semibold">Flask + PostgreSQL</span>
+                                    </div>
+                                </div>
+                                <a href="https://vendacerta.up.railway.app" target="_blank" class="btn btn-primary w-100">
+                                    <i class="bi bi-cloud-fill me-1"></i> Acesso Nuvem
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Novidades -->
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm border-start border-4 border-warning">
+                            <div class="card-body p-4">
+                                <h6 class="fw-semibold mb-3">
+                                    <i class="bi bi-star-fill text-warning me-2"></i>Novidades v2.9.1
+                                </h6>
+                                <ul class="list-unstyled mb-0 small">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        Gerente e Supervisor podem lançar metas
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        Editar login de vendedor
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        Email editável ao criar login
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        Validação de email duplicado
+                                    </li>
+                                    <li class="mb-0">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        Central de ajuda modernizada
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Atalhos Rápidos -->
+        <div class="mt-5">
+            <div class="mb-4">
+                <h2 class="page-title-modern mb-2">
+                    <i class="bi bi-lightning-fill me-2"></i>Atalhos Rápidos
+                </h2>
+                <p class="text-muted">Acesse rapidamente as principais funcionalidades</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('lista_vendedores') }}" class="text-decoration-none">
+                        <div class="sidebar-card hover-lift h-100 text-center">
+                            <div class="card-body p-4">
+                                <div class="icon-modern bg-info bg-opacity-10 text-info mx-auto mb-3">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <h6 class="fw-semibold text-dark mb-0">Vendedores</h6>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('lista_metas') }}" class="text-decoration-none">
+                        <div class="sidebar-card hover-lift h-100 text-center">
+                            <div class="card-body p-4">
+                                <div class="icon-modern bg-success bg-opacity-10 text-success mx-auto mb-3">
+                                    <i class="bi bi-bullseye"></i>
+                                </div>
+                                <h6 class="fw-semibold text-dark mb-0">Metas</h6>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('lista_equipes') }}" class="text-decoration-none">
+                        <div class="sidebar-card hover-lift h-100 text-center">
+                            <div class="card-body p-4">
+                                <div class="icon-modern bg-warning bg-opacity-10 text-warning mx-auto mb-3">
+                                    <i class="bi bi-diagram-3-fill"></i>
+                                </div>
+                                <h6 class="fw-semibold text-dark mb-0">Equipes</h6>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+                        <div class="sidebar-card hover-lift h-100 text-center">
+                            <div class="card-body p-4">
+                                <div class="icon-modern bg-primary bg-opacity-10 text-primary mx-auto mb-3">
+                                    <i class="bi bi-graph-up"></i>
+                                </div>
+                                <h6 class="fw-semibold text-dark mb-0">Dashboard</h6>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

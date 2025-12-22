@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}{% if equipe %}Editar{% else %}Nova{% endif %} Equipe - Sistema de Metas{% endblock %}
+
+{% block content %}
+<!-- Header Moderno -->
+<div class="modern-header">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-white-50 d-block mb-1">OPERACIONAL</small>
+                <h1 class="h2 mb-0 fw-bold text-white">
+                    <i class="bi bi-people-fill"></i> {% if equipe %}Editar Equipe{% else %}Nova Equipe{% endif %}
+                </h1>
+            </div>
+            <div>
+                <a href="{{ url_for('lista_equipes') }}" class="btn btn-outline-light">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }}"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0" style="border-left: 4px solid #6366f1 !important;">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-diagram-3-fill"></i> Informações da Equipe
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <!-- Nome da Equipe -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-diagram-3-fill text-primary"></i> {{ form.nome.label.text }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.nome(class="form-control form-control-lg", placeholder="Ex: Equipe Norte, Equipe Premium, etc.") }}
+                        {% if form.nome.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.nome.errors %}<div>{{ error }}</div>{% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Nome identificador da equipe</small>
+                    </div>
+
+                    <!-- Supervisor -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-person-check text-success"></i> {{ form.supervisor_id.label.text }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.supervisor_id(class="form-select form-select-lg") }}
+                        {% if form.supervisor_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.supervisor_id.errors %}<div>{{ error }}</div>{% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Responsável por gerenciar esta equipe</small>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-card-text text-info"></i> {{ form.descricao.label.text }}
+                        </label>
+                        {{ form.descricao(class="form-control", rows="4", placeholder="Descreva os objetivos, características e responsabilidades desta equipe...") }}
+                        {% if form.descricao.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.descricao.errors %}<div>{{ error }}</div>{% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Opcional - Informações adicionais sobre a equipe</small>
+                    </div>
+
+                    <!-- Info Box -->
+                    <div class="alert alert-info border-0 bg-info bg-opacity-10">
+                        <h6 class="alert-heading fw-bold">
+                            <i class="bi bi-info-circle"></i> Sobre Equipes
+                        </h6>
+                        <p class="mb-0 small">
+                            O supervisor será responsável por gerenciar os vendedores desta equipe
+                            e acompanhar suas metas e resultados. Após criar a equipe, você poderá
+                            associar vendedores a ela através do cadastro de vendedores.
+                        </p>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between gap-2 mt-4">
+                        <a href="{{ url_for('lista_equipes') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Salvar Equipe
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modern-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 0;
+        margin: -1.5rem -1.5rem 2rem -1.5rem;
+        color: white;
+    }
+
+    .form-label {
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    }
+
+    .btn-primary {
+        background-color: #6366f1;
+        border-color: #6366f1;
+    }
+
+    .btn-primary:hover {
+        background-color: #4f46e5;
+        border-color: #4f46e5;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+
+{% block title %}{{ cliente.nome }} - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('lista_clientes') }}" class="text-decoration-none">Clientes</a></li>
+            <li class="breadcrumb-item active">{{ cliente.nome }}</li>
+        </ol>
+    </nav>
+
+    <!-- Cabeçalho com Status -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="bi bi-person-fill text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h2 class="mb-1">{{ cliente.nome }}</h2>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-calendar3 me-1"></i>
+                                Cadastrado em {{ cliente.data_cadastro.strftime('%d/%m/%Y às %H:%M') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Badge de Status -->
+                    <div class="mt-3">
+                        {% if cliente.get_status_cor() == 'verde' %}
+                            <div class="alert alert-success d-inline-flex align-items-center mb-0 py-2 px-3">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Cliente Positivado</strong> - Comprou nos últimos 30 dias
+                            </div>
+                        {% elif cliente.get_status_cor() == 'amarelo' %}
+                            <div class="alert alert-warning d-inline-flex align-items-center mb-0 py-2 px-3">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <strong>Atenção Necessária</strong> - Entre 30 e 38 dias sem comprar
+                            </div>
+                        {% else %}
+                            <div class="alert alert-danger d-inline-flex align-items-center mb-0 py-2 px-3">
+                                <i class="bi bi-x-circle-fill me-2"></i>
+                                <strong>Sem Compras</strong> - Mais de 38 dias sem movimento
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="btn-group-vertical">
+                    <a href="{{ url_for('registrar_compra', id=cliente.id) }}" class="btn btn-success">
+                        <i class="bi bi-cart-plus-fill me-2"></i>Nova Compra
+                    </a>
+                    <a href="{{ url_for('editar_cliente', id=cliente.id) }}" class="btn btn-primary">
+                        <i class="bi bi-pencil-fill me-2"></i>Editar Dados
+                    </a>
+                    <a href="{{ url_for('lista_clientes') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Voltar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Coluna Esquerda - Informações -->
+        <div class="col-lg-4">
+            <!-- Dados Cadastrais -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-gradient-primary text-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-person-badge-fill me-2"></i>Dados Cadastrais</h6>
+                </div>
+                <div class="card-body p-4">
+                    <!-- CPF/CNPJ -->
+                    <div class="mb-3 pb-3 border-bottom">
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-credit-card me-1"></i>Documento
+                        </small>
+                        <strong class="fs-5">
+                            {% if cliente.cpf %}
+                                {{ cliente.cpf }}
+                                <small class="text-muted d-block mt-1">CPF</small>
+                            {% elif cliente.cnpj %}
+                                {{ cliente.cnpj }}
+                                <small class="text-muted d-block mt-1">CNPJ</small>
+                            {% else %}
+                                <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <!-- Telefone -->
+                    <div class="mb-3 pb-3 border-bottom">
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-telephone me-1"></i>Telefone
+                        </small>
+                        {% if cliente.telefone %}
+                            <div class="d-flex align-items-center justify-content-between">
+                                <a href="tel:{{ cliente.telefone }}" class="text-decoration-none text-dark">
+                                    <strong>{{ cliente.telefone }}</strong>
+                                </a>
+                                <a href="https://wa.me/55{{ cliente.telefone|replace('(', '')|replace(')', '')|replace(' ', '')|replace('-', '') }}"
+                                   target="_blank" class="btn btn-success btn-sm">
+                                    <i class="bi bi-whatsapp me-1"></i>WhatsApp
+                                </a>
+                            </div>
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3 pb-3 border-bottom">
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-envelope me-1"></i>Email
+                        </small>
+                        {% if cliente.email %}
+                            <a href="mailto:{{ cliente.email }}" class="text-decoration-none">
+                                <strong>{{ cliente.email }}</strong>
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Vendedor -->
+                    <div>
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-person-circle me-1"></i>Vendedor Responsável
+                        </small>
+                        <strong>{{ cliente.vendedor.nome if cliente.vendedor else 'Não definido' }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Localização -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-gradient-success text-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i>Localização</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-building me-1"></i>Cidade
+                        </small>
+                        <strong>{{ cliente.cidade or 'Não informado' }}</strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-signpost-2 me-1"></i>Bairro
+                        </small>
+                        <strong>{{ cliente.bairro or 'Não informado' }}</strong>
+                    </div>
+
+                    {% if cliente.ponto_referencia %}
+                    <div class="alert alert-info mb-0">
+                        <small class="text-muted text-uppercase d-block mb-1">
+                            <i class="bi bi-pin-map me-1"></i>Ponto de Referência
+                        </small>
+                        <p class="mb-0">{{ cliente.ponto_referencia }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informações Comerciais -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-gradient-warning text-dark py-3">
+                    <h6 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Informações Comerciais</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-calendar-event me-1"></i>Dia de Visita
+                        </small>
+                        {% if cliente.dia_visita %}
+                            <span class="badge bg-primary fs-6 px-3 py-2">
+                                {{ cliente.dia_visita|capitalize }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">Não definido</span>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-wallet2 me-1"></i>Formas de Pagamento
+                        </small>
+                        {% set formas = cliente.get_formas_pagamento_list() %}
+                        {% if formas %}
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for forma in formas %}
+                                    {% if forma == 'cartao_credito' %}
+                                        <span class="badge bg-primary"><i class="bi bi-credit-card me-1"></i>Cartão Crédito</span>
+                                    {% elif forma == 'cartao_debito' %}
+                                        <span class="badge bg-info"><i class="bi bi-credit-card-2-front me-1"></i>Cartão Débito</span>
+                                    {% elif forma == 'pix' %}
+                                        <span class="badge bg-success"><i class="bi bi-phone me-1"></i>PIX</span>
+                                    {% elif forma == 'dinheiro' %}
+                                        <span class="badge bg-success"><i class="bi bi-cash me-1"></i>Dinheiro</span>
+                                    {% elif forma == 'boleto' %}
+                                        <span class="badge bg-secondary"><i class="bi bi-receipt me-1"></i>Boleto</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
+                    </div>
+
+                    {% if cliente.observacoes %}
+                    <hr class="my-3">
+                    <div>
+                        <small class="text-muted text-uppercase d-block mb-2">
+                            <i class="bi bi-chat-left-text me-1"></i>Observações
+                        </small>
+                        <div class="alert alert-secondary mb-0">
+                            <p class="mb-0">{{ cliente.observacoes }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-info text-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Estatísticas</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="display-4 text-primary mb-2">{{ total_compras }}</div>
+                                <small class="text-muted text-uppercase">Total de Compras</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="display-4 text-success mb-2">{{ total_compras_mes }}</div>
+                                <small class="text-muted text-uppercase">Compras no Mês</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <small class="text-muted text-uppercase d-block mb-2">Última Compra</small>
+                        {% set ultima_compra = cliente.get_ultima_compra() %}
+                        {% if ultima_compra %}
+                            <div class="fs-4 text-primary mb-1">
+                                {{ ultima_compra.data_compra.strftime('%d/%m/%Y') }}
+                            </div>
+                            <small class="text-muted">
+                                {% set dias = (now - ultima_compra.data_compra).days %}
+                                {{ dias }} dia{{ 's' if dias != 1 else '' }} atrás
+                            </small>
+                        {% else %}
+                            <div class="text-danger fs-5">
+                                <i class="bi bi-exclamation-circle me-2"></i>
+                                Nunca comprou
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Direita - Histórico -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2 text-primary"></i>Histórico de Compras
+                    </h5>
+                    <span class="badge bg-primary fs-6">{{ compras|length }} registro{{ 's' if compras|length != 1 else '' }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if compras %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4"><i class="bi bi-calendar3 me-2"></i>Data/Hora</th>
+                                    <th><i class="bi bi-cash me-2"></i>Valor</th>
+                                    <th><i class="bi bi-credit-card me-2"></i>Pagamento</th>
+                                    <th><i class="bi bi-chat-left-text me-2"></i>Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for compra in compras %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div>
+                                            <strong class="d-block">{{ compra.data_compra.strftime('%d/%m/%Y') }}</strong>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock me-1"></i>{{ compra.data_compra.strftime('%H:%M') }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success fs-5">
+                                            R$ {{ "%.2f"|format(compra.valor) }}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        {% if compra.forma_pagamento == 'cartao_credito' %}
+                                            <span class="badge bg-primary">
+                                                <i class="bi bi-credit-card me-1"></i>Cartão Crédito
+                                            </span>
+                                        {% elif compra.forma_pagamento == 'cartao_debito' %}
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-credit-card-2-front me-1"></i>Cartão Débito
+                                            </span>
+                                        {% elif compra.forma_pagamento == 'pix' %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-phone me-1"></i>PIX
+                                            </span>
+                                        {% elif compra.forma_pagamento == 'dinheiro' %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-cash me-1"></i>Dinheiro
+                                            </span>
+                                        {% elif compra.forma_pagamento == 'boleto' %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-receipt me-1"></i>Boleto
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ compra.forma_pagamento }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ compra.observacoes or '-' }}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="bi bi-cart-x display-1 text-muted opacity-50"></i>
+                        </div>
+                        <h5 class="text-muted mb-3">Nenhuma compra registrada</h5>
+                        <p class="text-muted mb-4">Este cliente ainda não realizou nenhuma compra.</p>
+                        <a href="{{ url_for('registrar_compra', id=cliente.id) }}" class="btn btn-success btn-lg">
+                            <i class="bi bi-cart-plus-fill me-2"></i>Registrar Primeira Compra
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    }
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #0dcaf0 0%, #087990 100%);
+    }
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #cc9a06 100%);
+    }
+
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+    }
+
+    .table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+</style>
+{% endblock %}
+
+    <div class="row g-4">
+        <!-- Informações do Cliente -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Dados Cadastrais</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">CPF/CNPJ</small>
+                        <strong>
+                            {% if cliente.cpf %}
+                                {{ cliente.cpf }}
+                            {% elif cliente.cnpj %}
+                                {{ cliente.cnpj }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Telefone</small>
+                        {% if cliente.telefone %}
+                            <a href="tel:{{ cliente.telefone }}" class="text-decoration-none">
+                                <i class="bi bi-telephone"></i> {{ cliente.telefone }}
+                            </a>
+                            <a href="https://wa.me/55{{ cliente.telefone|replace('(', '')|replace(')', '')|replace(' ', '')|replace('-', '') }}"
+                               target="_blank" class="btn btn-success btn-sm ms-2">
+                                <i class="bi bi-whatsapp"></i>
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Email</small>
+                        {% if cliente.email %}
+                            <a href="mailto:{{ cliente.email }}">{{ cliente.email }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Cidade</small>
+                        <strong>{{ cliente.cidade or '-' }}</strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Bairro</small>
+                        <strong>{{ cliente.bairro or '-' }}</strong>
+                    </div>
+
+                    {% if cliente.ponto_referencia %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Ponto de Referência</small>
+                        <p class="mb-0">{{ cliente.ponto_referencia }}</p>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Dia de Visita</small>
+                        {% if cliente.dia_visita %}
+                            <span class="badge bg-secondary">{{ cliente.dia_visita|capitalize }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Formas de Pagamento</small>
+                        {% set formas = cliente.get_formas_pagamento_list() %}
+                        {% if formas %}
+                            {% for forma in formas %}
+                                <span class="badge bg-info me-1">
+                                    {% if forma == 'cartao' %}💳 Cartão
+                                    {% elif forma == 'pix' %}📱 PIX
+                                    {% elif forma == 'dinheiro' %}💵 Dinheiro
+                                    {% elif forma == 'boleto' %}📄 Boleto
+                                    {% endif %}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+
+                    {% if cliente.observacoes %}
+                    <hr>
+                    <div>
+                        <small class="text-muted d-block mb-1">Observações</small>
+                        <p class="mb-0 small">{{ cliente.observacoes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Estatísticas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">Total de Compras</small>
+                            <strong class="fs-5">{{ total_compras }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">Compras neste Mês</small>
+                            <strong class="fs-5 text-success">{{ total_compras_mes }}</strong>
+                        </div>
+                    </div>
+
+                    <div>
+                        <small class="text-muted d-block mb-1">Última Compra</small>
+                        {% set ultima_compra = cliente.get_ultima_compra() %}
+                        {% if ultima_compra %}
+                            <strong>{{ ultima_compra.data_compra.strftime('%d/%m/%Y') }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                {{ ((ultima_compra.data_compra - ultima_compra.data_compra + now - now)|string).split()[0] }} dias atrás
+                            </small>
+                        {% else %}
+                            <strong class="text-danger">Nunca comprou</strong>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Histórico de Compras -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Histórico de Compras</h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if compras %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="20%">Data</th>
+                                    <th width="20%">Valor</th>
+                                    <th width="20%">Forma Pagamento</th>
+                                    <th width="40%">Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for compra in compras %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ compra.data_compra.strftime('%d/%m/%Y') }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ compra.data_compra.strftime('%H:%M') }}</small>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">
+                                            R$ {{ "%.2f"|format(compra.valor) }}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        {% if compra.forma_pagamento == 'cartao' %}
+                                            <span class="badge bg-primary">💳 Cartão</span>
+                                        {% elif compra.forma_pagamento == 'pix' %}
+                                            <span class="badge bg-info">📱 PIX</span>
+                                        {% elif compra.forma_pagamento == 'dinheiro' %}
+                                            <span class="badge bg-success">💵 Dinheiro</span>
+                                        {% elif compra.forma_pagamento == 'boleto' %}
+                                            <span class="badge bg-secondary">📄 Boleto</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ compra.observacoes or '-' }}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-cart-x display-1 text-muted"></i>
+                        <p class="text-muted mt-3">Nenhuma compra registrada</p>
+                        <a href="{{ url_for('registrar_compra', id=cliente.id) }}" class="btn btn-success">
+                            <i class="bi bi-cart-plus me-2"></i>Registrar Primeira Compra
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

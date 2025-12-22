@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Movimentação - Venda Certa{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success-subtle text-success border-bottom border-success-subtle">
+                    <h4 class="mb-0">
+                        <i class="bi bi-arrow-left-right me-2"></i>Nova Movimentação de Estoque
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Informações de Permissão -->
+                    <div class="alert alert-info border-0 shadow-sm mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="bi bi-shield-check fs-2 text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-semibold">
+                                    <i class="bi bi-person-badge"></i>
+                                    Suas Permissões: <span class="badge bg-primary">{{ current_user.cargo|title }}</span>
+                                </h6>
+                                <small class="text-muted">
+                                    Os motivos de movimentação disponíveis são filtrados baseado na sua função no sistema.
+                                    Selecione o tipo de movimento para ver suas opções.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="" novalidate id="formMovimentacao">
+                        {{ form.hidden_tag() }}
+
+                        <!-- Tipo e Produto -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-box-seam me-2"></i>Produto e Tipo de Movimentação
+                                </h5>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.tipo.label(class="form-label") }}
+                                    <span class="text-danger">*</span>
+                                    {{ form.tipo(class="form-select", id="tipo_movimentacao") }}
+                                    {% if form.tipo.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.tipo.errors[0] }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.motivo.label(class="form-label") }}
+                                    <span class="text-danger">*</span>
+                                    {{ form.motivo(class="form-select", id="motivo") }}
+                                    {% if form.motivo.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.motivo.errors[0] }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="bi bi-info-circle"></i>
+                                        Motivos disponíveis baseados na sua função
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    {{ form.produto_id.label(class="form-label") }}
+                                    <span class="text-danger">*</span>
+                                    {{ form.produto_id(class="form-select", id="produto_select") }}
+                                    {% if form.produto_id.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.produto_id.errors[0] }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="text-muted">Selecione o produto para movimentar</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quantidade e Valores -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-calculator me-2"></i>Quantidade e Valores
+                                </h5>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.quantidade.label(class="form-label") }}
+                                    <span class="text-danger">*</span>
+                                    {{ form.quantidade(class="form-control", type="number", min="0.01", step="0.01", id="quantidade") }}
+                                    {% if form.quantidade.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.quantidade.errors[0] }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.valor_unitario.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        {{ form.valor_unitario(class="form-control", type="number", min="0", step="0.01", id="valor_unitario") }}
+                                    </div>
+                                    <small class="text-muted">Opcional - para atualizar custo médio</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Valor Total</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        <input type="text" class="form-control" id="valor_total" readonly disabled>
+                                    </div>
+                                    <small class="text-muted">Calculado automaticamente</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Documentos e Referências -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-file-text me-2"></i>Documentos e Referências
+                                </h5>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.documento.label(class="form-label") }}
+                                    {{ form.documento(class="form-control", placeholder="Ex: NF 12345") }}
+                                    <small class="text-muted">Nota fiscal, pedido, etc</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.ordem_servico_id.label(class="form-label") }}
+                                    {{ form.ordem_servico_id(class="form-select") }}
+                                    <small class="text-muted">Vincular a uma OS (opcional)</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6" id="div_fornecedor">
+                                <div class="mb-3">
+                                    {{ form.fornecedor.label(class="form-label") }}
+                                    {{ form.fornecedor(class="form-control", placeholder="Nome do fornecedor") }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6" id="div_cliente">
+                                <div class="mb-3">
+                                    {{ form.cliente_id.label(class="form-label") }}
+                                    {{ form.cliente_id(class="form-select") }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    {{ form.observacoes.label(class="form-label") }}
+                                    {{ form.observacoes(class="form-control", rows=3, placeholder="Observações adicionais sobre a movimentação") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('lista_estoque') }}" class="btn btn-secondary">
+                                        <i class="bi bi-x-lg me-2"></i>Cancelar
+                                    </a>
+                                    {{ form.submit(class="btn btn-success btn-lg") }}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoSelect = document.getElementById('tipo_movimentacao');
+    const motivoSelect = document.getElementById('motivo');
+    const divFornecedor = document.getElementById('div_fornecedor');
+    const divCliente = document.getElementById('div_cliente');
+    const quantidadeInput = document.getElementById('quantidade');
+    const valorUnitarioInput = document.getElementById('valor_unitario');
+    const valorTotalInput = document.getElementById('valor_total');
+
+    // Carregar motivos permitidos via AJAX
+    async function carregarMotivos(tipo) {
+        try {
+            const response = await fetch(`/api/estoque/motivos-permitidos/${tipo}`);
+            const data = await response.json();
+
+            if (data.success) {
+                // Limpar opções atuais
+                motivoSelect.innerHTML = '<option value="">Selecione o motivo</option>';
+
+                // Adicionar novos motivos permitidos
+                data.motivos.forEach(motivo => {
+                    const option = document.createElement('option');
+                    option.value = motivo.value;
+                    option.textContent = motivo.label;
+                    motivoSelect.appendChild(option);
+                });
+
+                // Mostrar alerta se tiver poucos motivos
+                if (data.motivos.length === 0) {
+                    alert('⚠️ Você não tem permissão para nenhum motivo de ' + tipo);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar motivos:', error);
+        }
+    }
+
+    // Mostrar/ocultar campos baseado no tipo
+    function atualizarCampos() {
+        const tipo = tipoSelect.value;
+
+        if (tipo === 'entrada') {
+            divFornecedor.style.display = 'block';
+            divCliente.style.display = 'none';
+            carregarMotivos('entrada');
+        } else if (tipo === 'saida') {
+            divFornecedor.style.display = 'none';
+            divCliente.style.display = 'block';
+            carregarMotivos('saida');
+        } else {
+            divFornecedor.style.display = 'none';
+            divCliente.style.display = 'none';
+        }
+    }
+
+    // Calcular valor total
+    function calcularTotal() {
+        const quantidade = parseFloat(quantidadeInput.value) || 0;
+        const valorUnitario = parseFloat(valorUnitarioInput.value) || 0;
+        const total = quantidade * valorUnitario;
+        valorTotalInput.value = total.toFixed(2);
+    }
+
+    tipoSelect.addEventListener('change', atualizarCampos);
+    quantidadeInput.addEventListener('input', calcularTotal);
+    valorUnitarioInput.addEventListener('input', calcularTotal);
+
+    // Inicializar
+    atualizarCampos();
+    calcularTotal();
+});
+</script>
+
+{% endblock %}

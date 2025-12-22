@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if faixa else 'Nova' }} Faixa de Comissão{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('configuracoes_comissoes') }}">Configurações de Comissão</a>
+            </li>
+            <li class="breadcrumb-item active">
+                {{ 'Editar' if faixa else 'Nova' }} Faixa
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Cabeçalho -->
+    <div class="mb-4">
+        <h2>
+            <i class="bi bi-{{ 'pencil-square' if faixa else 'plus-circle' }}"></i>
+            {{ 'Editar' if faixa else 'Nova' }} Faixa de Comissão
+            {% if tipo %}
+                <span class="badge bg-{{ 'primary' if tipo == 'vendedor' else 'info' }}">
+                    {{ 'Vendedor' if tipo == 'vendedor' else 'Supervisor' }}
+                </span>
+            {% endif %}
+        </h2>
+        <p class="text-muted">
+            {{ 'Atualize' if faixa else 'Configure' }} os parâmetros da faixa de comissão
+        </p>
+    </div>
+
+    <div class="row">
+        <!-- Formulário -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-{{ tipo if tipo else 'vendedor' }}">
+                    <h5 class="mb-0 text-white">
+                        <i class="bi bi-sliders"></i> Configuração da Faixa
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="formFaixa">
+                        <!-- Seleção de Tipo (apenas ao criar) -->
+                        {% if not faixa %}
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-person-check"></i> Tipo de Comissão
+                            </label>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="tipo" id="tipo-vendedor" value="vendedor" checked>
+                                    <label class="btn btn-outline-primary w-100 py-3" for="tipo-vendedor">
+                                        <i class="bi bi-person-badge fs-3 d-block mb-2"></i>
+                                        <strong>Vendedor</strong>
+                                        <small class="d-block text-muted">Comissão para vendedores individuais</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="tipo" id="tipo-supervisor" value="supervisor">
+                                    <label class="btn btn-outline-info w-100 py-3" for="tipo-supervisor">
+                                        <i class="bi bi-people fs-3 d-block mb-2"></i>
+                                        <strong>Supervisor</strong>
+                                        <small class="d-block text-muted">Comissão para supervisores de equipe</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <input type="hidden" name="tipo" value="{{ tipo }}">
+                        {% endif %}
+
+                        <!-- Ordem -->
+                        <div class="mb-4">
+                            <label for="ordem" class="form-label fw-bold">
+                                <i class="bi bi-sort-numeric-down"></i> Ordem de Exibição
+                            </label>
+                            <input type="number"
+                                   class="form-control form-control-lg"
+                                   id="ordem"
+                                   name="ordem"
+                                   value="{{ faixa.ordem if faixa else 0 }}"
+                                   min="0"
+                                   required>
+                            <small class="text-muted">
+                                Define a posição desta faixa na lista (0 = primeira)
+                            </small>
+                        </div>
+
+                        <!-- Faixa de Alcance -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="alcance_min" class="form-label fw-bold">
+                                    <i class="bi bi-arrow-down-circle"></i> Alcance Mínimo (%)
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <input type="number"
+                                           class="form-control"
+                                           id="alcance_min"
+                                           name="alcance_min"
+                                           value="{{ faixa.alcance_min if faixa else 0 }}"
+                                           min="0"
+                                           max="1000"
+                                           step="0.1"
+                                           required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted">Ex: 0 para 0%</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="alcance_max" class="form-label fw-bold">
+                                    <i class="bi bi-arrow-up-circle"></i> Alcance Máximo (%)
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <input type="number"
+                                           class="form-control"
+                                           id="alcance_max"
+                                           name="alcance_max"
+                                           value="{{ faixa.alcance_max if faixa else 50 }}"
+                                           min="0"
+                                           max="10000"
+                                           step="0.1"
+                                           required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted">Use 1000+ para "acima de"</small>
+                            </div>
+                        </div>
+
+                        <!-- Taxa de Comissão -->
+                        <div class="mb-4">
+                            <label for="taxa_comissao" class="form-label fw-bold">
+                                <i class="bi bi-percent"></i> Taxa de Comissão
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <input type="number"
+                                       class="form-control"
+                                       id="taxa_comissao"
+                                       name="taxa_comissao"
+                                       value="{{ (faixa.taxa_comissao * 100) if faixa else 1 }}"
+                                       min="0"
+                                       max="100"
+                                       step="0.1"
+                                       required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <small class="text-muted">
+                                Percentual da receita alcançada que será pago como comissão
+                            </small>
+                        </div>
+
+                        <!-- Cor de Visualização -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-palette"></i> Cor de Visualização
+                            </label>
+                            <div class="row g-3">
+                                <div class="col-6 col-md-4 col-lg-2">
+                                    <input type="radio" class="btn-check" name="cor" id="cor-danger" value="danger"
+                                           {{ 'checked' if (faixa and faixa.cor == 'danger') or not faixa else '' }}>
+                                    <label class="btn btn-outline-danger w-100" for="cor-danger">
+                                        <i class="bi bi-square-fill"></i> Vermelho
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-2">
+                                    <input type="radio" class="btn-check" name="cor" id="cor-warning" value="warning"
+                                           {{ 'checked' if faixa and faixa.cor == 'warning' else '' }}>
+                                    <label class="btn btn-outline-warning w-100" for="cor-warning">
+                                        <i class="bi bi-square-fill"></i> Amarelo
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-2">
+                                    <input type="radio" class="btn-check" name="cor" id="cor-info" value="info"
+                                           {{ 'checked' if faixa and faixa.cor == 'info' else '' }}>
+                                    <label class="btn btn-outline-info w-100" for="cor-info">
+                                        <i class="bi bi-square-fill"></i> Azul
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-2">
+                                    <input type="radio" class="btn-check" name="cor" id="cor-primary" value="primary"
+                                           {{ 'checked' if faixa and faixa.cor == 'primary' else '' }}>
+                                    <label class="btn btn-outline-primary w-100" for="cor-primary">
+                                        <i class="bi bi-square-fill"></i> Azul Escuro
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-2">
+                                    <input type="radio" class="btn-check" name="cor" id="cor-success" value="success"
+                                           {{ 'checked' if faixa and faixa.cor == 'success' else '' }}>
+                                    <label class="btn btn-outline-success w-100" for="cor-success">
+                                        <i class="bi bi-square-fill"></i> Verde
+                                    </label>
+                                </div>
+                                <div class="col-6 col-md-4 col-lg-2">
+                                    <input type="radio" class="btn-check" name="cor" id="cor-secondary" value="secondary"
+                                           {{ 'checked' if faixa and faixa.cor == 'secondary' else '' }}>
+                                    <label class="btn btn-outline-secondary w-100" for="cor-secondary">
+                                        <i class="bi bi-square-fill"></i> Cinza
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Opção de Copiar para Outro Tipo -->
+                        <div class="mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="copiar_para_outro" name="copiar_para_outro">
+                                        <label class="form-check-label" for="copiar_para_outro">
+                                            <i class="bi bi-arrow-left-right"></i>
+                                            <strong>Sincronizar com {{ 'Supervisor' if (tipo == 'vendedor' or not tipo) else 'Vendedor' }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                Cria/atualiza automaticamente uma faixa idêntica para
+                                                {{ 'supervisores' if (tipo == 'vendedor' or not tipo) else 'vendedores' }}
+                                            </small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Ação -->
+                        <div class="d-flex gap-2 justify-content-between mt-4 pt-3 border-top">
+                            <a href="{{ url_for('configuracoes_comissoes') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i>
+                                {{ 'Atualizar' if faixa else 'Criar' }} Faixa
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview e Ajuda -->
+        <div class="col-lg-4">
+            <!-- Preview -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-eye"></i> Visualização
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="preview" class="text-center p-3 border rounded">
+                        <div class="mb-2">
+                            <span class="badge bg-secondary" id="preview-ordem">Ordem: 0</span>
+                        </div>
+                        <div class="legend-square mx-auto mb-2" id="preview-cor" style="width: 60px; height: 60px;"></div>
+                        <h5 class="mb-2" id="preview-faixa">0% - 50%</h5>
+                        <h3 class="mb-0" id="preview-taxa">1.0%</h3>
+                        <small class="text-muted">de comissão</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dicas -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightbulb"></i> Dicas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li class="mb-2">
+                            <strong>Ordem:</strong> Define a sequência de exibição. Comece do 0.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Alcance:</strong> Use valores crescentes. Ex: 0-50, 51-75, 76-100.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Taxa:</strong> Percentual sobre a receita alcançada. Ex: 2% = R$ 1.000 de R$ 50.000.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Última faixa:</strong> Use alcance máximo >= 1000 para representar "acima de".
+                        </li>
+                        <li>
+                            <strong>Cores:</strong> Use vermelho para baixo desempenho, verde para alto.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.legend-square {
+    border-radius: 8px;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.bg-gradient-vendedor {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-supervisor {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+#preview {
+    background-color: #f8f9fa;
+}
+
+.btn-check:checked + label {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .btn-outline-primary, .btn-outline-info {
+        font-size: 0.9rem;
+    }
+}
+</style>
+
+<script>
+// Preview em tempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const formInputs = {
+        ordem: document.getElementById('ordem'),
+        alcance_min: document.getElementById('alcance_min'),
+        alcance_max: document.getElementById('alcance_max'),
+        taxa: document.getElementById('taxa_comissao')
+    };
+
+    const preview = {
+        ordem: document.getElementById('preview-ordem'),
+        cor: document.getElementById('preview-cor'),
+        faixa: document.getElementById('preview-faixa'),
+        taxa: document.getElementById('preview-taxa')
+    };
+
+    function atualizarPreview() {
+        // Ordem
+        preview.ordem.textContent = `Ordem: ${formInputs.ordem.value || 0}`;
+
+        // Faixa de alcance
+        const min = parseFloat(formInputs.alcance_min.value) || 0;
+        const max = parseFloat(formInputs.alcance_max.value) || 0;
+
+        if (max >= 1000) {
+            preview.faixa.textContent = `Acima de ${min.toFixed(0)}%`;
+        } else {
+            preview.faixa.textContent = `${min.toFixed(0)}% - ${max.toFixed(0)}%`;
+        }
+
+        // Taxa
+        const taxa = parseFloat(formInputs.taxa.value) || 0;
+        preview.taxa.textContent = `${taxa.toFixed(1)}%`;
+
+        // Cor
+        const corSelecionada = document.querySelector('input[name="cor"]:checked');
+        if (corSelecionada) {
+            const cor = corSelecionada.value;
+            preview.cor.className = 'legend-square mx-auto mb-2 bg-' + cor;
+        }
+    }
+
+    // Event listeners
+    Object.values(formInputs).forEach(input => {
+        input.addEventListener('input', atualizarPreview);
+    });
+
+    document.querySelectorAll('input[name="cor"]').forEach(radio => {
+        radio.addEventListener('change', atualizarPreview);
+    });
+
+    // Sincronização: atualizar texto ao mudar tipo
+    const tipoRadios = document.querySelectorAll('input[name="tipo"]');
+    tipoRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const label = document.querySelector('label[for="copiar_para_outro"] strong');
+            const descricao = document.querySelector('label[for="copiar_para_outro"] small');
+
+            if (this.value === 'vendedor') {
+                label.innerHTML = '<i class="bi bi-arrow-left-right"></i> Sincronizar com Supervisor';
+                descricao.textContent = 'Cria/atualiza automaticamente uma faixa idêntica para supervisores';
+            } else {
+                label.innerHTML = '<i class="bi bi-arrow-left-right"></i> Sincronizar com Vendedor';
+                descricao.textContent = 'Cria/atualiza automaticamente uma faixa idêntica para vendedores';
+            }
+        });
+    });
+
+    // Inicializar preview
+    atualizarPreview();
+});
+
+// Validação do formulário
+document.getElementById('formFaixa').addEventListener('submit', function(e) {
+    const min = parseFloat(document.getElementById('alcance_min').value);
+    const max = parseFloat(document.getElementById('alcance_max').value);
+
+    if (max <= min && max < 1000) {
+        e.preventDefault();
+        alert('O alcance máximo deve ser maior que o mínimo!');
+        return false;
+    }
+
+    const taxa = parseFloat(document.getElementById('taxa_comissao').value);
+    if (taxa < 0 || taxa > 100) {
+        e.preventDefault();
+        alert('A taxa de comissão deve estar entre 0% e 100%!');
+        return false;
+    }
+});
+</script>
+{% endblock %}

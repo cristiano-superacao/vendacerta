@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Equipes - Sistema de Metas{% endblock %}
+
+{% block content %}
+<!-- Header Moderno -->
+<div class="modern-header">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-white-50 d-block mb-1">OPERACIONAL</small>
+                <h1 class="h2 mb-0 fw-bold text-white">
+                    <i class="bi bi-people-fill"></i> Gerenciamento de Equipes
+                </h1>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('lista_vendedores') }}" class="btn btn-outline-light">
+                    <i class="bi bi-people"></i> Vendedores
+                </a>
+                <a href="{{ url_for('lista_supervisores') }}" class="btn btn-outline-light">
+                    <i class="bi bi-person-badge"></i> Supervisores
+                </a>
+                <a href="{{ url_for('lista_metas') }}" class="btn btn-outline-light">
+                    <i class="bi bi-bullseye"></i> Metas
+                </a>
+                <a href="{{ url_for('nova_equipe') }}" class="btn btn-light">
+                    <i class="bi bi-plus-circle"></i> Nova Equipe
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if equipes %}
+
+<!-- Cards de Estatísticas Modernizados -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #6366f1 !important;">
+            <div class="card-body position-relative">
+                <span class="badge bg-primary bg-opacity-10 text-primary position-absolute top-0 end-0 m-3">ATIVAS</span>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-modern bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                </div>
+                <h3 class="stats-value-modern mb-1">{{ equipes|length }}</h3>
+                <p class="stats-label-modern mb-0">
+                    <i class="bi bi-diagram-3"></i> EQUIPES CADASTRADAS
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #06b6d4 !important;">
+            <div class="card-body position-relative">
+                <span class="badge bg-info bg-opacity-10 text-info position-absolute top-0 end-0 m-3">TOTAL</span>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-modern bg-info bg-opacity-10 text-info">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                </div>
+                <h3 class="stats-value-modern mb-1">{{ equipes|sum(attribute='vendedores_count') }}</h3>
+                <p class="stats-label-modern mb-0">
+                    <i class="bi bi-people"></i> VENDEDORES ALOCADOS
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grid de Equipes Modernizado -->
+<div class="row g-4">
+    {% for item in equipes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0" style="border-left: 4px solid #6366f1 !important;">
+            <!-- Header -->
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-diagram-3-fill"></i> {{ item.equipe.nome }}
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <!-- Supervisor -->
+                <div class="mb-3 pb-3 border-bottom">
+                    <small class="text-muted d-block mb-2">
+                        <i class="bi bi-person-check text-primary"></i> Supervisor
+                    </small>
+                    <div class="fw-semibold">{{ item.supervisor.nome }}</div>
+                </div>
+
+                <!-- Descrição -->
+                {% if item.equipe.descricao %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <small class="text-muted d-block mb-2">
+                        <i class="bi bi-card-text text-primary"></i> Descrição
+                    </small>
+                    <p class="mb-0 small text-secondary">{{ item.equipe.descricao }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Estatística -->
+                <div class="d-flex align-items-center gap-3 bg-primary bg-opacity-10 rounded p-3">
+                    <div class="icon-modern bg-primary bg-opacity-10 text-primary" style="width: 40px; height: 40px; font-size: 1.25rem;">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-primary fs-5">{{ item.vendedores_count }}</div>
+                        <small class="text-muted">Vendedores</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="card-footer bg-light border-0">
+                <div class="d-flex justify-content-between gap-2">
+                    <a href="{{ url_for('detalhes_equipe', id=item.equipe.id) }}"
+                       class="btn btn-primary flex-grow-1">
+                        <i class="bi bi-eye"></i> Detalhes
+                    </a>
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('editar_equipe', id=item.equipe.id) }}"
+                           class="btn btn-outline-primary"
+                           title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('deletar_equipe', id=item.equipe.id) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Tem certeza que deseja desativar esta equipe?');">
+                            <button type="submit" class="btn btn-outline-danger" title="Desativar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Estado Vazio Modernizado -->
+<div class="text-center py-5">
+    <div class="icon-modern bg-secondary bg-opacity-10 text-secondary mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2.5rem;">
+        <i class="bi bi-people-fill"></i>
+    </div>
+    <h3 class="mt-3 fw-bold">Nenhuma equipe cadastrada</h3>
+    <p class="text-muted mb-4">Crie a primeira equipe para organizar seus vendedores</p>
+    <a href="{{ url_for('nova_equipe') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Criar Primeira Equipe
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modern-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 0;
+        margin: -1.5rem -1.5rem 2rem -1.5rem;
+        color: white;
+    }
+
+    .stats-card-modern {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stats-card-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .icon-modern {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 1.5rem;
+    }
+
+    .stats-value-modern {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .stats-label-modern {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}

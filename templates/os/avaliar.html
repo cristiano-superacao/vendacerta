@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Avaliar OS {{ os.numero_os }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('lista_ordens_servico') }}">Ordens de Serviço</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}">{{ os.numero_os }}</a></li>
+                    <li class="breadcrumb-item active">Avaliar</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-star-fill text-warning"></i> Avaliar Atendimento</h2>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Informações da OS -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-circle-fill"></i> OS {{ os.numero_os }} - Concluída
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Título:</strong> {{ os.titulo }}</p>
+                            <p><strong>Técnico:</strong> {{ os.tecnico.nome if os.tecnico else '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Concluída em:</strong> {{ os.data_conclusao.strftime('%d/%m/%Y %H:%M') if os.data_conclusao else '-' }}</p>
+                            <p><strong>Valor Total:</strong> R$ {{ "%.2f"|format(os.valor_total or 0) }}</p>
+                        </div>
+                    </div>
+
+                    {% if os.descricao_solucao %}
+                    <hr>
+                    <h6><i class="bi bi-tools"></i> Solução Aplicada:</h6>
+                    <p class="mb-0">{{ os.descricao_solucao }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Formulário de Avaliação -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Como você avalia o atendimento?</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('avaliar_ordem_servico', id=os.id) }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="text-center mb-4">
+                            <p class="mb-3">Clique nas estrelas para avaliar:</p>
+
+                            <div class="rating-stars mb-3">
+                                <input type="radio" name="avaliacao_cliente" id="star5" value="5">
+                                <label for="star5" title="Excelente">
+                                    <i class="bi bi-star-fill"></i>
+                                </label>
+
+                                <input type="radio" name="avaliacao_cliente" id="star4" value="4">
+                                <label for="star4" title="Muito Bom">
+                                    <i class="bi bi-star-fill"></i>
+                                </label>
+
+                                <input type="radio" name="avaliacao_cliente" id="star3" value="3">
+                                <label for="star3" title="Bom">
+                                    <i class="bi bi-star-fill"></i>
+                                </label>
+
+                                <input type="radio" name="avaliacao_cliente" id="star2" value="2">
+                                <label for="star2" title="Regular">
+                                    <i class="bi bi-star-fill"></i>
+                                </label>
+
+                                <input type="radio" name="avaliacao_cliente" id="star1" value="1">
+                                <label for="star1" title="Ruim">
+                                    <i class="bi bi-star-fill"></i>
+                                </label>
+                            </div>
+
+                            <p id="textoAvaliacao" class="text-muted mb-0"></p>
+                        </div>
+
+                        {% if form.avaliacao_cliente.errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.avaliacao_cliente.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex gap-2 justify-content-center">
+                            {{ form.submit(class="btn btn-primary btn-lg", id="btnSubmit", disabled=true) }}
+                            <a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}" class="btn btn-secondary btn-lg">
+                                <i class="bi bi-x-lg"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.rating-stars {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    justify-content: center;
+    font-size: 3rem;
+}
+
+.rating-stars input[type="radio"] {
+    display: none;
+}
+
+.rating-stars label {
+    color: #ddd;
+    cursor: pointer;
+    padding: 0 5px;
+    transition: color 0.2s;
+}
+
+.rating-stars label:hover,
+.rating-stars label:hover ~ label {
+    color: #ffc107;
+}
+
+.rating-stars input[type="radio"]:checked ~ label {
+    color: #ffc107;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const radios = document.querySelectorAll('input[name="avaliacao_cliente"]');
+    const textoAvaliacao = document.getElementById('textoAvaliacao');
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    const textos = {
+        '5': '⭐⭐⭐⭐⭐ Excelente!',
+        '4': '⭐⭐⭐⭐ Muito Bom!',
+        '3': '⭐⭐⭐ Bom',
+        '2': '⭐⭐ Regular',
+        '1': '⭐ Ruim'
+    };
+
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            textoAvaliacao.textContent = textos[this.value];
+            textoAvaliacao.className = 'fw-bold mb-0';
+            btnSubmit.disabled = false;
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Sistema de Metas{% endblock %}
+
+{% block extra_css %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Modernizado -->
+    <div class="modern-header mb-4">
+        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">VENDEDORES</p>
+        <h1 class="page-title-modern mb-2">
+            <i class="bi bi-person-{{ 'gear' if vendedor else 'plus' }}"></i> {{ titulo }}
+        </h1>
+        <p class="text-muted mb-3">Cadastre ou edite as informações do vendedor</p>
+        <a href="{{ url_for('lista_vendedores') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0" style="border-radius: 12px; border-left: 4px solid #3b82f6 !important;">
+        <div class="card-body p-4">
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="nome" class="form-label required">
+                    <i class="bi bi-person form-icon"></i>Nome Completo
+                </label>
+                {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Ex: João Silva Santos") }}
+                {% if form.nome.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.nome.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="email" class="form-label required">
+                    <i class="bi bi-envelope form-icon"></i>Email
+                </label>
+                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="vendedor@empresa.com") }}
+                {% if form.email.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.email.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="telefone" class="form-label">
+                    <i class="bi bi-telephone form-icon"></i>Telefone
+                </label>
+                {{ form.telefone(class="form-control" + (" is-invalid" if form.telefone.errors else ""), placeholder="(11) 98765-4321") }}
+                {% if form.telefone.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.telefone.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="cpf" class="form-label">
+                    <i class="bi bi-card-text form-icon"></i>CPF
+                </label>
+                {{ form.cpf(class="form-control" + (" is-invalid" if form.cpf.errors else ""), placeholder="000.000.000-00") }}
+                {% if form.cpf.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.cpf.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Seção de Vínculo -->
+        <div class="alert alert-info border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.1) 100%); border-left: 4px solid #3b82f6 !important;">
+            <h6 class="mb-2">
+                <i class="bi bi-link-45deg"></i> Vínculo com Supervisor e Equipe
+            </h6>
+            <small class="text-muted">Associe este vendedor a um supervisor e/ou equipe para melhor organização</small>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <label for="supervisor_id" class="form-label text-uppercase small fw-semibold text-muted">
+                    <i class="bi bi-person-badge text-primary"></i> Supervisor
+                </label>
+                {{ form.supervisor_id(class="form-select form-select-lg" + (" is-invalid" if form.supervisor_id.errors else "")) }}
+                {% if form.supervisor_id.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.supervisor_id.errors[0] }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted d-flex align-items-center mt-2">
+                    <i class="bi bi-info-circle me-1"></i> Selecione o supervisor responsável
+                </small>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <label for="equipe_id" class="form-label text-uppercase small fw-semibold text-muted">
+                    <i class="bi bi-diagram-3-fill text-success"></i> Equipe
+                </label>
+                {{ form.equipe_id(class="form-select form-select-lg" + (" is-invalid" if form.equipe_id.errors else "")) }}
+                {% if form.equipe_id.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.equipe_id.errors[0] }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted d-flex align-items-center mt-2">
+                    <i class="bi bi-info-circle me-1"></i> Adicione o vendedor a uma equipe
+                </small>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex justify-content-end gap-2">
+            <a href="{{ url_for('lista_vendedores') }}" class="btn btn-cancel">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Salvar Vendedor
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="alert alert-info mt-4" role="alert">
+    <i class="bi bi-lightbulb"></i> <strong>Dica:</strong>
+    Após cadastrar o vendedor, você poderá criar metas mensais para acompanhar seu desempenho.
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Máscara para telefone
+    document.getElementById('telefone').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+            value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+        }
+        e.target.value = value;
+    });
+
+    // Máscara para CPF
+    document.getElementById('cpf').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        e.target.value = value;
+    });
+</script>
+{% endblock %}

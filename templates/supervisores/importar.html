@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Importar Supervisores - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title mb-0">
+            <i class="bi bi-upload"></i> Importar Supervisores via Excel
+        </h1>
+        <a href="{{ url_for('lista_supervisores') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Formulário de Upload -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-excel"></i> Upload de Planilha</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-paperclip"></i> Selecione o arquivo Excel (.xlsx ou .xls)
+                            </label>
+                            <input type="file"
+                                   name="arquivo"
+                                   class="form-control form-control-lg"
+                                   accept=".xlsx,.xls"
+                                   required>
+                            <div class="form-text">
+                                Apenas arquivos .xlsx ou .xls são aceitos
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Importante:</strong> Certifique-se de que sua planilha segue o template correto com as colunas obrigatórias.
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="bi bi-shield-lock"></i>
+                            <strong>Senha Padrão:</strong> Todos os supervisores importados receberão a senha <code>supervisor123</code>. Oriente-os a alterar a senha no primeiro acesso.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-upload"></i> Importar Supervisores
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instruções e Template -->
+        <div class="col-lg-6">
+            <!-- Download Template -->
+            <div class="card shadow-sm mb-4 border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-download"></i> Template Excel</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Baixe o template oficial para garantir que sua planilha está no formato correto:</p>
+                    <a href="{{ url_for('download_template_supervisores') }}"
+                       class="btn btn-success btn-lg w-100">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Template de Supervisores
+                    </a>
+                </div>
+            </div>
+
+            <!-- Colunas Obrigatórias -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Colunas Obrigatórias</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <strong>Nome</strong> - Nome completo do supervisor
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <strong>Email</strong> - Email único do supervisor
+                        </li>
+                        {% if current_user.is_super_admin %}
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-exclamation-circle text-warning me-2"></i>
+                            <strong>Empresa CNPJ</strong> - <span class="badge bg-warning">Obrigatório para Super Admin</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exemplo de Dados -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Exemplo de Dados</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Carlos Supervisor</td>
+                            <td>carlos@empresa.com</td>
+                        </tr>
+                        <tr>
+                            <td>Ana Supervisora</td>
+                            <td>ana@empresa.com</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-info mb-0 mt-3">
+                <i class="bi bi-info-circle"></i>
+                <strong>Nota:</strong> O modelo Usuario não possui campo de telefone. Apenas Nome e Email são necessários.
+            </div>
+        </div>
+    </div>
+
+    <!-- Dicas -->
+    <div class="alert alert-warning mt-4">
+        <h5 class="alert-heading"><i class="bi bi-lightbulb"></i> Dicas Importantes</h5>
+        <hr>
+        <ul class="mb-0">
+            <li>Email deve ser único no sistema</li>
+            <li>Se houver erros, nenhum supervisor será importado (transação atômica)</li>
+            <li>Todos os supervisores serão criados com status ATIVO</li>
+            <li>A senha padrão será <strong>supervisor123</strong> para todos</li>
+            <li>A empresa será automaticamente a do usuário logado (exceto super admin)</li>
+            <li>Super Admin deve informar a coluna "Empresa CNPJ" na planilha</li>
+            <li>Oriente os supervisores a alterarem a senha no primeiro acesso</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header {
+        font-weight: 600;
+    }
+
+    .form-control-lg {
+        font-size: 1.1rem;
+    }
+
+    .list-group-item i {
+        font-size: 1.2rem;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #d63384;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,27 @@
+[flake8]
+# Configuração profissional para o VendaCerta
+# Compatível com Black e padrões modernos
+
+# Limite de linha (120 é o novo padrão para telas wide)
+max-line-length = 120
+
+# Ignorar erros comuns que não afetam a qualidade real
+# E203: Whitespace before ':' (conflito com Black)
+# W503: Line break before binary operator (conflito com Black)
+ignore = E203, W503
+
+# Excluir pastas de ambiente e migrações
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    migrations,
+    instance,
+    static,
+    templates
+
+# Mostrar estatísticas
+statistics = True
+count = True
+show-source = True

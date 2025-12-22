@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Empresa - Super Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Modernizado -->
+    <div class="modern-header mb-4">
+        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">INSTITUCIONAL</p>
+        <h1 class="page-title-modern mb-2">
+            <i class="bi bi-building"></i> {{ empresa.nome }}
+        </h1>
+        <div class="d-flex align-items-center gap-2 mb-3">
+            {% if empresa.bloqueado %}
+            <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2">
+                <i class="bi bi-shield-lock"></i> Bloqueado
+            </span>
+            {% elif empresa.ativo %}
+            <span class="badge bg-success bg-opacity-10 text-success px-3 py-2">
+                <i class="bi bi-check-circle"></i> Ativo
+            </span>
+            {% else %}
+            <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2">
+                <i class="bi bi-pause-circle"></i> Inativo
+            </span>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+            <a href="{{ url_for('super_admin_editar_empresa', id=empresa.id) }}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Card principal da empresa -->
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px; border-left: 4px solid #3b82f6 !important;">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">CNPJ</label>
+                            <div class="h5">{{ empresa.cnpj[:2] }}.{{ empresa.cnpj[2:5] }}.{{ empresa.cnpj[5:8] }}/{{ empresa.cnpj[8:12] }}-{{ empresa.cnpj[12:] }}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Email</label>
+                            <div class="h6">{{ empresa.email }}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Telefone</label>
+                            <div class="h6">{{ empresa.telefone or 'Não informado' }}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Plano</label>
+                            <div>
+                                {% if empresa.plano == 'basico' %}
+                                <span class="badge bg-primary">Básico</span>
+                                {% elif empresa.plano == 'premium' %}
+                                <span class="badge bg-success">Premium</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Enterprise</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if empresa.endereco or empresa.cidade %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="text-muted small">Endereço</label>
+                            <div>
+                                {{ empresa.endereco or 'Não informado' }}
+                                {% if empresa.cidade %}
+                                <br>{{ empresa.cidade }}{% if empresa.estado %}/{{ empresa.estado }}{% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if empresa.bloqueado and empresa.motivo_bloqueio %}
+                    <hr>
+                    <div class="alert alert-danger mb-0">
+                        <strong><i class="bi bi-lock-fill"></i> Motivo do bloqueio:</strong><br>
+                        {{ empresa.motivo_bloqueio }}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        Criada em {{ empresa.data_criacao.strftime('%d/%m/%Y às %H:%M') }}
+                        {% if empresa.data_atualizacao != empresa.data_criacao %}
+                        • Atualizada em {{ empresa.data_atualizacao.strftime('%d/%m/%Y às %H:%M') }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Estatísticas -->
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Estatísticas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="text-muted small">Usuários</label>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: {{ (usuarios|length / empresa.max_usuarios * 100) if empresa.max_usuarios > 0 else 0 }}%">
+                                {{ usuarios|length }} / {{ empresa.max_usuarios }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Usuários Ativos</label>
+                        <div class="h4 mb-0">{{ usuarios|selectattr('ativo')|list|length }}</div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="text-muted small">Usuários Inativos</label>
+                        <div class="h4 mb-0">{{ usuarios|rejectattr('ativo')|list|length }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Ações</h6>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{{ url_for('super_admin_editar_empresa', id=empresa.id) }}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Editar Empresa
+                    </a>
+                    <form method="POST" action="{{ url_for('super_admin_bloquear_empresa', id=empresa.id) }}">
+                        {% if empresa.bloqueado %}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-unlock"></i> Desbloquear
+                        </button>
+                        {% else %}
+                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Tem certeza que deseja bloquear esta empresa?')">
+                            <i class="bi bi-lock"></i> Bloquear
+                        </button>
+                        {% endif %}
+                    </form>
+                    <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de usuários -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people"></i>
+                        Usuários da Empresa ({{ usuarios|length }})
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if usuarios %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Email</th>
+                                    <th>Cargo</th>
+                                    <th>Status</th>
+                                    <th>Cadastro</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usuario in usuarios %}
+                                <tr class="{% if not usuario.ativo %}table-secondary{% endif %}">
+                                    <td>
+                                        {{ usuario.nome }}
+                                        {% if usuario.is_super_admin %}
+                                        <span class="badge bg-danger">Super Admin</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ usuario.email }}</td>
+                                    <td>
+                                        {% if usuario.cargo == 'admin' %}
+                                        <span class="badge bg-danger">Administrador</span>
+                                        {% elif usuario.cargo == 'supervisor' %}
+                                        <span class="badge bg-warning text-dark">Supervisor</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Usuário</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if usuario.ativo %}
+                                        <span class="badge bg-success">Ativo</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inativo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ usuario.data_criacao.strftime('%d/%m/%Y') }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="text-muted mt-2">Nenhum usuário cadastrado nesta empresa</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

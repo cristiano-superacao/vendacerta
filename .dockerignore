@@ -1,0 +1,164 @@
+# ============================================================================
+# DOCKERIGNORE - SISTEMA VENDACERTA
+# ============================================================================
+# Arquivos e pastas ignorados durante build Docker/Nixpacks
+# Otimiza tamanho da imagem e evita vazamento de dados sensíveis
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 🔐 SEGURANÇA - NUNCA INCLUIR NO BUILD
+# ----------------------------------------------------------------------------
+# Arquivos com dados sensíveis
+.env
+.env.local
+.env.production
+.env.*.local
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# Configurações locais
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups de banco de dados
+*.sql
+*.dump
+backups/
+*.backup
+
+# ----------------------------------------------------------------------------
+# 📁 DESENVOLVIMENTO
+# ----------------------------------------------------------------------------
+# IDEs e editores
+.vscode/
+.idea/
+.vs/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# ----------------------------------------------------------------------------
+# 🐍 PYTHON
+# ----------------------------------------------------------------------------
+# Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+*.pyo
+*.pyd
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ----------------------------------------------------------------------------
+# 📚 DOCUMENTAÇÃO E TESTES
+# ----------------------------------------------------------------------------
+# Documentação (exceto README principal)
+docs/
+*.md
+!README.md
+!CHANGELOG.md
+
+# Testes
+tests/
+test_*.py
+*_test.py
+
+# Scripts auxiliares
+scripts/
+migrations_scripts/
+*.sh
+
+# ----------------------------------------------------------------------------
+# 🏗️ BUILD E DISTRIBUIÇÃO
+# ----------------------------------------------------------------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+wheels/
+*.whl
+
+# ----------------------------------------------------------------------------
+# 📝 LOGS E TEMPORÁRIOS
+# ----------------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+*.cache
+.cache/
+*.bak
+
+# ----------------------------------------------------------------------------
+# 🖼️ ASSETS DESNECESSÁRIOS
+# ----------------------------------------------------------------------------
+# Arquivos de origem (se tiver compilados)
+*.scss
+*.sass
+*.less
+*.coffee
+
+# Arquivos grandes desnecessários
+*.psd
+*.ai
+*.sketch
+
+# ----------------------------------------------------------------------------
+# 📦 DEPENDÊNCIAS LOCAIS
+# ----------------------------------------------------------------------------
+# Node modules (se houver frontend build)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# ----------------------------------------------------------------------------
+# 🚀 DEPLOYMENT
+# ----------------------------------------------------------------------------
+# Configurações locais de deploy
+.railway/
+.docker/
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Arquivos de configuração Railway local
+railway.json.local
+.railway.toml

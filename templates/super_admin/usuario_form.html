@@ -1,0 +1,526 @@
+{% extends "base.html" %}
+
+{% block title %}{% if usuario %}Editar Usuário{% else %}Novo Usuário{% endif %} - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Cabeçalho -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="page-title mb-0">
+                <i class="bi bi-person-{% if usuario %}gear{% else %}plus-fill{% endif %}"></i>
+                {% if usuario %}Editar Usuário{% else %}Novo Usuário{% endif %}
+            </h1>
+            <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+        </div>
+
+        <!-- Formulário -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-text"></i> Dados do Usuário
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        {{ form.nome.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else "")) }}
+                        </div>
+                        {% if form.nome.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.nome.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                        </div>
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.email.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Senha (apenas criação) -->
+                    {% if not usuario %}
+                    <div class="mb-3">
+                        {{ form.senha.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            {{ form.senha(class="form-control" + (" is-invalid" if form.senha.errors else ""), type="password") }}
+                        </div>
+                        {% if form.senha.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.senha.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Empresa -->
+                    <div class="mb-3">
+                        {{ form.empresa_id.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-building"></i></span>
+                            {{ form.empresa_id(class="form-select" + (" is-invalid" if form.empresa_id.errors else "")) }}
+                        </div>
+                        {% if form.empresa_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.empresa_id.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Cargo -->
+                    <div class="mb-3">
+                        {{ form.cargo.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-briefcase"></i></span>
+                            {{ form.cargo(class="form-select" + (" is-invalid" if form.cargo.errors else ""), id="cargo-select") }}
+                        </div>
+                        {% if form.cargo.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.cargo.errors[0] }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <strong>Admin:</strong> Acesso total à empresa |
+                            <strong>Gerente:</strong> Gerencia equipes |
+                            <strong>Supervisor:</strong> Supervisiona vendedores |
+                            <strong>Usuário:</strong> Acesso básico
+                        </div>
+                    </div>
+
+                    <!-- Gerente Responsável (apenas para supervisores) -->
+                    <div class="mb-3" id="gerente-container" style="display: none;">
+                        <label for="gerente_id" class="form-label">
+                            <i class="bi bi-diagram-3 me-1"></i>
+                            Gerente/Administrador Responsável
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                            <select name="gerente_id" id="gerente_id" class="form-select">
+                                <option value="">Selecione o responsável</option>
+                                {% if gerentes_disponiveis %}
+                                    {% for gerente in gerentes_disponiveis %}
+                                        <option value="{{ gerente.id }}"
+                                                {% if usuario and usuario.gerente_id == gerente.id %}selected{% endif %}>
+                                            {{ gerente.nome }} - {{ gerente.cargo|capitalize }}
+                                        </option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Supervisores devem estar vinculados a um Gerente ou Administrador
+                        </div>
+                    </div>
+
+                    <!-- Ativo -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.ativo(class="form-check-input", id="ativo") }}
+                            {{ form.ativo.label(class="form-check-label", for="ativo") }}
+                        </div>
+                        <div class="form-text">
+                            Usuários inativos não podem fazer login
+                        </div>
+                    </div>
+
+                    <!-- Bloqueado -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.bloqueado(class="form-check-input", id="bloqueado") }}
+                            {{ form.bloqueado.label(class="form-check-label", for="bloqueado") }}
+                        </div>
+                        <div class="form-text text-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            Usuários bloqueados não podem acessar o sistema
+                        </div>
+                    </div>
+
+                    <!-- Motivo do Bloqueio -->
+                    <div class="mb-3" id="motivo-bloqueio-container" style="display: none;">
+                        {{ form.motivo_bloqueio.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-chat-square-text"></i></span>
+                            {{ form.motivo_bloqueio(class="form-control", rows=3) }}
+                        </div>
+                        <div class="form-text">
+                            Informe o motivo do bloqueio (será exibido para o usuário)
+                        </div>
+                    </div>
+
+                    <!-- Permissões de Acesso -->
+                    {% if usuario %}
+                    <hr class="my-4">
+                    <h6 class="mb-3">
+                        <i class="bi bi-shield-lock me-2"></i>
+                        Permissões de Acesso
+                    </h6>
+                    <p class="text-muted small mb-3">
+                        Configure o que este usuário pode ver e fazer no sistema
+                    </p>
+
+                    <div class="row">
+                        <!-- Dashboard -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_ver_dashboard"
+                                            name="pode_ver_dashboard"
+                                            {{ 'checked' if usuario.pode_ver_dashboard else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_ver_dashboard">
+                                            <i class="bi bi-speedometer2 me-2 text-primary"></i>
+                                            <strong>Visualizar Dashboard</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite acessar o dashboard com suas métricas
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mensagens -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_enviar_mensagens"
+                                            name="pode_enviar_mensagens"
+                                            {{ 'checked' if usuario.pode_enviar_mensagens else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_enviar_mensagens">
+                                            <i class="bi bi-envelope me-2 text-info"></i>
+                                            <strong>Enviar Mensagens</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite enviar mensagens para equipe
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gerenciar Vendedores -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_gerenciar_vendedores"
+                                            name="pode_gerenciar_vendedores"
+                                            {{ 'checked' if usuario.pode_gerenciar_vendedores else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_gerenciar_vendedores">
+                                            <i class="bi bi-people me-2 text-success"></i>
+                                            <strong>Gerenciar Vendedores</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite criar, editar e excluir vendedores
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gerenciar Metas -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_gerenciar_metas"
+                                            name="pode_gerenciar_metas"
+                                            {{ 'checked' if usuario.pode_gerenciar_metas else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_gerenciar_metas">
+                                            <i class="bi bi-bullseye me-2 text-warning"></i>
+                                            <strong>Gerenciar Metas</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite criar, editar e excluir metas
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ver Todas as Metas -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_ver_todas_metas"
+                                            name="pode_ver_todas_metas"
+                                            {{ 'checked' if usuario.pode_ver_todas_metas else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_ver_todas_metas">
+                                            <i class="bi bi-eye me-2 text-info"></i>
+                                            <strong>Ver Todas as Metas</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite visualizar metas de todos vendedores
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gerenciar Equipes -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_gerenciar_equipes"
+                                            name="pode_gerenciar_equipes"
+                                            {{ 'checked' if usuario.pode_gerenciar_equipes else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_gerenciar_equipes">
+                                            <i class="bi bi-people-fill me-2 text-primary"></i>
+                                            <strong>Gerenciar Equipes</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite criar e organizar equipes
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gerenciar Comissões -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_gerenciar_comissoes"
+                                            name="pode_gerenciar_comissoes"
+                                            {{ 'checked' if usuario.pode_gerenciar_comissoes else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_gerenciar_comissoes">
+                                            <i class="bi bi-currency-dollar me-2 text-success"></i>
+                                            <strong>Gerenciar Comissões</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite configurar comissões
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aprovar Comissões -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_aprovar_comissoes"
+                                            name="pode_aprovar_comissoes"
+                                            {{ 'checked' if usuario.pode_aprovar_comissoes else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_aprovar_comissoes">
+                                            <i class="bi bi-check-circle me-2 text-success"></i>
+                                            <strong>Aprovar Comissões</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite aprovar pagamento de comissões
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Exportar Dados -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="pode_exportar_dados"
+                                            name="pode_exportar_dados"
+                                            {{ 'checked' if usuario.pode_exportar_dados else '' }}
+                                        >
+                                        <label class="form-check-label" for="pode_exportar_dados">
+                                            <i class="bi bi-download me-2 text-primary"></i>
+                                            <strong>Exportar Dados</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Permite exportar relatórios e dados
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Botões -->
+                    <hr class="my-4">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Informações Adicionais (somente edição) -->
+        {% if usuario %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações Adicionais</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <strong><i class="bi bi-calendar-plus"></i> Criado em:</strong>
+                            {{ usuario.created_at.strftime('%d/%m/%Y às %H:%M') if usuario.created_at else 'N/A' }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <strong><i class="bi bi-calendar-check"></i> Última atualização:</strong>
+                            {{ usuario.updated_at.strftime('%d/%m/%Y às %H:%M') if usuario.updated_at else 'N/A' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resetar Senha -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-key"></i> Resetar Senha</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    Para resetar a senha do usuário, você pode:
+                </p>
+                <ul class="text-muted">
+                    <li>Usar a funcionalidade de "Recuperar Senha" na tela de login</li>
+                    <li>Solicitar ao usuário que altere a senha após o login</li>
+                </ul>
+                <button type="button" class="btn btn-warning" onclick="alert('Funcionalidade em desenvolvimento')">
+                    <i class="bi bi-key"></i> Enviar Link de Reset
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Script para mostrar/ocultar o campo de gerente baseado no cargo -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cargoSelect = document.getElementById('cargo-select');
+        const gerenteContainer = document.getElementById('gerente-container');
+        const bloqueadoSwitch = document.getElementById('bloqueado');
+        const motivoBloqueioContainer = document.getElementById('motivo-bloqueio-container');
+
+        // Função para atualizar visibilidade do campo gerente
+        function atualizarCampoGerente() {
+            if (cargoSelect && gerenteContainer) {
+                if (cargoSelect.value === 'supervisor') {
+                    gerenteContainer.style.display = 'block';
+                } else {
+                    gerenteContainer.style.display = 'none';
+                }
+            }
+        }
+
+        // Função para atualizar visibilidade do motivo de bloqueio
+        function atualizarMotivoBloqueio() {
+            if (bloqueadoSwitch && motivoBloqueioContainer) {
+                if (bloqueadoSwitch.checked) {
+                    motivoBloqueioContainer.style.display = 'block';
+                } else {
+                    motivoBloqueioContainer.style.display = 'none';
+                }
+            }
+        }
+
+        // Inicializar estado dos campos
+        atualizarCampoGerente();
+        atualizarMotivoBloqueio();
+
+        // Adicionar listeners
+        if (cargoSelect) {
+            cargoSelect.addEventListener('change', atualizarCampoGerente);
+        }
+
+        if (bloqueadoSwitch) {
+            bloqueadoSwitch.addEventListener('change', atualizarMotivoBloqueio);
+        }
+    });
+</script>
+{% endblock %}
+    </div>
+</div>
+
+<script>
+// Mostrar/ocultar motivo do bloqueio
+document.addEventListener('DOMContentLoaded', function() {
+    const bloqueadoCheckbox = document.getElementById('bloqueado');
+    const motivoContainer = document.getElementById('motivo-bloqueio-container');
+
+    // Estado inicial
+    if (bloqueadoCheckbox.checked) {
+        motivoContainer.style.display = 'block';
+    }
+
+    // Ao mudar
+    bloqueadoCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            motivoContainer.style.display = 'block';
+        } else {
+            motivoContainer.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

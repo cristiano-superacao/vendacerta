@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Super Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Modernizado -->
+    <div class="modern-header mb-4">
+        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">INSTITUCIONAL</p>
+        <h1 class="page-title-modern mb-2">
+            <i class="bi bi-building"></i> {{ titulo }}
+        </h1>
+        <p class="text-muted mb-3">Super Administrador</p>
+        <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0" style="border-radius: 12px; border-left: 4px solid #3b82f6 !important;">
+                <div class="card-body p-4">
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Nome da Empresa *</label>
+                                {{ form.nome(class="form-control form-control-lg" + (" is-invalid" if form.nome.errors else "")) }}
+                                {% if form.nome.errors %}
+                                    <div class="invalid-feedback">{{ form.nome.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">CNPJ *</label>
+                                {{ form.cnpj(class="form-control form-control-lg" + (" is-invalid" if form.cnpj.errors else ""), placeholder="00.000.000/0000-00", maxlength="18") }}
+                                {% if form.cnpj.errors %}
+                                    <div class="invalid-feedback">{{ form.cnpj.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Email *</label>
+                                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), type="email") }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback">{{ form.email.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Telefone</label>
+                                {{ form.telefone(class="form-control", placeholder="(00) 00000-0000") }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Endereço</label>
+                                {{ form.endereco(class="form-control") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Cidade</label>
+                                {{ form.cidade(class="form-control") }}
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">UF</label>
+                                {{ form.estado(class="form-control text-uppercase", maxlength="2", placeholder="BA") }}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Plano *</label>
+                                {{ form.plano(class="form-select") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Máx. Usuários *</label>
+                                {{ form.max_usuarios(class="form-control" + (" is-invalid" if form.max_usuarios.errors else ""), type="number", min="1") }}
+                                {% if form.max_usuarios.errors %}
+                                    <div class="invalid-feedback">{{ form.max_usuarios.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Máx. Vendedores *</label>
+                                {{ form.max_vendedores(class="form-control" + (" is-invalid" if form.max_vendedores.errors else ""), type="number", min="1") }}
+                                {% if form.max_vendedores.errors %}
+                                    <div class="invalid-feedback">{{ form.max_vendedores.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if empresa %}
+                        <div class="alert alert-info">
+                            <strong>Status atual:</strong>
+                            {% if empresa.bloqueado %}
+                                <span class="badge bg-danger ms-2">Bloqueado</span>
+                            {% elif empresa.ativo %}
+                                <span class="badge bg-success ms-2">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-2">Inativo</span>
+                            {% endif %}
+                            <br>
+                            <small>Criada em: {{ empresa.data_criacao.strftime('%d/%m/%Y às %H:%M') }}</small>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-check-circle"></i> Salvar Empresa
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Card de Ajuda -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body bg-light">
+                    <h6 class="mb-2"><i class="bi bi-info-circle"></i> Informações sobre os Planos</h6>
+                    <ul class="small mb-0">
+                        <li><strong>Básico:</strong> Até 10 usuários e 50 vendedores</li>
+                        <li><strong>Premium:</strong> Até 50 usuários e 200 vendedores</li>
+                        <li><strong>Enterprise:</strong> Ilimitado (personalizável)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Máscara de CNPJ
+document.querySelector('[name="cnpj"]').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 14) {
+        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+        value = value.replace(/(\d{4})(\d)/, '$1-$2');
+        e.target.value = value;
+    }
+});
+
+// Máscara de telefone
+document.querySelector('[name="telefone"]').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+        if (value.length > 10) {
+            value = value.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        } else if (value.length > 6) {
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+        } else {
+            value = value.replace(/^(\d*)/, '($1');
+        }
+        e.target.value = value;
+    }
+});
+
+// Uppercase no estado
+document.querySelector('[name="estado"]').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase();
+});
+</script>
+
+<style>
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Venda Certa{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0">
+                        <i class="bi bi-box-seam text-primary me-2"></i>{{ titulo }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <!-- Identificação do Produto -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-card-text me-2"></i>Identificação
+                                </h5>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    {{ form.codigo.label(class="form-label") }}
+                                    <span class="text-danger">*</span>
+                                    {{ form.codigo(class="form-control") }}
+                                    {% if form.codigo.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.codigo.errors[0] }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="col-md-9">
+                                <div class="mb-3">
+                                    {{ form.nome.label(class="form-label") }}
+                                    <span class="text-danger">*</span>
+                                    {{ form.nome(class="form-control") }}
+                                    {% if form.nome.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.nome.errors[0] }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.codigo_barra.label(class="form-label") }}
+                                    {{ form.codigo_barra(class="form-control", placeholder="EAN-13, UPC, etc") }}
+                                    <small class="text-muted">Código de barras para scanner</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.referencia.label(class="form-label") }}
+                                    {{ form.referencia(class="form-control", placeholder="Ref. do fabricante") }}
+                                    <small class="text-muted">Referência original do fabricante</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.ncm.label(class="form-label") }}
+                                    {{ form.ncm(class="form-control", placeholder="0000.00.00") }}
+                                    <small class="text-muted">NCM para classificação fiscal</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    {{ form.descricao.label(class="form-label") }}
+                                    {{ form.descricao(class="form-control", rows=3) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Categorização -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-tags me-2"></i>Categorização
+                                </h5>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.categoria.label(class="form-label") }}
+                                    {{ form.categoria(class="form-select") }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.unidade.label(class="form-label") }}
+                                    {{ form.unidade(class="form-select") }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.fornecedor.label(class="form-label") }}
+                                    {{ form.fornecedor(class="form-control", placeholder="Nome do fornecedor") }}
+                                    <small class="text-muted">Fornecedor principal</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estoque -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-building me-2"></i>Controle de Estoque
+                                </h5>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.estoque_minimo.label(class="form-label") }}
+                                    {{ form.estoque_minimo(class="form-control", type="number", min="0", step="1") }}
+                                    <small class="text-muted">Quantidade mínima para alerta</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    {{ form.localizacao.label(class="form-label") }}
+                                    {{ form.localizacao(class="form-control", placeholder="Ex: Prateleira A, Gaveta 3") }}
+                                    <small class="text-muted">Localização física no estoque</small>
+                                </div>
+                            </div>
+
+                            {% if produto %}
+                            <div class="col-md-12">
+                                <div class="alert alert-info border-0 shadow-sm">
+                                    <i class="bi bi-info-circle-fill me-2"></i>
+                                    <strong>Estoque Atual:</strong> {{ produto.estoque_atual }} {{ produto.unidade }}
+                                    <br>
+                                    <small>Para alterar o estoque, utilize a opção "Nova Movimentação"</small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Valores -->
+                        {% if current_user.pode_ver_custos or current_user.cargo == 'admin' %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-currency-dollar me-2"></i>Valores
+                                </h5>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.custo_medio.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        {{ form.custo_medio(class="form-control", type="number", min="0", step="0.01") }}
+                                    </div>
+                                    <small class="text-muted">Custo médio de aquisição</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.preco_venda.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        {{ form.preco_venda(class="form-control", type="number", min="0", step="0.01") }}
+                                    </div>
+                                    <small class="text-muted">Preço de venda ao cliente</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.preco_servico.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        {{ form.preco_servico(class="form-control", type="number", min="0", step="0.01") }}
+                                    </div>
+                                    <small class="text-muted">Valor cobrado pelo serviço</small>
+                                </div>
+                            </div>
+
+                            {% if produto and produto.custo_medio > 0 and produto.preco_venda > 0 %}
+                            <div class="col-md-12">
+                                <div class="alert alert-success border-0 shadow-sm">
+                                    <i class="bi bi-percent me-2"></i>
+                                    <strong>Margem de Lucro:</strong>
+                                    {% set margem = ((produto.preco_venda - produto.custo_medio) / produto.custo_medio * 100) %}
+                                    {{ '{:.2f}'.format(margem) }}%
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Status -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-toggle-on me-2"></i>Status
+                                </h5>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    {{ form.ativo(class="form-check-input", checked="") }}
+                                    {{ form.ativo.label(class="form-check-label") }}
+                                    <small class="text-muted d-block">
+                                        Produtos inativos não aparecem nas listas de seleção
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('lista_produtos') }}" class="btn btn-secondary">
+                                        <i class="bi bi-x-lg me-2"></i>Cancelar
+                                    </a>
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calcular margem de lucro em tempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const custoInput = document.getElementById('custo_medio');
+    const precoInput = document.getElementById('preco_venda');
+
+    if (custoInput && precoInput) {
+        function calcularMargem() {
+            const custo = parseFloat(custoInput.value) || 0;
+            const preco = parseFloat(precoInput.value) || 0;
+
+            if (custo > 0 && preco > 0) {
+                const margem = ((preco - custo) / custo * 100).toFixed(2);
+                console.log(`Margem: ${margem}%`);
+            }
+        }
+
+        custoInput.addEventListener('input', calcularMargem);
+        precoInput.addEventListener('input', calcularMargem);
+    }
+});
+</script>
+
+{% endblock %}

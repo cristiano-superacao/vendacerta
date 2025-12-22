@@ -1,0 +1,85 @@
+# Railway Ignore - Arquivos excluídos do build/deploy
+# Sistema VendaCerta - Otimizado para produção
+
+# Documentação
+docs/
+*.md
+!requirements.txt
+CHANGELOG.md
+COMECE_AQUI.md
+README.md
+RESUMO_OTIMIZACAO.md
+
+# Testes
+tests/
+*_test.py
+test_*.py
+
+# Desenvolvimento
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Database local
+instance/
+*.db
+*.db.backup
+instance/backups/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Scripts de análise (não necessários em produção)
+scripts/analyze*.py
+scripts/check*.py
+scripts/verificar*.py
+scripts/limpar*.py
+scripts/analisar*.py
+scripts/fix_pep8.py
+scripts/otimizacoes_cache.py
+scripts/analise_sistema.py
+scripts/analise_rapida.py
+
+# Logs
+*.log
+logs/
+
+# Temporários
+*.bak
+*~
+*.tmp
+temp/
+tmp/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Configurações locais
+.env.local
+.env.development
+limpar_documentacao.bat
+limpar_documentacao.ps1
+
+package.json
+package-lock.json
+node_modules/

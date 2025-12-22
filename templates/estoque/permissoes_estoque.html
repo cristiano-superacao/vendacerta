@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Hierarquia de Permissões - Estoque{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-shield-lock text-primary me-2"></i>
+                        Hierarquia de Permissões de Estoque
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Sistema de controle de acesso aos motivos de movimentação
+                    </p>
+                </div>
+                <a href="{{ url_for('lista_estoque') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Voltar ao Estoque
+                </a>
+            </div>
+
+            <!-- Alert Informativo -->
+            <div class="alert alert-info border-0 shadow-sm mb-4">
+                <div class="d-flex">
+                    <i class="bi bi-info-circle fs-4 me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-2">Como Funciona</h6>
+                        <p class="mb-0">
+                            Cada função no sistema tem acesso apenas aos motivos de movimentação relevantes para suas atividades.
+                            Isso garante segurança, rastreabilidade e evita erros operacionais.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissões por Cargo -->
+            <div class="row g-4">
+                <!-- ADMIN / GERENTE -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-badge me-2"></i>
+                                Admin / Gerente
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-arrow-down-circle me-2"></i>Entrada
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Compra</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Ajuste de Inventário</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Manutenção/OS</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Consumo Interno</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Outro</li>
+                            </ul>
+
+                            <h6 class="text-danger mb-3">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Saída
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Venda</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Ajuste de Inventário</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Manutenção/OS</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Consumo Interno</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Perda/Avaria</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Outro</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUPERVISOR -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-check me-2"></i>
+                                Supervisor
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-arrow-down-circle me-2"></i>Entrada
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Compra</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Ajuste de Inventário</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Outro</li>
+                            </ul>
+
+                            <h6 class="text-danger mb-3">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Saída
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Venda</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Ajuste de Inventário</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Manutenção/OS</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Consumo Interno</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Outro</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VENDEDOR -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <h5 class="mb-0">
+                                <i class="bi bi-cart me-2"></i>
+                                Vendedor
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-arrow-down-circle me-2"></i>Entrada
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                            </ul>
+
+                            <h6 class="text-danger mb-3">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Saída
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Venda</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TÉCNICO -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <h5 class="mb-0">
+                                <i class="bi bi-tools me-2"></i>
+                                Técnico
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-arrow-down-circle me-2"></i>Entrada
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                            </ul>
+
+                            <h6 class="text-danger mb-3">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Saída
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Manutenção/OS</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Consumo Interno</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FINANCEIRO -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                            <h5 class="mb-0">
+                                <i class="bi bi-cash-coin me-2"></i>
+                                Financeiro
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-arrow-down-circle me-2"></i>Entrada
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Compra</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Ajuste de Inventário</li>
+                            </ul>
+
+                            <h6 class="text-danger mb-3">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Saída
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Venda</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Devolução</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Ajuste de Inventário</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Perda/Avaria</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RH -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                            <h5 class="mb-0 text-dark">
+                                <i class="bi bi-people me-2"></i>
+                                RH (Recursos Humanos)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-arrow-down-circle me-2"></i>Entrada
+                            </h6>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Compra</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Outro</li>
+                            </ul>
+
+                            <h6 class="text-danger mb-3">
+                                <i class="bi bi-arrow-up-circle me-2"></i>Saída
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Consumo Interno</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Outro</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legenda -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-key me-2 text-primary"></i>
+                        Entendendo os Motivos
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <strong>Compra:</strong> Aquisição de produtos de fornecedores
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Venda:</strong> Saída de produtos para clientes
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Devolução:</strong> Retorno de produtos (entrada ou saída)
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Ajuste de Inventário:</strong> Correções no estoque
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Manutenção/OS:</strong> Uso em ordens de serviço
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Consumo Interno:</strong> Uso interno da empresa
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Perda/Avaria:</strong> Baixa por danos ou vencimento
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Outro:</strong> Motivos não categorizados
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

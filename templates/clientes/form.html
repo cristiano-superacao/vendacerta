@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Sistema de Metas{% endblock %}
+
+{% block content %}
+<style>
+    /* Estilos para tipo de cadastro */
+    .btn-group .btn-check:checked + .btn-outline-primary {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+
+    .btn-group .btn-outline-primary {
+        transition: all 0.3s ease;
+    }
+
+    .btn-group .btn-outline-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    /* Animação suave para mostrar/ocultar campos */
+    #campoCpf, #campoCnpj, #campoRazaoSocial {
+        transition: opacity 0.3s ease;
+    }
+
+    /* Cards com sombra suave */
+    .card {
+        transition: box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* Destaque nos campos obrigatórios */
+    .text-danger {
+        font-weight: bold;
+    }
+
+    /* Responsivo para mobile */
+    @media (max-width: 768px) {
+        .btn-group {
+            flex-direction: column;
+        }
+
+        .btn-group .btn {
+            border-radius: 0.375rem !important;
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('lista_clientes') }}" class="text-decoration-none">Clientes</a></li>
+            <li class="breadcrumb-item active">{{ titulo }}</li>
+        </ol>
+    </nav>
+
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-person-plus-fill text-primary me-2"></i>{{ titulo }}</h2>
+            <p class="text-muted mb-0">Preencha os dados do cliente</p>
+        </div>
+        <a href="{{ url_for('lista_clientes') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+
+    <!-- Formulário -->
+    <form method="post" novalidate id="clienteForm">
+        {{ form.hidden_tag() }}
+
+        <!-- Card Principal -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-gradient-primary text-white py-3">
+                <h5 class="mb-0"><i class="bi bi-person-vcard me-2"></i>Dados do Cliente</h5>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- Seção 1: Vendedor e Supervisor -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-person-badge text-primary me-2"></i>Vendedor
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.vendedor_id(class="form-select" + (" is-invalid" if form.vendedor_id.errors else ""), id="vendedor_id") }}
+                        {% if form.vendedor_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.vendedor_id.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-person-check text-info me-2"></i>Supervisor
+                        </label>
+                        {{ form.supervisor_nome(class="form-control bg-light", placeholder="Será preenchido automaticamente") }}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Tipo de Cadastro -->
+                <div class="mb-3">
+                    <h6 class="text-primary mb-3"><i class="bi bi-card-heading me-2"></i>Tipo de Cadastro</h6>
+                    <div class="btn-group w-100" role="group" aria-label="Tipo de cadastro">
+                        <input type="radio" class="btn-check" name="tipoCadastro" id="tipoPessoaFisica" value="pf" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="tipoPessoaFisica">
+                            <i class="bi bi-person-fill me-2"></i>Pessoa Física
+                        </label>
+
+                        <input type="radio" class="btn-check" name="tipoCadastro" id="tipoPessoaJuridica" value="pj" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="tipoPessoaJuridica">
+                            <i class="bi bi-building-fill me-2"></i>Pessoa Jurídica
+                        </label>
+                    </div>
+                </div>
+
+                <h6 class="text-primary mb-3"><i class="bi bi-card-heading me-2"></i>Identificação</h6>
+
+                <!-- Seção 2: Documentos -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3" id="campoCpf">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-credit-card text-primary me-2"></i>CPF
+                            <span class="text-danger" id="cpfObrigatorio">*</span>
+                        </label>
+                        {{ form.cpf(class="form-control" + (" is-invalid" if form.cpf.errors else ""), placeholder="000.000.000-00", id="cpf") }}
+                        {% if form.cpf.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.cpf.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3" id="campoCnpj">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-building text-primary me-2"></i>CNPJ
+                            <span class="text-danger" id="cnpjObrigatorio">*</span>
+                        </label>
+                        {{ form.cnpj(class="form-control" + (" is-invalid" if form.cnpj.errors else ""), placeholder="00.000.000/0000-00", id="cnpj") }}
+                        {% if form.cnpj.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.cnpj.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-tag text-warning me-2"></i>Sigla
+                        </label>
+                        {{ form.sigla(class="form-control", placeholder="ABC") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-card-text text-info me-2"></i>Inscr. Estadual
+                        </label>
+                        {{ form.inscricao_estadual(class="form-control", placeholder="000.000.000", id="inscricao_estadual") }}
+                    </div>
+                </div>
+
+                <!-- Seção 3: Nome e Razão Social -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6" id="campoRazaoSocial">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-building-fill text-primary me-2"></i>Razão Social
+                            <span class="text-danger" id="razaoSocialObrigatorio" style="display:none;">*</span>
+                        </label>
+                        {{ form.razao_social(class="form-control", placeholder="Nome empresarial completo", id="razao_social") }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold" id="labelNome">
+                            <i class="bi bi-person-fill text-primary me-2"></i><span id="textoLabelNome">Nome Completo / Nome Fantasia</span>
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Nome do cliente", id="nome") }}
+                        {% if form.nome.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.nome.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-primary mb-3"><i class="bi bi-geo-alt-fill me-2"></i>Endereço</h6>
+
+                <!-- Seção 4: Endereço -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-signpost text-success me-2"></i>Logradouro
+                        </label>
+                        {{ form.logradouro(class="form-control", placeholder="Rua, Avenida, número, complemento") }}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-geo-alt text-success me-2"></i>Município
+                        </label>
+                        {{ form.municipio(class="form-control", placeholder="Nome da cidade", id="municipio") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-map text-success me-2"></i>Bairro
+                        </label>
+                        {{ form.bairro(class="form-control", placeholder="Nome do bairro") }}
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-flag text-primary me-2"></i>Estado (UF)
+                        </label>
+                        {{ form.estado(class="form-select", id="estado") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-mailbox text-primary me-2"></i>CEP
+                        </label>
+                        {{ form.cep(class="form-control", placeholder="00000-000", id="cep") }}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-sign-turn-right text-info me-2"></i>Ponto de Referência
+                        </label>
+                        {{ form.ponto_referencia(class="form-control", placeholder="Próximo ao...") }}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-primary mb-3"><i class="bi bi-telephone-fill me-2"></i>Contato</h6>
+
+                <!-- Seção 5: Contatos -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-telephone text-primary me-2"></i>Fone (1)
+                        </label>
+                        {{ form.telefone(class="form-control", placeholder="(00) 0000-0000", id="telefone") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-telephone text-primary me-2"></i>Fone (2)
+                        </label>
+                        {{ form.telefone2(class="form-control", placeholder="(00) 0000-0000", id="telefone2") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-phone text-success me-2"></i>Cel (1)
+                        </label>
+                        {{ form.celular(class="form-control", placeholder="(00) 00000-0000", id="celular") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-phone text-success me-2"></i>Cel (2)
+                        </label>
+                        {{ form.celular2(class="form-control", placeholder="(00) 00000-0000", id="celular2") }}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-envelope text-primary me-2"></i>Email
+                        </label>
+                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="email@exemplo.com") }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.email.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-primary mb-3"><i class="bi bi-crosshair me-2"></i>Coordenadas GPS</h6>
+
+                <!-- Seção 6: Coordenadas -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-arrows-move text-danger me-2"></i>Longitude
+                        </label>
+                        {{ form.coordenada_x(class="form-control", placeholder="-38.5014") }}
+                        <small class="text-muted">Coordenada X (Longitude)</small>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-arrows-move text-danger me-2"></i>Latitude
+                        </label>
+                        {{ form.coordenada_y(class="form-control", placeholder="-12.9714") }}
+                        <small class="text-muted">Coordenada Y (Latitude)</small>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-primary mb-3"><i class="bi bi-gear-fill me-2"></i>Informações Complementares</h6>
+
+                <!-- Seção 7: Informações Adicionais -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-upc-scan text-secondary me-2"></i>Código BP
+                        </label>
+                        {{ form.codigo_bp(class="form-control", placeholder="Código ERP") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-upc-scan text-secondary me-2"></i>Código-BW
+                        </label>
+                        {{ form.codigo_bw(class="form-control", placeholder="Código-BW") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-calendar-week text-primary me-2"></i>Dia da Visita
+                        </label>
+                        {{ form.dia_visita(class="form-select") }}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-toggle-on text-success me-2"></i>Status
+                        </label>
+                        <div class="form-check form-switch mt-2">
+                            {{ form.ativo(class="form-check-input", role="switch", id="ativo") }}
+                            <label class="form-check-label" for="ativo">Cliente Ativo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-credit-card-2-front text-info me-2"></i>Formas de Pagamento
+                        </label>
+                        {{ form.formas_pagamento(class="form-select", size="4", multiple=true) }}
+                        <small class="text-muted">Segure Ctrl para selecionar múltiplas opções</small>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-chat-left-text text-secondary me-2"></i>Observações
+                        </label>
+                        {{ form.observacoes(class="form-control", rows="4", placeholder="Informações adicionais sobre o cliente") }}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Rodapé do Card - Botões -->
+            <div class="card-footer bg-light py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{{ url_for('lista_clientes') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle me-2"></i>Salvar Cliente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+/* Animações e estilos responsivos */
+.card {
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+.form-label {
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-label i {
+    font-size: 1.1rem;
+}
+
+hr {
+    opacity: 0.1;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .col-md-3, .col-md-4, .col-md-6 {
+        margin-bottom: 1rem;
+    }
+
+    h6 {
+        font-size: 1rem;
+    }
+}
+
+/* Hover effects */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Máscara CPF
+    const cpfInput = document.getElementById('cpf');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = value;
+            }
+        });
+    }
+
+    // Máscara CNPJ
+    const cnpjInput = document.getElementById('cnpj');
+    if (cnpjInput) {
+        cnpjInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 14) {
+                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                e.target.value = value;
+            }
+        });
+    }
+
+    // Máscara CEP
+    const cepInput = document.getElementById('cep');
+    if (cepInput) {
+        cepInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+            e.target.value = value;
+        });
+    }
+
+    // Máscara Telefone
+    function mascaraTelefone(input) {
+        if (input) {
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 10) {
+                    value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                    value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                } else {
+                    value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                    value = value.replace(/(\d{5})(\d)/, '$1-$2');
+                }
+                e.target.value = value;
+            });
+        }
+    }
+
+    mascaraTelefone(document.getElementById('telefone'));
+    mascaraTelefone(document.getElementById('telefone2'));
+    mascaraTelefone(document.getElementById('celular'));
+    mascaraTelefone(document.getElementById('celular2'));
+
+    // Buscar supervisor quando vendedor é selecionado
+    const vendedorSelect = document.getElementById('vendedor_id');
+    if (vendedorSelect) {
+        vendedorSelect.addEventListener('change', function() {
+            const vendedorId = this.value;
+            if (vendedorId) {
+                fetch(`/api/vendedor/${vendedorId}/supervisor`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const supervisorInput = document.querySelector('input[name="supervisor_nome"]');
+                        if (supervisorInput && data.supervisor) {
+                            supervisorInput.value = data.supervisor;
+                        }
+                    })
+                    .catch(error => console.error('Erro ao buscar supervisor:', error));
+            }
+        });
+    }
+
+    // Sincronizar município com cidade (campo legado)
+    const municipioInput = document.getElementById('municipio');
+    const cidadeInput = document.querySelector('input[name="cidade"]');
+    if (municipioInput && cidadeInput) {
+        municipioInput.addEventListener('input', function() {
+            cidadeInput.value = this.value;
+        });
+        // Sincronizar valor inicial
+        if (municipioInput.value && !cidadeInput.value) {
+            cidadeInput.value = municipioInput.value;
+        }
+    }
+
+    // ========== VALIDAÇÃO CPF/CNPJ - PESSOA FÍSICA E JURÍDICA ==========
+    const tipoPF = document.getElementById('tipoPessoaFisica');
+    const tipoPJ = document.getElementById('tipoPessoaJuridica');
+    const cnpjInput = document.getElementById('cnpj');
+    const campoCpf = document.getElementById('campoCpf');
+    const campoCnpj = document.getElementById('campoCnpj');
+    const campoRazaoSocial = document.getElementById('campoRazaoSocial');
+    const inscricaoEstadualInput = document.getElementById('inscricao_estadual');
+    const razaoSocialInput = document.getElementById('razao_social');
+    const nomeInput = document.getElementById('nome');
+    const textoLabelNome = document.getElementById('textoLabelNome');
+    const razaoSocialObrigatorio = document.getElementById('razaoSocialObrigatorio');
+
+    // Função para alternar entre PF e PJ
+    function alternarTipoCadastro(tipo) {
+        if (tipo === 'pf') {
+            // Pessoa Física
+            campoCpf.style.display = 'block';
+            campoCnpj.style.display = 'none';
+            campoRazaoSocial.style.display = 'none';
+
+            // Limpar campos de PJ
+            cnpjInput.value = '';
+            razaoSocialInput.value = '';
+            inscricaoEstadualInput.value = '';
+            razaoSocialObrigatorio.style.display = 'none';
+
+            // Atualizar labels
+            textoLabelNome.textContent = 'Nome Completo';
+            nomeInput.placeholder = 'Nome completo da pessoa';
+            cpfInput.setAttribute('required', 'required');
+
+        } else if (tipo === 'pj') {
+            // Pessoa Jurídica
+            campoCpf.style.display = 'none';
+            campoCnpj.style.display = 'block';
+            campoRazaoSocial.style.display = 'block';
+
+            // Limpar campo de PF
+            cpfInput.value = '';
+
+            // Atualizar labels
+            textoLabelNome.textContent = 'Nome Fantasia';
+            nomeInput.placeholder = 'Nome fantasia da empresa';
+            razaoSocialObrigatorio.style.display = 'inline';
+            cnpjInput.setAttribute('required', 'required');
+            razaoSocialInput.setAttribute('required', 'required');
+        }
+    }
+
+    // Detectar tipo inicial baseado nos campos preenchidos
+    function detectarTipoInicial() {
+        if (cnpjInput.value) {
+            tipoPJ.checked = true;
+            alternarTipoCadastro('pj');
+        } else if (cpfInput.value) {
+            tipoPF.checked = true;
+            alternarTipoCadastro('pf');
+        } else {
+            // Padrão: Pessoa Física
+            tipoPF.checked = true;
+            alternarTipoCadastro('pf');
+        }
+    }
+
+    // Event listeners para os botões
+    if (tipoPF) {
+        tipoPF.addEventListener('change', function() {
+            if (this.checked) {
+                alternarTipoCadastro('pf');
+            }
+        });
+    }
+
+    if (tipoPJ) {
+        tipoPJ.addEventListener('change', function() {
+            if (this.checked) {
+                alternarTipoCadastro('pj');
+            }
+        });
+    }
+
+    // Auto-detectar ao digitar nos campos
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function() {
+            if (this.value && !tipoPF.checked) {
+                tipoPF.checked = true;
+                alternarTipoCadastro('pf');
+            }
+        });
+    }
+
+    if (cnpjInput) {
+        cnpjInput.addEventListener('input', function() {
+            if (this.value && !tipoPJ.checked) {
+                tipoPJ.checked = true;
+                alternarTipoCadastro('pj');
+            }
+        });
+    }
+
+    // Validação no submit do formulário
+    const clienteForm = document.getElementById('clienteForm');
+    if (clienteForm) {
+        clienteForm.addEventListener('submit', function(e) {
+            const cpfValue = cpfInput.value.trim();
+            const cnpjValue = cnpjInput.value.trim();
+
+            // Validar que pelo menos um documento foi preenchido
+            if (!cpfValue && !cnpjValue) {
+                e.preventDefault();
+                alert('⚠️ Preencha CPF (Pessoa Física) ou CNPJ (Pessoa Jurídica)!');
+                return false;
+            }
+
+            // Se é PJ, validar razão social
+            if (tipoPJ.checked && !razaoSocialInput.value.trim()) {
+                e.preventDefault();
+                alert('⚠️ Razão Social é obrigatória para Pessoa Jurídica!');
+                razaoSocialInput.focus();
+                return false;
+            }
+        });
+    }
+
+    // Inicializar tipo de cadastro
+    detectarTipoInicial();
+});
+</script>
+{% endblock %}

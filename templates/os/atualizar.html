@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Atualizar OS {{ os.numero_os }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('lista_ordens_servico') }}">Ordens de Serviço</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}">{{ os.numero_os }}</a></li>
+                    <li class="breadcrumb-item active">Atualizar</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-pencil-square"></i> Atualizar Andamento da OS</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Informações da OS -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">OS {{ os.numero_os }} - {{ os.titulo }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Cliente:</strong> {{ os.cliente.nome if os.cliente else '-' }}</p>
+                            <p><strong>Status Atual:</strong>
+                                {% if os.status == 'aprovada' %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">Aprovada</span>
+                                {% elif os.status == 'em_andamento' %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Em Andamento</span>
+                                {% elif os.status == 'aguardando_peca' %}
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">Aguardando Peça</span>
+                                {% elif os.status == 'concluida' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Concluída</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Prioridade:</strong>
+                                {% if os.prioridade == 'urgente' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Urgente</span>
+                                {% elif os.prioridade == 'alta' %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Alta</span>
+                                {% else %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Normal</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Aberta em:</strong> {{ os.data_abertura.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulário de Atualização -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Atualizar Informações</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('atualizar_ordem_servico', id=os.id) }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.status.label }} <span class="text-danger">*</span></label>
+                                {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
+                                {% if form.status.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.status.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">{{ form.data_previsao.label }}</label>
+                                {{ form.data_previsao(class="form-control" + (" is-invalid" if form.data_previsao.errors else "")) }}
+                                {% if form.data_previsao.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.data_previsao.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Quando espera concluir o serviço</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.feedback_tecnico.label }}</label>
+                            {{ form.feedback_tecnico(class="form-control" + (" is-invalid" if form.feedback_tecnico.errors else ""), rows=3, placeholder="Observações sobre o andamento...") }}
+                            {% if form.feedback_tecnico.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.feedback_tecnico.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Campos de Conclusão (aparecem quando status = concluida) -->
+                        <div id="camposConclusao" style="display: none;">
+                            <hr>
+                            <h6 class="mb-3"><i class="bi bi-flag-fill"></i> Informações de Conclusão</h6>
+
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.descricao_solucao.label }} <span class="text-danger">*</span></label>
+                                {{ form.descricao_solucao(class="form-control" + (" is-invalid" if form.descricao_solucao.errors else ""), rows=4, placeholder="Descreva detalhadamente a solução aplicada...") }}
+                                {% if form.descricao_solucao.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.descricao_solucao.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.valor_mao_obra.label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        {{ form.valor_mao_obra(class="form-control" + (" is-invalid" if form.valor_mao_obra.errors else ""), step="0.01") }}
+                                    </div>
+                                    {% if form.valor_mao_obra.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.valor_mao_obra.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ form.valor_pecas.label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        {{ form.valor_pecas(class="form-control" + (" is-invalid" if form.valor_pecas.errors else ""), step="0.01") }}
+                                    </div>
+                                    {% if form.valor_pecas.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.valor_pecas.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill"></i> Ao concluir, o cliente poderá avaliar o atendimento
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}" class="btn btn-secondary">
+                                <i class="bi bi-x-lg"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle-fill"></i> Status Disponíveis</h6>
+                    <hr>
+                    <ul class="small">
+                        <li><strong>Em Andamento:</strong> Serviço sendo executado</li>
+                        <li><strong>Aguardando Peça:</strong> Aguardando chegada de peças</li>
+                        <li><strong>Concluída:</strong> Serviço finalizado</li>
+                    </ul>
+                    <hr>
+                    <h6><i class="bi bi-clipboard-check-fill"></i> Conclusão da OS</h6>
+                    <p class="small">Ao marcar como "Concluída", preencha:</p>
+                    <ul class="small mb-0">
+                        <li>Descrição da solução aplicada</li>
+                        <li>Valores de mão de obra e peças</li>
+                        <li>Feedback sobre o atendimento</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Problema Relatado -->
+            <div class="card mt-3 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Problema Relatado</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-0">{{ os.descricao_problema }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectStatus = document.getElementById('status');
+    const camposConclusao = document.getElementById('camposConclusao');
+
+    function verificarStatus() {
+        if (selectStatus.value === 'concluida') {
+            camposConclusao.style.display = 'block';
+        } else {
+            camposConclusao.style.display = 'none';
+        }
+    }
+
+    selectStatus.addEventListener('change', verificarStatus);
+
+    // Verificar no carregamento
+    verificarStatus();
+});
+</script>
+{% endblock %}

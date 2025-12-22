@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Permissões - {{ vendedor.nome }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('lista_vendedores') }}">Vendedores</a></li>
+                    <li class="breadcrumb-item active">Permissões</li>
+                </ol>
+            </nav>
+
+            <!-- Card de Permissões -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-shield-lock fs-4 me-2"></i>
+                        <h5 class="mb-0">Gerenciar Permissões</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Informações do Vendedor -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-person-circle me-2"></i>
+                            Vendedor
+                        </h6>
+                        <p class="mb-1"><strong>Nome:</strong> {{ vendedor.nome }}</p>
+                        <p class="mb-1"><strong>Email:</strong> {{ vendedor.email }}</p>
+                        <p class="mb-0"><strong>Cargo:</strong> <span class="badge bg-secondary">{{ usuario.cargo|title }}</span></p>
+                    </div>
+
+                    <!-- Formulário de Permissões -->
+                    <form method="POST">
+                        <h6 class="mb-3">
+                            <i class="bi bi-gear me-2"></i>
+                            Permissões de Acesso
+                        </h6>
+
+                        <div class="row">
+                            <!-- Dashboard -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_ver_dashboard"
+                                                name="pode_ver_dashboard"
+                                                {{ 'checked' if usuario.pode_ver_dashboard else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_ver_dashboard">
+                                                <i class="bi bi-speedometer2 me-2 text-primary"></i>
+                                                <strong>Visualizar Dashboard</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite acessar o dashboard com suas métricas
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mensagens -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_enviar_mensagens"
+                                                name="pode_enviar_mensagens"
+                                                {{ 'checked' if usuario.pode_enviar_mensagens else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_enviar_mensagens">
+                                                <i class="bi bi-envelope me-2 text-info"></i>
+                                                <strong>Enviar Mensagens</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite enviar mensagens para equipe
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gerenciar Vendedores -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_gerenciar_vendedores"
+                                                name="pode_gerenciar_vendedores"
+                                                {{ 'checked' if usuario.pode_gerenciar_vendedores else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_gerenciar_vendedores">
+                                                <i class="bi bi-people me-2 text-warning"></i>
+                                                <strong>Gerenciar Vendedores</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite criar, editar e deletar vendedores
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gerenciar Metas -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_gerenciar_metas"
+                                                name="pode_gerenciar_metas"
+                                                {{ 'checked' if usuario.pode_gerenciar_metas else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_gerenciar_metas">
+                                                <i class="bi bi-graph-up me-2 text-success"></i>
+                                                <strong>Gerenciar Metas</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite criar e editar metas de vendedores
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ver Todas as Metas -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_ver_todas_metas"
+                                                name="pode_ver_todas_metas"
+                                                {{ 'checked' if usuario.pode_ver_todas_metas else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_ver_todas_metas">
+                                                <i class="bi bi-eye me-2 text-secondary"></i>
+                                                <strong>Ver Todas as Metas</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite visualizar metas de todos os vendedores
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gerenciar Equipes -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_gerenciar_equipes"
+                                                name="pode_gerenciar_equipes"
+                                                {{ 'checked' if usuario.pode_gerenciar_equipes else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_gerenciar_equipes">
+                                                <i class="bi bi-people-fill me-2 text-primary"></i>
+                                                <strong>Gerenciar Equipes</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite criar e gerenciar equipes
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gerenciar Comissões -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_gerenciar_comissoes"
+                                                name="pode_gerenciar_comissoes"
+                                                {{ 'checked' if usuario.pode_gerenciar_comissoes else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_gerenciar_comissoes">
+                                                <i class="bi bi-cash-coin me-2 text-success"></i>
+                                                <strong>Gerenciar Comissões</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite configurar faixas de comissão
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Aprovar Comissões -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_aprovar_comissoes"
+                                                name="pode_aprovar_comissoes"
+                                                {{ 'checked' if usuario.pode_aprovar_comissoes else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_aprovar_comissoes">
+                                                <i class="bi bi-check-circle me-2 text-success"></i>
+                                                <strong>Aprovar Comissões</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite aprovar pagamentos de comissões
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Exportar Dados -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_exportar_dados"
+                                                name="pode_exportar_dados"
+                                                {{ 'checked' if usuario.pode_exportar_dados else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_exportar_dados">
+                                                <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>
+                                                <strong>Exportar Dados</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite exportar relatórios em PDF
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Salvar Permissões
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

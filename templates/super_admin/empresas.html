@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Empresas - Super Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Modernizado -->
+    <div class="modern-header mb-4">
+        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">INSTITUCIONAL</p>
+        <h1 class="page-title-modern mb-2">
+            <i class="bi bi-building"></i> Gerenciamento de Empresas
+        </h1>
+        <p class="text-muted mb-3">Super Administrador</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('super_admin_backups') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-hdd-stack"></i> Backups
+            </a>
+            <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-people"></i> Usuários
+            </a>
+            <a href="{{ url_for('super_admin_criar_empresa') }}" class="btn btn-outline-primary">
+                <i class="bi bi-plus-circle"></i> Nova Empresa
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas com Bordas Coloridas -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #718096 !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary position-absolute top-0 end-0 m-3">TOTAL</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern bg-secondary bg-opacity-10 text-secondary">
+                            <i class="bi bi-building"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1">{{ empresas|length }}</h3>
+                    <p class="stats-label-modern mb-0">TOTAL DE EMPRESAS</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #10b981 !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-success bg-opacity-10 text-success position-absolute top-0 end-0 m-3">ATIVAS</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1">{{ empresas|selectattr('ativo')|rejectattr('bloqueado')|list|length }}</h3>
+                    <p class="stats-label-modern mb-0">EMPRESAS ATIVAS</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #ef4444 !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-danger bg-opacity-10 text-danger position-absolute top-0 end-0 m-3">BLOQUEADAS</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern bg-danger bg-opacity-10 text-danger">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1">{{ empresas|selectattr('bloqueado')|list|length }}</h3>
+                    <p class="stats-label-modern mb-0">EMPRESAS BLOQUEADAS</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #f59e0b !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-warning bg-opacity-10 text-warning position-absolute top-0 end-0 m-3">INATIVAS</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-pause-circle"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1">{{ empresas|rejectattr('ativo')|list|length }}</h3>
+                    <p class="stats-label-modern mb-0">EMPRESAS INATIVAS</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Empresas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-body p-0">
+                    {% if empresas %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted ps-4">Empresa</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">CNPJ</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Email/Telefone</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Plano</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Usuários</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Status</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Data Criação</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted text-center pe-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for empresa in empresas %}
+                                <tr class="{% if empresa.bloqueado %}table-danger{% elif not empresa.ativo %}table-secondary{% endif %}">
+                                    <td class="ps-4">
+                                        <div>
+                                            <strong>{{ empresa.nome }}</strong>
+                                            {% if empresa.bloqueado %}
+                                            <span class="badge bg-danger ms-2">Bloqueado</span>
+                                            {% endif %}
+                                            {% if not empresa.ativo %}
+                                            <span class="badge bg-secondary ms-2">Inativo</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if empresa.cidade and empresa.estado %}
+                                        <small class="text-muted">{{ empresa.cidade }}/{{ empresa.estado }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <code>{{ empresa.cnpj[:2] }}.{{ empresa.cnpj[2:5] }}.{{ empresa.cnpj[5:8] }}/{{ empresa.cnpj[8:12] }}-{{ empresa.cnpj[12:] }}</code>
+                                    </td>
+                                    <td>
+                                        <div>{{ empresa.email }}</div>
+                                        {% if empresa.telefone %}
+                                        <small class="text-muted">{{ empresa.telefone }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if empresa.plano == 'basico' %}
+                                        <span class="badge bg-primary">Básico</span>
+                                        {% elif empresa.plano == 'premium' %}
+                                        <span class="badge bg-success">Premium</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark">Enterprise</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ empresa.total_usuarios }} / {{ empresa.max_usuarios }}</span>
+                                    </td>
+                                    <td>
+                                        {% if empresa.bloqueado %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-lock-fill"></i> Bloqueado
+                                        </span>
+                                        {% elif empresa.ativo %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle-fill"></i> Ativo
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-x-circle-fill"></i> Inativo
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ empresa.data_criacao.strftime('%d/%m/%Y') }}</small>
+                                    </td>
+                                    <td class="pe-4">
+                                        <div class="d-flex gap-1 justify-content-center">
+                                            <a href="{{ url_for('super_admin_visualizar_empresa', id=empresa.id) }}"
+                                               class="btn btn-sm btn-outline-primary" title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('super_admin_editar_empresa', id=empresa.id) }}"
+                                               class="btn btn-sm btn-outline-warning" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-{% if empresa.bloqueado %}success{% else %}danger{% endif %}"
+                                                    onclick="bloquearEmpresa({{ empresa.id }}, '{{ empresa.nome }}', {{ 'true' if empresa.bloqueado else 'false' }})"
+                                                    title="{% if empresa.bloqueado %}Desbloquear{% else %}Bloquear{% endif %}">
+                                                <i class="bi bi-{% if empresa.bloqueado %}unlock{% else %}lock{% endif %}"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-dark"
+                                                    onclick="excluirEmpresa({{ empresa.id }}, '{{ empresa.nome }}')"
+                                                    title="Excluir (Desativar)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="excluirEmpresaDefinitivamente({{ empresa.id }}, '{{ empresa.nome }}')"
+                                                    title="Excluir Definitivamente">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% if empresa.bloqueado and empresa.motivo_bloqueio %}
+                                <tr class="table-danger">
+                                    <td colspan="8" class="ps-5 py-2">
+                                        <small><strong>Motivo do bloqueio:</strong> {{ empresa.motivo_bloqueio }}</small>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 my-5">
+                        <div class="icon-modern bg-secondary bg-opacity-10 text-secondary mx-auto mb-3" style="width: 80px; height: 80px;">
+                            <i class="bi bi-building" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h5 class="text-muted mb-2">Nenhuma empresa cadastrada</h5>
+                        <p class="text-muted small mb-3">Adicione a primeira empresa para começar</p>
+                        <a href="{{ url_for('super_admin_criar_empresa') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-circle"></i> Criar Empresa
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Bloquear Empresa -->
+<div class="modal fade" id="modalBloquear" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formBloquear" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalBloquearTitulo"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modalBloquearTexto"></p>
+                    <div id="divMotivo" style="display: none;">
+                        <label class="form-label">Motivo do bloqueio (opcional):</label>
+                        <textarea class="form-control" name="motivo" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" id="btnConfirmarBloquear">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Excluir Empresa -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formExcluir" method="POST">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">Excluir (Desativar) Empresa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modalExcluirTexto"></p>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>Atenção:</strong> Esta ação desativará a empresa e todos os seus usuários. Os dados serão mantidos.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark">Desativar Empresa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Excluir Definitivamente -->
+<div class="modal fade" id="modalExcluirDefinitivo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-danger">
+            <form id="formExcluirDefinitivo" method="POST">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                        Excluir Definitivamente
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modalExcluirDefinitivoTexto" class="fw-bold"></p>
+                    <div class="alert alert-danger">
+                        <h6 class="alert-heading fw-bold"><i class="bi bi-radioactive"></i> AÇÃO IRREVERSÍVEL!</h6>
+                        <p class="mb-0 small">Isso apagará PERMANENTEMENTE:</p>
+                        <ul class="small mb-0 mt-1">
+                            <li>Todos os usuários e vendedores</li>
+                            <li>Todos os clientes e vendas</li>
+                            <li>Todas as metas e comissões</li>
+                            <li>Todo o histórico financeiro</li>
+                        </ul>
+                    </div>
+                    <div class="form-check bg-light p-3 rounded border border-danger">
+                        <input class="form-check-input" type="checkbox" id="confirmarExclusaoCheck" required>
+                        <label class="form-check-label small text-danger fw-bold" for="confirmarExclusaoCheck">
+                            Eu entendo que esta ação não pode ser desfeita e todos os dados serão perdidos.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger fw-bold">
+                        <i class="bi bi-trash-fill me-1"></i> EXCLUIR TUDO
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function bloquearEmpresa(id, nome, bloqueado) {
+    const modal = new bootstrap.Modal(document.getElementById('modalBloquear'));
+    const form = document.getElementById('formBloquear');
+    const titulo = document.getElementById('modalBloquearTitulo');
+    const texto = document.getElementById('modalBloquearTexto');
+    const divMotivo = document.getElementById('divMotivo');
+    const btnConfirmar = document.getElementById('btnConfirmarBloquear');
+
+    form.action = `/super-admin/empresas/${id}/bloquear`;
+
+    if (bloqueado) {
+        titulo.textContent = 'Desbloquear Empresa';
+        texto.textContent = `Tem certeza que deseja desbloquear a empresa "${nome}"?`;
+        divMotivo.style.display = 'none';
+        btnConfirmar.className = 'btn btn-success';
+        btnConfirmar.textContent = 'Desbloquear';
+    } else {
+        titulo.textContent = 'Bloquear Empresa';
+        texto.textContent = `Tem certeza que deseja bloquear a empresa "${nome}"?`;
+        divMotivo.style.display = 'block';
+        btnConfirmar.className = 'btn btn-danger';
+        btnConfirmar.textContent = 'Bloquear';
+    }
+
+    modal.show();
+}
+
+function excluirEmpresa(id, nome) {
+    const modal = new bootstrap.Modal(document.getElementById('modalExcluir'));
+    const form = document.getElementById('formExcluir');
+    const texto = document.getElementById('modalExcluirTexto');
+
+    form.action = `/super-admin/empresas/${id}/excluir`;
+    texto.textContent = `Tem certeza que deseja desativar a empresa "${nome}"?`;
+
+    modal.show();
+}
+
+function excluirEmpresaDefinitivamente(id, nome) {
+    const modal = new bootstrap.Modal(document.getElementById('modalExcluirDefinitivo'));
+    const form = document.getElementById('formExcluirDefinitivo');
+    const texto = document.getElementById('modalExcluirDefinitivoTexto');
+    
+    // Reset checkbox
+    document.getElementById('confirmarExclusaoCheck').checked = false;
+
+    form.action = `/super-admin/empresas/${id}/excluir-definitivamente`;
+    texto.textContent = `Tem certeza absoluta que deseja APAGAR TODOS OS DADOS da empresa "${nome}"?`;
+
+    modal.show();
+}
+</script>
+
+<style>
+/* Header Moderno */
+.modern-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.page-title-modern {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0;
+}
+
+/* Cards de Estatísticas Modernos */
+.stats-card-modern {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.stats-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.icon-modern {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stats-value-modern {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+    line-height: 1;
+}
+
+.stats-label-modern {
+    font-size: 0.875rem;
+    color: #718096;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* Tabela */
+.table > tbody > tr {
+    transition: background-color 0.2s ease;
+}
+
+.table > tbody > tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+.table-light th {
+    background-color: #f8f9fa;
+    padding: 1rem 0.75rem;
+}
+
+.table td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .page-title-modern {
+        font-size: 1.5rem;
+    }
+
+    .stats-value-modern {
+        font-size: 1.5rem;
+    }
+
+    .modern-header {
+        padding: 1.5rem;
+    }
+}
+</style>
+{% endblock %}

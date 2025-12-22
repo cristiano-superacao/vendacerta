@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if funcionario else 'Novo' }} Funcionário - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('lista_funcionarios') }}">Funcionários</a></li>
+                    <li class="breadcrumb-item active">{{ 'Editar' if funcionario else 'Novo' }} Funcionário</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0">
+                <i class="bi bi-{{ 'pencil-square' if funcionario else 'person-plus-fill' }} me-2 text-primary"></i>
+                {{ 'Editar' if funcionario else 'Novo' }} Funcionário
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Formulário -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>Dados do Funcionário
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('editar_funcionario', id=funcionario.id) if funcionario else url_for('criar_funcionario') }}">
+                        <!-- Informações Pessoais -->
+                        <div class="mb-4">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-person me-2"></i>Informações Pessoais
+                            </h6>
+
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label for="nome" class="form-label">
+                                        Nome Completo <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-person text-muted"></i>
+                                        </span>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="nome"
+                                               name="nome"
+                                               value="{{ funcionario.nome if funcionario else '' }}"
+                                               required
+                                               placeholder="Digite o nome completo">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label for="email" class="form-label">
+                                        E-mail <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-envelope text-muted"></i>
+                                        </span>
+                                        <input type="email"
+                                               class="form-control"
+                                               id="email"
+                                               name="email"
+                                               value="{{ funcionario.email if funcionario else '' }}"
+                                               required
+                                               placeholder="email@exemplo.com">
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Será usado para login no sistema
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cargo e Departamento -->
+                        <div class="mb-4">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-briefcase me-2"></i>Cargo e Departamento
+                            </h6>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="cargo" class="form-label">
+                                        Cargo <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-person-badge text-muted"></i>
+                                        </span>
+                                        <select class="form-select" id="cargo" name="cargo" required>
+                                            <option value="">Selecione um cargo...</option>
+                                            <option value="admin" {{ 'selected' if funcionario and funcionario.cargo == 'admin' else '' }}>
+                                                👑 Administrador
+                                            </option>
+                                            <option value="gerente" {{ 'selected' if funcionario and funcionario.cargo == 'gerente' else '' }}>
+                                                🎯 Gerente
+                                            </option>
+                                            <option value="supervisor" {{ 'selected' if funcionario and funcionario.cargo == 'supervisor' else '' }}>
+                                                📊 Supervisor
+                                            </option>
+                                            <option value="vendedor" {{ 'selected' if funcionario and funcionario.cargo == 'vendedor' else '' }}>
+                                                💼 Vendedor
+                                            </option>
+                                            <option value="tecnico" {{ 'selected' if funcionario and funcionario.cargo == 'tecnico' else '' }}>
+                                                🔧 Técnico
+                                            </option>
+                                            <option value="financeiro" {{ 'selected' if funcionario and funcionario.cargo == 'financeiro' else '' }}>
+                                                💰 Financeiro
+                                            </option>
+                                            <option value="rh" {{ 'selected' if funcionario and funcionario.cargo == 'rh' else '' }}>
+                                                👥 RH (Recursos Humanos)
+                                            </option>
+                                            <option value="usuario" {{ 'selected' if funcionario and funcionario.cargo == 'usuario' else '' }}>
+                                                👤 Usuário
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Define as permissões do usuário no sistema
+                                    </small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="departamento" class="form-label">
+                                        Departamento <span class="text-muted">(Opcional)</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-building text-muted"></i>
+                                        </span>
+                                        <select class="form-select" id="departamento" name="departamento">
+                                            <option value="">Nenhum departamento</option>
+                                            <option value="rh" {{ 'selected' if funcionario and funcionario.departamento == 'rh' else '' }}>
+                                                👥 Recursos Humanos
+                                            </option>
+                                            <option value="financeiro" {{ 'selected' if funcionario and funcionario.departamento == 'financeiro' else '' }}>
+                                                💰 Financeiro
+                                            </option>
+                                            <option value="comercial" {{ 'selected' if funcionario and funcionario.departamento == 'comercial' else '' }}>
+                                                💼 Comercial
+                                            </option>
+                                            <option value="ti" {{ 'selected' if funcionario and funcionario.departamento == 'ti' else '' }}>
+                                                💻 TI (Tecnologia da Informação)
+                                            </option>
+                                            <option value="administrativo" {{ 'selected' if funcionario and funcionario.departamento == 'administrativo' else '' }}>
+                                                📋 Administrativo
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Organização interna da empresa
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Senha -->
+                        <div class="mb-4">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-shield-lock me-2"></i>
+                                {{ 'Alterar Senha' if funcionario else 'Definir Senha' }}
+                                {% if funcionario %}
+                                <span class="text-muted small">(Deixe em branco para manter a senha atual)</span>
+                                {% endif %}
+                            </h6>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="senha" class="form-label">
+                                        Senha {% if not funcionario %}<span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-key text-muted"></i>
+                                        </span>
+                                        <input type="password"
+                                               class="form-control"
+                                               id="senha"
+                                               name="senha"
+                                               {% if not funcionario %}required{% endif %}
+                                               minlength="6"
+                                               placeholder="Mínimo 6 caracteres">
+                                        <button class="btn btn-outline-secondary"
+                                                type="button"
+                                                onclick="togglePassword('senha')">
+                                            <i class="bi bi-eye" id="senha-icon"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-shield-check me-1"></i>
+                                        Mínimo de 6 caracteres
+                                    </small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="confirmar_senha" class="form-label">
+                                        Confirmar Senha {% if not funcionario %}<span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-key text-muted"></i>
+                                        </span>
+                                        <input type="password"
+                                               class="form-control"
+                                               id="confirmar_senha"
+                                               name="confirmar_senha"
+                                               {% if not funcionario %}required{% endif %}
+                                               minlength="6"
+                                               placeholder="Repita a senha">
+                                        <button class="btn btn-outline-secondary"
+                                                type="button"
+                                                onclick="togglePassword('confirmar_senha')">
+                                            <i class="bi bi-eye" id="confirmar_senha-icon"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Ação -->
+                        <div class="d-flex justify-content-between pt-3 border-top">
+                            <a href="{{ url_for('lista_funcionarios') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-check-circle me-2"></i>
+                                {{ 'Atualizar' if funcionario else 'Cadastrar' }} Funcionário
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Card Informativo sobre Hierarquia de Cargos -->
+            <div class="card border-primary mt-4 shadow-sm">
+                <div class="card-header bg-light border-bottom">
+                    <h6 class="mb-0 text-primary">
+                        <i class="bi bi-info-circle me-2"></i>Hierarquia de Cargos e Permissões
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Admin -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100 bg-light">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-danger me-2">👑</span>
+                                    <strong class="text-danger">Administrador</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Acesso total ao sistema, gerencia todos os módulos e usuários
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Gerente -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-success me-2">🎯</span>
+                                    <strong class="text-success">Gerente</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Gerencia vendedores, metas, relatórios e movimentações de estoque
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Supervisor -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100 shadow-sm">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-primary-subtle text-primary me-2"><i class="bi bi-bar-chart-fill"></i></span>
+                                    <strong class="text-primary">Supervisor</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Supervisiona equipes, acessa relatórios e executa operações específicas
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Vendedor -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100 shadow-sm">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-info-subtle text-info me-2"><i class="bi bi-briefcase-fill"></i></span>
+                                    <strong class="text-info">Vendedor</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Registra vendas, consulta clientes e acompanha suas metas
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Técnico -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100 shadow-sm">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-warning-subtle text-warning me-2"><i class="bi bi-tools"></i></span>
+                                    <strong class="text-warning">Técnico</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Realiza manutenções, ajustes de estoque e suporte técnico
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Financeiro -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100 shadow-sm">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-success-subtle text-success me-2"><i class="bi bi-cash-coin"></i></span>
+                                    <strong class="text-success">Financeiro</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Gerencia pagamentos, contas e relatórios financeiros
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- RH -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100 shadow-sm">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-info-subtle text-info me-2"><i class="bi bi-people-fill"></i></span>
+                                    <strong class="text-info">RH</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Gerencia funcionários, registros e documentações de pessoal
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Usuário -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded p-3 h-100 shadow-sm">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-secondary-subtle text-secondary me-2"><i class="bi bi-person-fill"></i></span>
+                                    <strong class="text-secondary">Usuário</strong>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Acesso básico ao sistema com permissões limitadas
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        <strong>Dica:</strong> As permissões de cada cargo são configuradas automaticamente pelo sistema.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validação de senhas
+document.querySelector('form').addEventListener('submit', function(e) {
+    const senha = document.getElementById('senha').value;
+    const confirmar = document.getElementById('confirmar_senha').value;
+
+    if (senha || confirmar) {
+        if (senha !== confirmar) {
+            e.preventDefault();
+            alert('As senhas não conferem!');
+            document.getElementById('confirmar_senha').focus();
+            return false;
+        }
+
+        if (senha.length < 6) {
+            e.preventDefault();
+            alert('A senha deve ter no mínimo 6 caracteres!');
+            document.getElementById('senha').focus();
+            return false;
+        }
+    }
+});
+
+// Alternar visualização de senha
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(fieldId + '-icon');
+
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+// Sugestão de departamento baseado no cargo
+document.getElementById('cargo').addEventListener('change', function() {
+    const cargo = this.value;
+    const departamento = document.getElementById('departamento');
+
+    // Sugerir departamento apropriado
+    if (cargo === 'rh') {
+        departamento.value = 'rh';
+    } else if (cargo === 'financeiro') {
+        departamento.value = 'financeiro';
+    } else if (cargo === 'gerente' || cargo === 'vendedor' || cargo === 'supervisor') {
+        departamento.value = 'comercial';
+    } else if (cargo === 'tecnico') {
+        departamento.value = 'ti';
+    } else if (cargo === 'admin') {
+        departamento.value = 'administrativo';
+    }
+});
+</script>
+{% endblock %}
+

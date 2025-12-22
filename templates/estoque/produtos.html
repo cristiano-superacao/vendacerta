@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Produtos - Venda Certa{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Produtos do Estoque</h1>
+            <p class="text-muted mb-0 small">Gerencie os produtos cadastrados no estoque</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if current_user.pode_gerenciar_produtos or current_user.cargo == 'admin' %}
+            <button type="button" class="btn btn-outline-primary rounded-3" data-bs-toggle="modal" data-bs-target="#modalImportacao">
+                <i class="bi bi-file-earmark-excel me-2"></i>Importar Excel
+            </button>
+            <a href="{{ url_for('novo_produto') }}" class="btn btn-primary rounded-3 shadow-sm">
+                <i class="bi bi-plus-circle me-2"></i>Novo Produto
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3">
+        <div class="card-body p-4">
+            <form method="GET" action="{{ url_for('lista_produtos') }}" class="row g-3">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label small text-muted text-uppercase fw-semibold">Buscar</label>
+                    <input type="text" name="busca" class="form-control form-control-lg border-0 bg-light rounded-3"
+                           placeholder="Código, Nome, Código de Barras, Referência..."
+                           value="{{ filtros.busca }}">
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label small text-muted text-uppercase fw-semibold">Categoria</label>
+                    <select name="categoria" class="form-select form-select-lg border-0 bg-light rounded-3">
+                        <option value="">Todas</option>
+                        <option value="Peça" {% if filtros.categoria == 'Peça' %}selected{% endif %}>Peça</option>
+                        <option value="Consumível" {% if filtros.categoria == 'Consumível' %}selected{% endif %}>Consumível</option>
+                        <option value="Ferramenta" {% if filtros.categoria == 'Ferramenta' %}selected{% endif %}>Ferramenta</option>
+                        <option value="Equipamento" {% if filtros.categoria == 'Equipamento' %}selected{% endif %}>Equipamento</option>
+                        <option value="Outro" {% if filtros.categoria == 'Outro' %}selected{% endif %}>Outro</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label small text-muted text-uppercase fw-semibold">Status Estoque</label>
+                    <select name="status" class="form-select form-select-lg border-0 bg-light rounded-3">
+                        <option value="">Todos</option>
+                        <option value="zerado" {% if filtros.status == 'zerado' %}selected{% endif %}>Zerado</option>
+                        <option value="baixo" {% if filtros.status == 'baixo' %}selected{% endif %}>Baixo</option>
+                        <option value="normal" {% if filtros.status == 'normal' %}selected{% endif %}>Normal</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-12 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-lg btn-primary rounded-3 flex-grow-1">
+                        Filtrar
+                    </button>
+                    <a href="{{ url_for('lista_produtos') }}" class="btn btn-lg btn-outline-secondary rounded-3">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Lista de Produtos -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light border-0 py-3">
+            <h5 class="mb-0 fw-semibold text-dark">
+                <i class="bi bi-list-ul me-2"></i>{{ produtos|length }} Produto(s) Encontrado(s)
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if produtos %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted ps-4 py-3">Código</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3" style="min-width: 200px;">Nome</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Referência</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Código de Barra</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">NCM</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Fornecedor</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center py-3">Estoque Atual</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center py-3">Estoque Mín</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Localização</th>
+                            {% if current_user.pode_ver_custos or current_user.cargo == 'admin' %}
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-end py-3">Custo</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-end py-3">Preço Venda</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-end py-3">Preço Serviço</th>
+                            {% endif %}
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center py-3">Status</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center pe-4 py-3">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produto in produtos %}
+                        <tr class="border-bottom">
+                            <td class="ps-4 py-3"><strong class="text-primary">{{ produto.codigo }}</strong></td>
+                            <td class="py-3">
+                                <div class="text-truncate" style="max-width: 250px;" title="{{ produto.nome }}">
+                                    {{ produto.nome }}
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted">{{ produto.referencia or '-' }}</small>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted font-monospace">{{ produto.codigo_barra or '-' }}</small>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted font-monospace">{{ produto.ncm or '-' }}</small>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted">{{ produto.fornecedor or '-' }}</small>
+                            </td>
+                            <td class="text-center py-3">
+                                {% if produto.estoque_atual <= 0 %}
+                                <span class="badge rounded-pill bg-danger px-3 py-2">
+                                    {{ produto.estoque_atual|int }} {{ produto.unidade }}
+                                </span>
+                                {% elif produto.estoque_atual <= produto.estoque_minimo %}
+                                <span class="badge rounded-pill bg-warning text-dark px-3 py-2">
+                                    {{ produto.estoque_atual|int }} {{ produto.unidade }}
+                                </span>
+                                {% else %}
+                                <span class="badge rounded-pill bg-success px-3 py-2">
+                                    {{ produto.estoque_atual|int }} {{ produto.unidade }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center py-3">
+                                <small class="text-muted fw-medium">{{ produto.estoque_minimo|int }}</small>
+                            </td>
+                            <td class="py-3">
+                                <div class="text-truncate" style="max-width: 150px;" title="{{ produto.localizacao or '-' }}">
+                                    <small class="text-muted">{{ produto.localizacao or '-' }}</small>
+                                </div>
+                            </td>
+                            {% if current_user.pode_ver_custos or current_user.cargo == 'admin' %}
+                            <td class="text-end py-3">
+                                <small class="text-muted">R$ {{ '{:,.2f}'.format(produto.custo_medio) }}</small>
+                            </td>
+                            <td class="text-end py-3">
+                                <strong class="text-success">R$ {{ '{:,.2f}'.format(produto.preco_venda) }}</strong>
+                            </td>
+                            <td class="text-end py-3">
+                                <strong class="text-primary">R$ {{ '{:,.2f}'.format(produto.preco_servico if produto.preco_servico else 0) }}</strong>
+                            </td>
+                            {% endif %}
+                            <td class="text-center py-3">
+                                {% if produto.ativo %}
+                                <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2">
+                                    <i class="bi bi-check-circle me-1"></i>Ativo
+                                </span>
+                                {% else %}
+                                <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary px-3 py-2">
+                                    <i class="bi bi-x-circle me-1"></i>Inativo
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center py-3">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('visualizar_produto', id=produto.id) }}"
+                                       class="btn btn-outline-primary rounded-start"
+                                       title="Visualizar"
+                                       data-bs-toggle="tooltip">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if current_user.pode_gerenciar_produtos or current_user.cargo == 'admin' %}
+                                    <a href="{{ url_for('editar_produto', id=produto.id) }}"
+                                       class="btn btn-outline-warning rounded-end"
+                                       title="Editar"
+                                       data-bs-toggle="tooltip">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% else %}
+                                    <style>.btn-group .btn-outline-primary:last-child { border-top-right-radius: 0.375rem !important; border-bottom-right-radius: 0.375rem !important; }</style>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                </div>
+                <h5 class="text-muted mb-2">Nenhum produto encontrado</h5>
+                <p class="text-muted small mb-4">
+                    {% if filtros.busca or filtros.categoria or filtros.status %}
+                    Tente alterar os filtros de busca
+                    {% else %}
+                    Cadastre o primeiro produto clicando no botão acima
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Importação -->
+<div class="modal fade" id="modalImportacao" tabindex="-1" aria-labelledby="modalImportacaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-semibold" id="modalImportacaoLabel">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Importar Produtos do Excel
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Instruções -->
+                <div class="alert alert-info border-0 mb-4">
+                    <h6 class="alert-heading d-flex align-items-center mb-3">
+                        <i class="bi bi-info-circle-fill me-2"></i>Como importar
+                    </h6>
+                    <ol class="mb-0 ps-3 small">
+                        <li class="mb-2">Baixe o modelo de planilha clicando no botão abaixo</li>
+                        <li class="mb-2">Preencha os dados dos produtos nas colunas correspondentes</li>
+                        <li class="mb-2">Produtos já cadastrados (código duplicado) serão ignorados e informados</li>
+                        <li class="mb-2">Produtos novos receberão um ID único automaticamente</li>
+                        <li>A coluna O.S deve ser preenchida manualmente quando necessário</li>
+                    </ol>
+                </div>
+
+                <!-- Download Template -->
+                <div class="mb-4">
+                    <a href="{{ url_for('download_template_produtos') }}" class="btn btn-outline-success w-100 py-3 rounded-3">
+                        <i class="bi bi-download me-2"></i>Baixar Modelo de Planilha (.xlsx)
+                    </a>
+                </div>
+
+                <!-- Upload Form -->
+                <form method="POST" action="{{ url_for('importar_produtos') }}" enctype="multipart/form-data" id="formImportacao">
+                    <div class="mb-4">
+                        <label for="arquivo" class="form-label fw-semibold">Selecione o arquivo Excel</label>
+                        <input type="file"
+                               class="form-control form-control-lg"
+                               id="arquivo"
+                               name="arquivo"
+                               accept=".xlsx,.xls"
+                               required>
+                        <div class="form-text">Formatos aceitos: .xlsx, .xls</div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-3">
+                            <i class="bi bi-cloud-upload me-2"></i>Importar Produtos
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Resultado da Importação -->
+                <div id="resultadoImportacao" class="mt-4" style="display: none;">
+                    <div class="card border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="mb-3 fw-semibold">Resultado da Importação</h6>
+                            <div id="conteudoResultado"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('formImportacao')?.addEventListener('submit', function(e) {
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importando...';
+});
+</script>
+
+{% endblock %}

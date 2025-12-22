@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de Metas Avançado - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-graph-up text-primary me-2"></i>Relatório de Metas Avançado
+            </h2>
+            <p class="text-muted mb-0">Análise detalhada de metas de valor e volume com balanceamento</p>
+        </div>
+        <a href="{{ url_for('configurar_metas') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Configurar Nova Meta
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Vendedor</label>
+                    <select class="form-select" name="vendedor_id">
+                        <option value="">Todos</option>
+                        {% for vendedor in vendedores %}
+                            <option value="{{ vendedor.id }}" {% if request.args.get('vendedor_id') == vendedor.id|string %}selected{% endif %}>
+                                {{ vendedor.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Tipo de Meta</label>
+                    <select class="form-select" name="tipo_meta">
+                        <option value="">Todas</option>
+                        <option value="valor" {% if request.args.get('tipo_meta') == 'valor' %}selected{% endif %}>Valor</option>
+                        <option value="volume" {% if request.args.get('tipo_meta') == 'volume' %}selected{% endif %}>Volume</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Ano</label>
+                    <select class="form-select" name="ano">
+                        <option value="">Todos</option>
+                        {% for ano in anos %}
+                            <option value="{{ ano }}" {% if request.args.get('ano') == ano|string %}selected{% endif %}>{{ ano }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Mês</label>
+                    <select class="form-select" name="mes">
+                        <option value="">Todos</option>
+                        {% for m in range(1, 13) %}
+                            <option value="{{ m }}" {% if request.args.get('mes') == m|string %}selected{% endif %}>
+                                {{ ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][m] }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel me-2"></i>Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Total de Metas</p>
+                            <h3 class="mb-0">{{ estatisticas.total_metas }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-bullseye text-primary" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Metas Atingidas</p>
+                            <h3 class="mb-0">{{ estatisticas.metas_atingidas }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-check-circle text-success" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Taxa de Sucesso</p>
+                            <h3 class="mb-0">{{ "%.1f"|format(estatisticas.taxa_sucesso) }}%</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-graph-up text-info" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Total Comissões</p>
+                            <h3 class="mb-0">R$ {{ "%.2f"|format(estatisticas.total_comissoes) }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-currency-dollar text-warning" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Metas -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0"><i class="bi bi-table me-2"></i>Detalhamento de Metas</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Vendedor</th>
+                            <th>Tipo</th>
+                            <th>Período</th>
+                            <th class="text-end">Meta</th>
+                            <th class="text-end">Realizado</th>
+                            <th class="text-center">Progresso</th>
+                            <th class="text-end">Comissão</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for meta in metas %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle me-2 d-flex align-items-center justify-content-center">
+                                        <span class="text-primary fw-bold">{{ meta.vendedor.nome[0] }}</span>
+                                    </div>
+                                    <strong>{{ meta.vendedor.nome }}</strong>
+                                </div>
+                            </td>
+                            <td>
+                                {% if meta.tipo_meta == 'valor' %}
+                                    <span class="badge bg-primary">
+                                        <i class="bi bi-currency-dollar me-1"></i>Valor
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-box-seam me-1"></i>Volume
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ "%02d"|format(meta.mes) }}/{{ meta.ano }}</td>
+                            <td class="text-end">
+                                {% if meta.tipo_meta == 'valor' %}
+                                    R$ {{ "%.2f"|format(meta.valor_meta) }}
+                                {% else %}
+                                    {{ meta.volume_meta }} vendas
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if meta.tipo_meta == 'valor' %}
+                                    R$ {{ "%.2f"|format(meta.receita_alcancada) }}
+                                {% else %}
+                                    {{ meta.volume_alcancado }} vendas
+                                {% endif %}
+                            </td>
+                            <td class="text-center" style="min-width: 180px;">
+                                {% set percentual = meta.percentual_alcance or 0 %}
+
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if percentual >= 100 %}bg-success{% elif percentual >= 75 %}bg-info{% elif percentual >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                         style="width: {{ [percentual, 100]|min }}%">
+                                        {{ "%.0f"|format(percentual) }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <span class="badge bg-success">
+                                    R$ {{ "%.2f"|format(meta.comissao_total or 0) }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary" onclick="verGrafico({{ meta.vendedor_id }}, '{{ meta.mes }}', '{{ meta.ano }}')"
+                                        data-bs-toggle="modal" data-bs-target="#graficoModal">
+                                    <i class="bi bi-bar-chart-line"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                                <p class="text-muted mt-3">Nenhuma meta encontrada com os filtros selecionados</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking de Melhores/Piores Meses -->
+    {% if ranking_meses %}
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success bg-opacity-10 py-3">
+                    <h6 class="mb-0 text-success">
+                        <i class="bi bi-trophy-fill me-2"></i>Melhores Meses (Valor)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for mes in ranking_meses.melhores %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <div>
+                                <i class="bi bi-calendar3 me-2 text-success"></i>
+                                <strong>{{ mes.mes_nome }}/{{ mes.ano }}</strong>
+                            </div>
+                            <span class="badge bg-success">R$ {{ "%.2f"|format(mes.total_valor) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger bg-opacity-10 py-3">
+                    <h6 class="mb-0 text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Meses com Menor Desempenho
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for mes in ranking_meses.piores %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <div>
+                                <i class="bi bi-calendar3 me-2 text-danger"></i>
+                                <strong>{{ mes.mes_nome }}/{{ mes.ano }}</strong>
+                            </div>
+                            <span class="badge bg-danger">R$ {{ "%.2f"|format(mes.total_valor) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Gráfico -->
+<div class="modal fade" id="graficoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-graph-up me-2"></i>Evolução do Vendedor
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="graficoEvolucao" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+let graficoAtual = null;
+
+function verGrafico(vendedorId, mes, ano) {
+    fetch(`{{ url_for('api_dados_grafico_metas', vendedor_id=0) }}`.replace('/0', `/${vendedorId}`))
+        .then(response => response.json())
+        .then(data => {
+            if (graficoAtual) {
+                graficoAtual.destroy();
+            }
+
+            const evolucao = data.evolucao;
+            const ctx = document.getElementById('graficoEvolucao').getContext('2d');
+            graficoAtual = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: evolucao.labels,
+                    datasets: [
+                        {
+                            label: 'Valor Realizado (R$)',
+                            data: evolucao.valores,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Volume (Vendas)',
+                            data: evolucao.volumes,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            fill: false,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Evolução de Vendas (Últimos 12 Meses)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR');
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' vendas';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar gráfico:', error);
+            alert('Erro ao carregar dados do gráfico');
+        });
+}
+</script>
+
+<style>
+.avatar-sm {
+    width: 35px;
+    height: 35px;
+}
+</style>
+{% endblock %}

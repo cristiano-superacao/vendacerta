@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-person-lines-fill text-primary me-2"></i>Meus Clientes</h2>
+            <p class="text-muted mb-0">Gerencie sua carteira de clientes</p>
+        </div>
+        <div class="btn-group">
+            <a href="{{ url_for('exportar_clientes') }}" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+            </a>
+            <a href="{{ url_for('importar_clientes') }}" class="btn btn-outline-primary">
+                <i class="bi bi-cloud-upload me-2"></i>Importar Excel
+            </a>
+            <a href="{{ url_for('novo_cliente') }}" class="btn btn-success">
+                <i class="bi bi-plus-circle me-2"></i>Novo Cliente
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                                <i class="bi bi-people-fill fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Total de Clientes</h6>
+                            <h3 class="mb-0">{{ total_clientes }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 text-success rounded-3 p-3">
+                                <i class="bi bi-check-circle-fill fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Positivados</h6>
+                            <h3 class="mb-0">{{ clientes_verde }}</h3>
+                            <small class="text-success">
+                                {% if total_clientes > 0 %}
+                                    {{ "%.1f"|format((clientes_verde / total_clientes * 100)) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 text-warning rounded-3 p-3">
+                                <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Atenção</h6>
+                            <h3 class="mb-0">{{ clientes_amarelo }}</h3>
+                            <small class="text-warning">30-38 dias</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-3">
+                                <i class="bi bi-x-circle-fill fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Sem Compras</h6>
+                            <h3 class="mb-0">{{ clientes_vermelho }}</h3>
+                            <small class="text-danger">&gt;38 dias</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Busca Rápida -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-10">
+                    <label class="form-label mb-1"><i class="bi bi-search me-2"></i>Busca Rápida</label>
+                    <input type="text" name="busca" class="form-control form-control-lg"
+                           placeholder="Buscar por nome, CPF, CNPJ ou telefone..."
+                           value="{{ busca }}" autofocus>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-search me-2"></i>Buscar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Filtros Avançados -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0">
+                <a class="text-decoration-none text-dark" data-bs-toggle="collapse" href="#filtrosAvancados">
+                    <i class="bi bi-funnel me-2"></i>Filtros Avançados
+                    <i class="bi bi-chevron-down float-end"></i>
+                </a>
+            </h6>
+        </div>
+        <div class="collapse" id="filtrosAvancados">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <!-- Manter busca no filtro avançado -->
+                    {% if busca %}
+                    <input type="hidden" name="busca" value="{{ busca }}">
+                    {% endif %}
+
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="todos" {% if status_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                            <option value="verde" {% if status_filtro == 'verde' %}selected{% endif %}>🟢 Positivados</option>
+                            <option value="amarelo" {% if status_filtro == 'amarelo' %}selected{% endif %}>🟡 Atenção</option>
+                            <option value="vermelho" {% if status_filtro == 'vermelho' %}selected{% endif %}>🔴 Sem Compras</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cidade</label>
+                        <input type="text" name="cidade" class="form-control" placeholder="Filtrar por cidade" value="{{ cidade_filtro }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Bairro</label>
+                        <input type="text" name="bairro" class="form-control" placeholder="Filtrar por bairro" value="{{ bairro_filtro }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Dia da Visita</label>
+                        <select name="dia_visita" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="segunda" {% if dia_visita_filtro == 'segunda' %}selected{% endif %}>Segunda</option>
+                            <option value="terca" {% if dia_visita_filtro == 'terca' %}selected{% endif %}>Terça</option>
+                            <option value="quarta" {% if dia_visita_filtro == 'quarta' %}selected{% endif %}>Quarta</option>
+                            <option value="quinta" {% if dia_visita_filtro == 'quinta' %}selected{% endif %}>Quinta</option>
+                            <option value="sexta" {% if dia_visita_filtro == 'sexta' %}selected{% endif %}>Sexta</option>
+                            <option value="sabado" {% if dia_visita_filtro == 'sabado' %}selected{% endif %}>Sábado</option>
+                            <option value="domingo" {% if dia_visita_filtro == 'domingo' %}selected{% endif %}>Domingo</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-2"></i>Filtrar
+                        </button>
+                        <a href="{{ url_for('lista_clientes') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Limpar
+                        </a>
+                        <a href="{{ url_for('relatorio_clientes') }}" class="btn btn-outline-info ms-2">
+                            <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Clientes -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Lista de Clientes ({{ clientes|length }})</h6>
+        </div>
+        <div class="card-body p-0">
+            {% if clientes %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">Status</th>
+                            <th width="10%">Código</th>
+                            <th width="20%">Nome</th>
+                            <th width="15%">CPF/CNPJ</th>
+                            <th width="15%">Cidade</th>
+                            <th width="10%">Telefone</th>
+                            <th width="10%">Dia Visita</th>
+                            <th width="10%">Última Compra</th>
+                            <th width="5%" class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente in clientes %}
+                        <tr>
+                            <td>
+                                {% if cliente.get_status_cor() == 'verde' %}
+                                    <span class="badge bg-success rounded-pill">🟢</span>
+                                {% elif cliente.get_status_cor() == 'amarelo' %}
+                                    <span class="badge bg-warning rounded-pill">🟡</span>
+                                {% else %}
+                                    <span class="badge bg-danger rounded-pill">🔴</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ cliente.codigo_cliente or '-' }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('ver_cliente', id=cliente.id) }}" class="text-decoration-none fw-medium">
+                                    {{ cliente.nome }}
+                                </a>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if cliente.cpf %}
+                                        {{ cliente.cpf }}
+                                    {% elif cliente.cnpj %}
+                                        {{ cliente.cnpj }}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>{{ cliente.cidade or '-' }}</td>
+                            <td>
+                                {% if cliente.telefone %}
+                                    <a href="tel:{{ cliente.telefone }}" class="text-decoration-none">
+                                        <i class="bi bi-telephone"></i> {{ cliente.telefone }}
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cliente.dia_visita %}
+                                    <span class="badge bg-secondary">{{ cliente.dia_visita|capitalize }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set ultima_compra = cliente.get_ultima_compra() %}
+                                {% if ultima_compra %}
+                                    <small class="text-muted">
+                                        {{ ultima_compra.data_compra.strftime('%d/%m/%Y') }}
+                                    </small>
+                                {% else %}
+                                    <small class="text-danger">Sem compras</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('ver_cliente', id=cliente.id) }}"
+                                       class="btn btn-outline-primary" title="Ver Detalhes">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('registrar_compra', id=cliente.id) }}"
+                                       class="btn btn-outline-success" title="Registrar Compra">
+                                        <i class="bi bi-cart-plus"></i>
+                                    </a>
+                                    <a href="{{ url_for('editar_cliente', id=cliente.id) }}"
+                                       class="btn btn-outline-warning" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginação -->
+            {% if pagination.pages > 1 %}
+            <div class="card-footer bg-white border-top">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="mb-0 text-muted small">
+                            Mostrando {{ pagination.per_page * (pagination.page - 1) + 1 }}
+                            até {{ [pagination.per_page * pagination.page, pagination.total] | min }}
+                            de {{ pagination.total }} clientes
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <nav>
+                            <ul class="pagination pagination-sm justify-content-end mb-0">
+                                <!-- Primeira página -->
+                                {% if pagination.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('lista_clientes', page=1, status=status_filtro, cidade=cidade_filtro, bairro=bairro_filtro, dia_visita=dia_visita_filtro, busca=busca) }}">
+                                        <i class="bi bi-chevron-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('lista_clientes', page=pagination.prev_num, status=status_filtro, cidade=cidade_filtro, bairro=bairro_filtro, dia_visita=dia_visita_filtro, busca=busca) }}">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                                </li>
+                                {% endif %}
+
+                                <!-- Páginas numeradas -->
+                                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                    {% if page_num %}
+                                        {% if page_num == pagination.page %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                        {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('lista_clientes', page=page_num, status=status_filtro, cidade=cidade_filtro, bairro=bairro_filtro, dia_visita=dia_visita_filtro, busca=busca) }}">
+                                                {{ page_num }}
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                <!-- Última página -->
+                                {% if pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('lista_clientes', page=pagination.next_num, status=status_filtro, cidade=cidade_filtro, bairro=bairro_filtro, dia_visita=dia_visita_filtro, busca=busca) }}">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('lista_clientes', page=pagination.pages, status=status_filtro, cidade=cidade_filtro, bairro=bairro_filtro, dia_visita=dia_visita_filtro, busca=busca) }}">
+                                        <i class="bi bi-chevron-double-right"></i>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <p class="text-muted mt-3">Nenhum cliente encontrado</p>
+                <a href="{{ url_for('novo_cliente') }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-2"></i>Cadastrar Primeiro Cliente
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

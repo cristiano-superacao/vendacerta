@@ -1,0 +1,14 @@
+# Deploy Trigger para Railway
+# Este arquivo força um novo deploy quando alterado
+# Última atualização: 2025-12-18 às 12:30
+
+Deploy ID: v2025.12.18.1230
+Motivo: Aplicar todas as otimizações e correções do nixpacks.toml
+
+## Melhorias incluídas neste deploy:
+- ✅ Configuração correta do pip via ensurepip
+- ✅ Remoção de duplicidade na inicialização do banco
+- ✅ ProxyFix configurado para IPs corretos
+- ✅ Cache e compressão Gzip ativos
+- ✅ Health check otimizado
+- ✅ Layout responsivo em todas as páginas

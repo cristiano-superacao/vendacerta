@@ -1,0 +1,1 @@
+web: export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${NIXPACKS_PATH}/lib && . .venv/bin/activate && python init_railway.py && python add_supervisor_id_railway.py && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --keep-alive 5 --log-level info --preload --access-logfile - --error-logfile -

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Ordem de Serviço{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho no padrão da lista (Imagem 1) -->
+    <div class="page-header-clean mb-4">
+        <p class="page-category">MANUTENÇÃO</p>
+        <h1 class="page-title-clean">Nova Ordem de Serviço</h1>
+        <p class="page-subtitle-clean">Registre uma nova solicitação de manutenção</p>
+
+        <div class="d-flex gap-2 mt-3 flex-wrap">
+            <button type="submit" form="novaOSForm" class="btn-primary-clean">
+                <i class="bi bi-check-lg"></i>
+                <span>Criar OS</span>
+            </button>
+            <a href="{{ url_for('lista_ordens_servico') }}" class="btn-secondary-clean">
+                <i class="bi bi-arrow-left"></i>
+                <span>Voltar</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulário -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary-subtle text-primary border-bottom border-primary-subtle">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Informações da Ordem de Serviço</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="novaOSForm" method="POST" action="{{ url_for('nova_ordem_servico') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-person text-primary me-2"></i>{{ form.cliente_id.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.cliente_id(class="form-select form-select-lg" + (" is-invalid" if form.cliente_id.errors else "")) }}
+                                {% if form.cliente_id.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.cliente_id.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-flag text-primary me-2"></i>{{ form.prioridade.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.prioridade(class="form-select form-select-lg" + (" is-invalid" if form.prioridade.errors else "")) }}
+                                {% if form.prioridade.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.prioridade.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-card-heading text-primary me-2"></i>{{ form.titulo.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.titulo(class="form-control form-control-lg" + (" is-invalid" if form.titulo.errors else ""), placeholder="Ex: Reparo em impressora HP LaserJet") }}
+                            {% if form.titulo.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.titulo.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-chat-square-text text-primary me-2"></i>{{ form.descricao_problema.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.descricao_problema(class="form-control" + (" is-invalid" if form.descricao_problema.errors else ""), rows=6, placeholder="Descreva detalhadamente o problema relatado pelo cliente...") }}
+                            {% if form.descricao_problema.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.descricao_problema.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle me-1"></i>Inclua todos os sintomas, histórico e observações relevantes
+                            </small>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                            {{ form.submit(class="btn btn-primary btn-lg px-5 shadow-sm") }}
+                            <a href="{{ url_for('lista_ordens_servico') }}" class="btn btn-outline-secondary btn-lg px-4">
+                                <i class="bi bi-x-lg me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar de Informações -->
+        <div class="col-lg-4">
+            <!-- Card de Status -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-success-subtle text-success border-bottom border-success-subtle">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informações</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase fw-bold d-block mb-2">Status Inicial</small>
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle fs-6 px-3 py-2">
+                            <i class="bi bi-hourglass-split me-1"></i>Aguardando Aprovação
+                        </span>
+                    </div>
+                    <div class="alert alert-info bg-info-subtle border-info-subtle mb-0">
+                        <h6 class="alert-heading fw-bold"><i class="bi bi-arrow-right-circle me-2"></i>Próximo Passo</h6>
+                        <p class="mb-0 small">O Supervisor de Manutenção irá avaliar e aprovar esta OS, atribuindo um técnico responsável.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de Prioridades -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Níveis de Prioridade</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-3 px-3 py-2">Baixa</span>
+                            <div>
+                                <small class="text-muted">Atendimento normal</small>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-info-subtle text-info border border-info-subtle me-3 px-3 py-2">Normal</span>
+                            <div>
+                                <small class="text-muted">Atendimento padrão</small>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle me-3 px-3 py-2">Alta</span>
+                            <div>
+                                <small class="text-muted">Solicitar atenção</small>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-3 px-3 py-2">Urgente</span>
+                            <div>
+                                <small class="text-muted">Atendimento imediato</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

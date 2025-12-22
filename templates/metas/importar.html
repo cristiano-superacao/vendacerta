@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Importar Metas - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title mb-0">
+            <i class="bi bi-upload"></i> Importar Metas via Excel
+        </h1>
+        <a href="{{ url_for('lista_metas') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Formulário de Upload -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-excel"></i> Upload de Planilha</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-paperclip"></i> Selecione o arquivo Excel (.xlsx ou .xls)
+                            </label>
+                            <input type="file"
+                                   name="arquivo"
+                                   class="form-control form-control-lg"
+                                   accept=".xlsx,.xls"
+                                   required>
+                            <div class="form-text">
+                                Apenas arquivos .xlsx ou .xls são aceitos
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Importante:</strong> Certifique-se de que sua planilha segue o template correto com as colunas obrigatórias.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-upload"></i> Importar Metas
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instruções e Template -->
+        <div class="col-lg-6">
+            <!-- Download Template -->
+            <div class="card shadow-sm mb-4 border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-download"></i> Template Excel</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Baixe o template oficial para garantir que sua planilha está no formato correto:</p>
+                    <a href="{{ url_for('static', filename='templates_excel/template_metas.xlsx') }}"
+                       class="btn btn-success btn-lg w-100"
+                       download>
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Template de Metas
+                    </a>
+                </div>
+            </div>
+
+            <!-- Colunas Obrigatórias -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-list-check"></i> Colunas Obrigatórias</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <strong>Vendedor Email</strong> - Email do vendedor cadastrado
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <strong>Mês</strong> - Número do mês (1-12)
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <strong>Ano</strong> - Ano da meta (ex: 2024)
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <strong>Meta Vendas</strong> - Valor em R$ (ex: 50000.00)
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Colunas Opcionais -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-list"></i> Colunas Opcionais</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-dash-circle text-secondary me-2"></i>
+                            <strong>Meta Alcance</strong> - Meta de alcance em R$
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-dash-circle text-secondary me-2"></i>
+                            <strong>Meta Manutenção</strong> - Meta de manutenção em R$
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exemplo de Dados -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Exemplo de Dados</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Vendedor Email</th>
+                            <th>Mês</th>
+                            <th>Ano</th>
+                            <th>Meta Vendas</th>
+                            <th>Meta Alcance</th>
+                            <th>Meta Manutenção</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>joao@empresa.com</td>
+                            <td>1</td>
+                            <td>2024</td>
+                            <td>50000.00</td>
+                            <td>45000.00</td>
+                            <td>40000.00</td>
+                        </tr>
+                        <tr>
+                            <td>maria@empresa.com</td>
+                            <td>1</td>
+                            <td>2024</td>
+                            <td>60000.00</td>
+                            <td>55000.00</td>
+                            <td>50000.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dicas -->
+    <div class="alert alert-warning mt-4">
+        <h5 class="alert-heading"><i class="bi bi-lightbulb"></i> Dicas Importantes</h5>
+        <hr>
+        <ul class="mb-0">
+            <li>O vendedor deve estar cadastrado no sistema (busca por email)</li>
+            <li>Não pode haver metas duplicadas para o mesmo vendedor/mês/ano</li>
+            <li>Se houver erros, nenhuma meta será importada (transação atômica)</li>
+            <li>Meta Alcance e Meta Manutenção são opcionais (padrão 0)</li>
+            <li>Valores devem ser numéricos (use ponto como separador decimal)</li>
+            <li>Super Admin pode importar metas para qualquer empresa</li>
+            <li>Usuários normais só podem importar metas de sua empresa</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header {
+        font-weight: 600;
+    }
+
+    .form-control-lg {
+        font-size: 1.1rem;
+    }
+
+    .list-group-item i {
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}

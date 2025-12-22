@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+
+{% block title %}Configuração de Comissões{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-sliders"></i> Configuração de Faixas de Comissão</h2>
+            <p class="text-muted mb-0">Gerencie as faixas de comissão para vendedores e supervisores</p>
+        </div>
+        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nova Faixa
+        </a>
+    </div>
+
+    <!-- Navegação em Abas -->
+    <ul class="nav nav-tabs nav-fill mb-4" id="tipoComissaoTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="vendedor-tab" data-bs-toggle="tab"
+                    data-bs-target="#vendedor-pane" type="button" role="tab">
+                <i class="bi bi-person-badge"></i>
+                <span class="d-none d-md-inline">Faixas de </span>Vendedores
+                <span class="badge bg-primary ms-2">{{ faixas_vendedor|length }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="supervisor-tab" data-bs-toggle="tab"
+                    data-bs-target="#supervisor-pane" type="button" role="tab">
+                <i class="bi bi-people"></i>
+                <span class="d-none d-md-inline">Faixas de </span>Supervisores
+                <span class="badge bg-info ms-2">{{ faixas_supervisor|length }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Conteúdo das Abas -->
+    <div class="tab-content" id="tipoComissaoTabContent">
+
+        <!-- ABA VENDEDORES -->
+        <div class="tab-pane fade show active" id="vendedor-pane" role="tabpanel">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-vendedor">
+                    <h5 class="mb-0 text-white">
+                        <i class="bi bi-calculator"></i> Faixas de Comissão - Vendedores
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if faixas_vendedor %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 80px;">Ordem</th>
+                                    <th>Faixa de Alcance</th>
+                                    <th>Taxa de Comissão</th>
+                                    <th style="width: 150px;">Visualização</th>
+                                    <th style="width: 120px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for faixa in faixas_vendedor %}
+                                <tr>
+                                    <td class="align-middle">
+                                        <span class="badge bg-secondary fs-6">{{ faixa.ordem }}</span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <strong class="fs-5">
+                                            {{ '{:.0f}'.format(faixa.alcance_min) }}% -
+                                            {% if faixa.alcance_max >= 1000 %}
+                                                Acima de {{ '{:.0f}'.format(faixa.alcance_min) }}%
+                                            {% else %}
+                                                {{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fs-4 fw-bold text-success">
+                                                {{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%
+                                            </span>
+                                            <small class="text-muted">de comissão</small>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="legend-square bg-{{ faixa.cor }}"></div>
+                                            <span class="badge bg-{{ faixa.cor }} text-capitalize">
+                                                {{ faixa.cor }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('editar_faixa_comissao', tipo='vendedor', id=faixa.id) }}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="confirmarExclusao('vendedor', {{ faixa.id }}, '{{ faixa.alcance_min }}-{{ faixa.alcance_max }}%')"
+                                                    title="Excluir">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mt-3">Nenhuma faixa configurada para vendedores</h4>
+                        <p class="text-muted">Crie sua primeira faixa de comissão para vendedores</p>
+                        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle"></i> Criar Primeira Faixa
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Preview Visual Vendedores -->
+            {% if faixas_vendedor %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-eye"></i> Visualização das Faixas - Vendedores
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for faixa in faixas_vendedor %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 border-{{ faixa.cor }}">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="legend-square bg-{{ faixa.cor }} me-2"></div>
+                                        <h6 class="mb-0">Faixa {{ faixa.ordem }}</h6>
+                                    </div>
+                                    <h4 class="mb-2">
+                                        {{ '{:.0f}'.format(faixa.alcance_min) }}% -
+                                        {% if faixa.alcance_max >= 1000 %}
+                                            Acima
+                                        {% else %}
+                                            {{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                        {% endif %}
+                                    </h4>
+                                    <div class="d-flex align-items-baseline">
+                                        <h3 class="text-{{ faixa.cor }} mb-0">
+                                            {{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%
+                                        </h3>
+                                        <small class="text-muted ms-2">de comissão</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ABA SUPERVISORES -->
+        <div class="tab-pane fade" id="supervisor-pane" role="tabpanel">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-supervisor">
+                    <h5 class="mb-0 text-white">
+                        <i class="bi bi-calculator"></i> Faixas de Comissão - Supervisores
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if faixas_supervisor %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 80px;">Ordem</th>
+                                    <th>Faixa de Alcance</th>
+                                    <th>Taxa de Comissão</th>
+                                    <th style="width: 150px;">Visualização</th>
+                                    <th style="width: 120px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for faixa in faixas_supervisor %}
+                                <tr>
+                                    <td class="align-middle">
+                                        <span class="badge bg-secondary fs-6">{{ faixa.ordem }}</span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <strong class="fs-5">
+                                            {{ '{:.0f}'.format(faixa.alcance_min) }}% -
+                                            {% if faixa.alcance_max >= 1000 %}
+                                                Acima de {{ '{:.0f}'.format(faixa.alcance_min) }}%
+                                            {% else %}
+                                                {{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fs-4 fw-bold text-success">
+                                                {{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%
+                                            </span>
+                                            <small class="text-muted">de comissão</small>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="legend-square bg-{{ faixa.cor }}"></div>
+                                            <span class="badge bg-{{ faixa.cor }} text-capitalize">
+                                                {{ faixa.cor }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('editar_faixa_comissao', tipo='supervisor', id=faixa.id) }}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="confirmarExclusao('supervisor', {{ faixa.id }}, '{{ faixa.alcance_min }}-{{ faixa.alcance_max }}%')"
+                                                    title="Excluir">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mt-3">Nenhuma faixa configurada para supervisores</h4>
+                        <p class="text-muted">Crie sua primeira faixa de comissão para supervisores</p>
+                        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-info mt-2">
+                            <i class="bi bi-plus-circle"></i> Criar Primeira Faixa
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Preview Visual Supervisores -->
+            {% if faixas_supervisor %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-eye"></i> Visualização das Faixas - Supervisores
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for faixa in faixas_supervisor %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 border-{{ faixa.cor }}">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="legend-square bg-{{ faixa.cor }} me-2"></div>
+                                        <h6 class="mb-0">Faixa {{ faixa.ordem }}</h6>
+                                    </div>
+                                    <h4 class="mb-2">
+                                        {{ '{:.0f}'.format(faixa.alcance_min) }}% -
+                                        {% if faixa.alcance_max >= 1000 %}
+                                            Acima
+                                        {% else %}
+                                            {{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                        {% endif %}
+                                    </h4>
+                                    <div class="d-flex align-items-baseline">
+                                        <h3 class="text-{{ faixa.cor }} mb-0">
+                                            {{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%
+                                        </h3>
+                                        <small class="text-muted ms-2">de comissão</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Informações e Exemplos (comum para ambos) -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-info-circle"></i> Como Funciona?
+            </h5>
+        </div>
+        <div class="card-body">
+            <h6 class="fw-bold">Fórmula de Cálculo:</h6>
+            <div class="alert alert-light border">
+                <code class="fs-5">
+                    Comissão = Receita Alcançada × Taxa da Faixa
+                </code>
+            </div>
+
+            <h6 class="fw-bold mt-4">Exemplo Prático:</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Meta</th>
+                            <th>Receita</th>
+                            <th>Alcance</th>
+                            <th>Faixa</th>
+                            <th>Cálculo</th>
+                            <th>Comissão</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>R$ 100.000</td>
+                            <td>R$ 45.000</td>
+                            <td>45%</td>
+                            <td class="bg-danger text-white">0-50% = 1%</td>
+                            <td><code>R$ 45.000 × 1%</code></td>
+                            <td class="fw-bold">R$ 450,00</td>
+                        </tr>
+                        <tr>
+                            <td>R$ 100.000</td>
+                            <td>R$ 65.000</td>
+                            <td>65%</td>
+                            <td class="bg-warning">51-75% = 2%</td>
+                            <td><code>R$ 65.000 × 2%</code></td>
+                            <td class="fw-bold">R$ 1.300,00</td>
+                        </tr>
+                        <tr>
+                            <td>R$ 100.000</td>
+                            <td>R$ 130.000</td>
+                            <td>130%</td>
+                            <td class="bg-success text-white">Acima 125% = 5%</td>
+                            <td><code>R$ 130.000 × 5%</code></td>
+                            <td class="fw-bold">R$ 6.500,00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-warning mt-3">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Importante:</strong> As faixas são independentes para vendedores e supervisores.
+                Configure separadamente ou use a opção de copiar ao criar/editar faixas.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a faixa <strong id="faixaNome"></strong>?</p>
+                <p class="text-danger mb-0">
+                    <i class="bi bi-exclamation-circle"></i>
+                    Esta ação não pode ser desfeita!
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formExcluir" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.legend-square {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.bg-gradient-vendedor {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-supervisor {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.nav-tabs .nav-link {
+    font-weight: 500;
+    color: #6c757d;
+    border: none;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom-color: #dee2e6;
+}
+
+.nav-tabs .nav-link.active {
+    color: #667eea;
+    background-color: transparent;
+    border-bottom-color: #667eea;
+}
+
+/* Cores das faixas */
+.bg-danger { background-color: #dc3545 !important; }
+.bg-warning { background-color: #ffc107 !important; }
+.bg-info { background-color: #17a2b8 !important; }
+.bg-success { background-color: #28a745 !important; }
+.bg-primary { background-color: #007bff !important; }
+
+.border-danger { border-color: #dc3545 !important; border-width: 2px !important; }
+.border-warning { border-color: #ffc107 !important; border-width: 2px !important; }
+.border-info { border-color: #17a2b8 !important; border-width: 2px !important; }
+.border-success { border-color: #28a745 !important; border-width: 2px !important; }
+.border-primary { border-color: #007bff !important; border-width: 2px !important; }
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+</style>
+
+<script>
+function confirmarExclusao(tipo, id, nome) {
+    document.getElementById('faixaNome').textContent = nome;
+    document.getElementById('formExcluir').action = `/configuracoes/comissoes/${tipo}/${id}/deletar`;
+    new bootstrap.Modal(document.getElementById('modalExcluir')).show();
+}
+</script>
+{% endblock %}

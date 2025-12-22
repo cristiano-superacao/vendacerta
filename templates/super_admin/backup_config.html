@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}Configuração de Backups Automáticos - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title mb-2">
+                <i class="bi bi-clock-history"></i> Configuração de Backups Automáticos
+            </h1>
+            <p class="text-muted mb-0">Configure o agendamento e políticas de backup do sistema</p>
+        </div>
+        <a href="{{ url_for('super_admin_backups') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Status do Sistema -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Status do Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="text-muted small">Status do Agendador:</label>
+                        <p class="mb-0">
+                            {% if scheduler_ativo %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="bi bi-check-circle-fill"></i> Ativo
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="bi bi-x-circle-fill"></i> Inativo
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted small">Backup Automático:</label>
+                        <p class="mb-0">
+                            {% if config.enabled %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="bi bi-toggle-on"></i> Habilitado
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning fs-6">
+                                    <i class="bi bi-toggle-off"></i> Desabilitado
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    {% if proxima_execucao %}
+                    <div class="mb-3">
+                        <label class="text-muted small">Próxima Execução:</label>
+                        <p class="mb-0 fw-bold text-primary">
+                            <i class="bi bi-calendar-event"></i>
+                            {{ proxima_execucao.strftime('%d/%m/%Y às %H:%M') }}
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-0">
+                        <label class="text-muted small">Frequência Atual:</label>
+                        <p class="mb-0 fw-semibold">
+                            <i class="bi bi-arrow-repeat"></i>
+                            {% if config.frequency == 'daily' %}
+                                Diário às {{ config.time }}
+                            {% elif config.frequency == 'weekly' %}
+                                Semanal (Domingo) às {{ config.time }}
+                            {% elif config.frequency == 'monthly' %}
+                                Mensal (Dia 1) às {{ config.time }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário de Configuração -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear-fill"></i> Configurações de Agendamento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('salvar_config_backup') }}">
+                        <!-- Habilitar/Desabilitar -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enabled" name="enabled"
+                                       {% if config.enabled %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="enabled">
+                                    <i class="bi bi-power"></i> Habilitar Backup Automático
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                Quando habilitado, backups serão criados automaticamente no horário configurado
+                            </small>
+                        </div>
+
+                        <div class="row">
+                            <!-- Frequência -->
+                            <div class="col-md-6 mb-4">
+                                <label for="frequency" class="form-label fw-semibold">
+                                    <i class="bi bi-arrow-repeat"></i> Frequência
+                                </label>
+                                <select class="form-select" id="frequency" name="frequency" required>
+                                    <option value="daily" {% if config.frequency == 'daily' %}selected{% endif %}>
+                                        Diário
+                                    </option>
+                                    <option value="weekly" {% if config.frequency == 'weekly' %}selected{% endif %}>
+                                        Semanal (Domingo)
+                                    </option>
+                                    <option value="monthly" {% if config.frequency == 'monthly' %}selected{% endif %}>
+                                        Mensal (Dia 1)
+                                    </option>
+                                </select>
+                                <small class="text-muted">Com que frequência criar backups automáticos</small>
+                            </div>
+
+                            <!-- Horário -->
+                            <div class="col-md-6 mb-4">
+                                <label for="time" class="form-label fw-semibold">
+                                    <i class="bi bi-clock"></i> Horário
+                                </label>
+                                <input type="time" class="form-control" id="time" name="time"
+                                       value="{{ config.time }}" required>
+                                <small class="text-muted">Horário de execução do backup (formato 24h)</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Quantidade de Backups -->
+                            <div class="col-md-6 mb-4">
+                                <label for="keep_last" class="form-label fw-semibold">
+                                    <i class="bi bi-archive"></i> Manter Últimos Backups
+                                </label>
+                                <input type="number" class="form-control" id="keep_last" name="keep_last"
+                                       value="{{ config.keep_last }}" min="1" max="30" required>
+                                <small class="text-muted">Quantidade de backups recentes a manter (1-30)</small>
+                            </div>
+
+                            <!-- Limpeza Automática -->
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-semibold d-block">
+                                    <i class="bi bi-trash3"></i> Limpeza Automática
+                                </label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="auto_cleanup" name="auto_cleanup"
+                                           {% if config.auto_cleanup %}checked{% endif %}>
+                                    <label class="form-check-label" for="auto_cleanup">
+                                        Deletar backups antigos automaticamente
+                                    </label>
+                                </div>
+                                <small class="text-muted">Remove backups além do limite configurado</small>
+                            </div>
+                        </div>
+
+                        <!-- Alerta Informativo -->
+                        <div class="alert alert-info border-0">
+                            <i class="bi bi-lightbulb"></i>
+                            <strong>Dica:</strong> Recomendamos backups diários às 02:00 (madrugada)
+                            para mínimo impacto no desempenho. Mantenha pelo menos 7 backups para
+                            recuperação de dados da última semana.
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-fill">
+                                <i class="bi bi-save"></i> Salvar Configurações
+                            </button>
+                            <a href="{{ url_for('super_admin_backups') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card de Informações Adicionais -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-question-circle"></i> Informações Importantes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6 class="fw-bold text-primary">
+                                <i class="bi bi-shield-check"></i> PostgreSQL (Produção)
+                            </h6>
+                            <p class="small mb-0">
+                                Se você está usando PostgreSQL no Railway, os backups são gerenciados
+                                automaticamente pela plataforma. Acesse o painel do Railway para
+                                configurar e restaurar backups do banco de dados em nuvem.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="fw-bold text-success">
+                                <i class="bi bi-database"></i> SQLite (Local)
+                            </h6>
+                            <p class="small mb-0">
+                                Para ambientes locais com SQLite, o sistema cria backups automáticos
+                                na pasta <code>instance/backups/</code>. Os arquivos são nomeados com
+                                <code>auto_backup_AAAAMMDD_HHMMSS.db</code> para fácil identificação.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="fw-bold text-danger">
+                                <i class="bi bi-exclamation-triangle"></i> Recomendações
+                            </h6>
+                            <p class="small mb-0">
+                                Além dos backups automáticos, faça downloads manuais periódicos e
+                                armazene em local seguro (nuvem, HD externo). Teste a restauração
+                                dos backups regularmente para garantir sua integridade.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+
+    .card {
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    code {
+        background: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}

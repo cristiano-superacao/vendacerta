@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Desempenho - Sistema de Metas{% endblock %}
+
+{% block content %}
+<!-- Header Mobile-First -->
+<div class="mobile-header">
+    <div class="container-fluid py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-white-50 d-block mb-1">VENDEDOR</small>
+                <h1 class="h4 mb-0 fw-bold text-white">
+                    <i class="bi bi-person-circle"></i> Olá, {{ vendedor.nome.split()[0] }}!
+                </h1>
+            </div>
+            <div class="d-flex gap-2">
+                <!-- Botão de Mensagens com Badge -->
+                <a href="{{ url_for('caixa_entrada') }}" class="btn btn-sm btn-outline-light position-relative">
+                    <i class="bi bi-envelope-fill"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;" id="badge-mensagens">
+                        0
+                    </span>
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumo Rápido -->
+<div class="container-fluid px-3 py-4">
+    {% if not meta_atual %}
+        <!-- Mensagem quando não há meta -->
+        <div class="alert alert-info">
+            <h5><i class="bi bi-info-circle"></i> Nenhuma meta cadastrada</h5>
+            <p class="mb-0">Não há metas cadastradas para você no mês atual. Entre em contato com seu supervisor.</p>
+        </div>
+    {% else %}
+        <!-- Card de Desempenho do Mês -->
+        <div class="card shadow-sm border-0 mb-4" style="border-left: 4px solid #6366f1 !important;">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-graph-up-arrow"></i> Meu Desempenho - {{ historico[0].mes_nome if historico else hoje.strftime('%b') }}/{{ hoje.year }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Barra de Progresso -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-semibold">Meta do Mês</span>
+                        <span class="text-muted">{{ meta_atual.percentual_alcance|round(1) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar {% if meta_atual.percentual_alcance >= 100 %}bg-success{% elif meta_atual.percentual_alcance >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
+                             role="progressbar"
+                             style="width: {{ [meta_atual.percentual_alcance, 100]|min }}%">
+                            <strong>{{ meta_atual.percentual_alcance|round(1) }}%</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Valores -->                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <div class="text-center p-3 bg-light rounded">
+                            <small class="text-muted d-block mb-1">Meta</small>
+                            <h5 class="mb-0 text-primary fw-bold">
+                                R$ {{ "{:,.2f}".format(meta_atual.valor_meta).replace(',', '_').replace('.', ',').replace('_', '.') }}
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center p-3 bg-light rounded">
+                            <small class="text-muted d-block mb-1">Vendido</small>
+                            <h5 class="mb-0 {% if meta_atual.receita_alcancada >= meta_atual.valor_meta %}text-success{% else %}text-warning{% endif %} fw-bold">
+                                R$ {{ "{:,.2f}".format(meta_atual.receita_alcancada).replace(',', '_').replace('.', ',').replace('_', '.') }}
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Falta/Excedente -->
+                <div class="alert {% if meta_atual.receita_alcancada >= meta_atual.valor_meta %}alert-success{% else %}alert-warning{% endif %} mb-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <i class="bi {% if meta_atual.receita_alcancada >= meta_atual.valor_meta %}bi-check-circle-fill{% else %}bi-exclamation-triangle-fill{% endif %}"></i>
+                            <strong>
+                                {% if meta_atual.receita_alcancada >= meta_atual.valor_meta %}
+                                    Parabéns! Meta batida!
+                                {% else %}
+                                    Falta para a meta
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <span class="fw-bold">
+                            R$ {{ "{:,.2f}".format((meta_atual.valor_meta - meta_atual.receita_alcancada)|abs).replace(',', '_').replace('.', ',').replace('_', '.') }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Projeção -->
+                {% if projecao %}
+                <div class="card bg-info bg-opacity-10 border-info border-0 mb-3">
+                    <div class="card-body">
+                        <h6 class="text-info mb-3">
+                            <i class="bi bi-graph-up"></i> Projeção do Mês
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Média/Dia</small>
+                                <strong class="text-dark">{{ projecao.media_diaria_formatada }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block">Projeção Final</small>
+                                <strong class="{% if projecao.projecao_mes >= meta_atual.valor_meta %}text-success{% else %}text-warning{% endif %}">
+                                    {{ projecao.projecao_mes_formatada }}
+                                </strong>
+                            </div>
+                            <div class="col-12">
+                                <small class="text-muted">Dias úteis: {{ projecao.dias_uteis_trabalhados }} trabalhados | {{ projecao.dias_uteis_restantes }} restantes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Comissão -->
+                <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
+                    <small class="text-muted d-block mb-1">Comissão Prevista</small>
+                    <h4 class="mb-0 text-primary fw-bold">
+                        R$ {{ "{:,.2f}".format(meta_atual.comissao_total).replace(',', '_').replace('.', ',').replace('_', '.') }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ranking da Equipe -->
+        {% if ranking_equipe %}
+        <div class="card shadow-sm border-0 mb-4" style="border-left: 4px solid #10b981 !important;">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold text-success">
+                    <i class="bi bi-trophy-fill"></i> Ranking da Equipe
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for item in ranking_equipe %}
+                    <div class="list-group-item {% if item.is_current_user %}bg-light border-primary border-2{% endif %}">
+                        <div class="d-flex align-items-center">
+                            <!-- Posição -->
+                            <div class="me-3">
+                                {% if item.posicao == 1 %}
+                                    <span class="badge bg-warning text-dark" style="font-size: 1.2rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-trophy-fill"></i>
+                                    </span>
+                                {% elif item.posicao == 2 %}
+                                    <span class="badge bg-secondary" style="font-size: 1.2rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-trophy"></i>
+                                    </span>
+                                {% elif item.posicao == 3 %}
+                                    <span class="badge bg-danger" style="font-size: 1.2rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-trophy"></i>
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border" style="font-size: 1rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        {{ item.posicao }}º
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <!-- Info do Vendedor -->
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0 {% if item.is_current_user %}fw-bold text-primary{% endif %}">
+                                    {{ item.nome }} {% if item.is_current_user %}<span class="badge bg-primary">Você</span>{% endif %}
+                                </h6>
+                                <small class="text-muted">
+                                    {{ "{:,.2f}".format(item.receita).replace(',', '_').replace('.', ',').replace('_', '.') }} /
+                                    {{ "{:,.2f}".format(item.meta).replace(',', '_').replace('.', ',').replace('_', '.') }}
+                                </small>
+                            </div>
+                            <!-- Percentual -->
+                            <div class="text-end">
+                                <span class="badge {% if item.percentual >= 100 %}bg-success{% elif item.percentual >= 70 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                                    {{ item.percentual|round(1) }}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Histórico Rápido (últimos 3 meses) -->
+        {% if historico %}
+        <div class="card shadow-sm border-0 mt-4" style="border-left: 4px solid #ec4899 !important;">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0 fw-bold" style="color: #ec4899;">
+                    <i class="bi bi-clock-history"></i> Histórico
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mês</th>
+                                <th class="text-end">Meta</th>
+                                <th class="text-end">Vendido</th>
+                                <th class="text-end">%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in historico %}
+                            <tr>
+                                <td>{{ item.mes_nome }}/{{ item.ano }}</td>
+                                <td class="text-end">R$ {{ "{:,.0f}".format(item.meta).replace(',', '.') }}</td>
+                                <td class="text-end">R$ {{ "{:,.0f}".format(item.receita).replace(',', '.') }}</td>
+                                <td class="text-end">
+                                    <span class="badge {% if item.percentual >= 100 %}bg-success{% elif item.percentual >= 70 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ item.percentual|round(0)|int }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mobile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: -1.5rem -1.5rem 0 -1.5rem;
+    }
+
+    .progress {
+        border-radius: 15px;
+        background-color: #e9ecef;
+    }
+
+    .progress-bar {
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+    }
+
+    @media (max-width: 576px) {
+        body {
+            font-size: 0.9rem;
+        }
+
+        h1, .h1 {
+            font-size: 1.5rem;
+        }
+
+        h5, .h5 {
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+
+{% block title %}Importar Vendedores - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Cabeçalho -->
+    <div class="row align-items-center mb-4 g-3">
+        <div class="col-md-8">
+            <h2 class="mb-2">
+                <i class="bi bi-cloud-upload-fill text-primary me-2"></i>
+                <span class="d-none d-md-inline">Importar Vendedores</span>
+                <span class="d-inline d-md-none">Importar</span>
+            </h2>
+            <p class="text-muted mb-0 small">Envie uma planilha Excel com os dados dos vendedores</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('lista_vendedores') }}" class="btn btn-outline-secondary w-100 w-md-auto">
+                <i class="bi bi-arrow-left me-2"></i>Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 g-lg-4">
+        <!-- Formulário de Upload -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-cloud-arrow-up me-2"></i>Upload de Planilha
+                    </h5>
+                </div>
+                <div class="card-body p-3 p-lg-4">
+                    <form method="POST" enctype="multipart/form-data" id="formImportacao">
+                        
+                        <!-- Upload com Drag and Drop -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-file-earmark-excel-fill text-success me-2"></i>Arquivo Excel
+                            </label>
+                            
+                            <!-- Área de Drop Moderna -->
+                            <div class="drop-zone" id="dropZone">
+                                <input type="file" class="d-none" id="arquivo" name="arquivo"
+                                       accept=".xlsx,.xls" required>
+                                <div class="drop-zone-content text-center">
+                                    <i class="bi bi-cloud-upload display-3 text-primary mb-3 d-block"></i>
+                                    <h6 class="fw-bold mb-2">Arraste o arquivo aqui</h6>
+                                    <p class="text-muted small mb-3">ou</p>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('arquivo').click()">
+                                        <i class="bi bi-folder2-open me-2"></i>Escolher Arquivo
+                                    </button>
+                                    <div class="mt-3">
+                                        <small class="text-muted d-block">Formatos: .xlsx, .xls</small>
+                                        <small class="text-muted d-block">Tamanho máximo: 10 MB</small>
+                                    </div>
+                                </div>
+                                <div class="drop-zone-file-info d-none">
+                                    <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-file-earmark-excel-fill text-success fs-3 me-3"></i>
+                                            <div>
+                                                <div class="fw-bold" id="fileName"></div>
+                                                <small class="text-muted" id="fileSize"></small>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile()">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dicas -->
+                        <div class="alert alert-info border-0 bg-info bg-opacity-10 mb-4">
+                            <div class="d-flex">
+                                <i class="bi bi-lightbulb-fill text-info me-3 fs-4"></i>
+                                <div class="small">
+                                    <strong class="d-block mb-2">Dicas importantes:</strong>
+                                    <ul class="mb-0 ps-3">
+                                        <li>Nome e Email são obrigatórios</li>
+                                        <li>CPF deve ser único</li>
+                                        <li>Senha padrão: "venda123"</li>
+                                        <li>Duplicatas serão ignoradas</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botão de Importar com Progress -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg shadow" id="btnImportar">
+                                <span class="spinner-border spinner-border-sm me-2 d-none" id="loadingSpinner"></span>
+                                <i class="bi bi-cloud-upload-fill me-2" id="uploadIcon"></i>
+                                <span id="btnText">Importar Vendedores</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="progress mt-3 d-none" id="progressContainer" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                 role="progressbar" id="progressBar" style="width: 0%">
+                                <span id="progressText">0%</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template e Instruções -->
+        <div class="col-lg-6">
+            <!-- Download Template -->
+            <div class="card border-0 shadow-sm mb-3 mb-lg-4">
+                <div class="card-header bg-gradient-success text-white border-0">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-download me-2"></i>Template Excel
+                    </h5>
+                </div>
+                <div class="card-body p-3 p-lg-4 text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-file-earmark-plus text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h6 class="fw-bold mb-2">Modelo Oficial</h6>
+                    <p class="text-muted small mb-4">Baixe o template para garantir o formato correto</p>
+                    <a href="{{ url_for('download_template_vendedores') }}"
+                       class="btn btn-success btn-lg w-100 shadow-sm">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Baixar Template
+                    </a>
+                </div>
+            </div>
+
+            <!-- Colunas da Planilha -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-table text-primary me-2"></i>Estrutura da Planilha
+                    </h5>
+                </div>
+                <div class="card-body p-3 p-lg-4">
+                    <!-- Obrigatórias -->
+                    <h6 class="fw-bold mb-3">
+                        <span class="badge bg-danger me-2">Obrigatórias</span>
+                    </h6>
+                    <div class="row g-2 mb-4">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong class="small">Nome</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong class="small">Email</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong class="small">CPF</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong class="small">Telefone</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Opcionais -->
+                    <h6 class="fw-bold mb-3">
+                        <span class="badge bg-secondary me-2">Opcionais</span>
+                    </h6>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-circle text-secondary me-2"></i>
+                                <small>Equipe</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-circle text-secondary me-2"></i>
+                                <small>Cargo</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-circle text-secondary me-2"></i>
+                                <small>Data Admissão</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-circle text-secondary me-2"></i>
+                                <small>Gerente</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processo de Importação -->
+    <div class="row mt-3 mt-lg-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-diagram-3-fill text-primary me-2"></i>Como Funciona
+                    </h5>
+                </div>
+                <div class="card-body p-3 p-lg-4">
+                    <div class="row g-3 g-md-4 text-center">
+                        <div class="col-6 col-lg-3">
+                            <div class="step-icon mb-3 mx-auto">
+                                <div class="icon-wrapper">
+                                    <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                                </div>
+                                <div class="step-number">1</div>
+                            </div>
+                            <h6 class="fw-bold small mb-2">Baixe o Template</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.8rem;">Use o modelo oficial</p>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="step-icon mb-3 mx-auto">
+                                <div class="icon-wrapper">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </div>
+                                <div class="step-number">2</div>
+                            </div>
+                            <h6 class="fw-bold small mb-2">Preencha</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.8rem;">Insira os dados dos vendedores</p>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="step-icon mb-3 mx-auto">
+                                <div class="icon-wrapper">
+                                    <i class="bi bi-cloud-upload-fill"></i>
+                                </div>
+                                <div class="step-number">3</div>
+                            </div>
+                            <h6 class="fw-bold small mb-2">Envie</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.8rem;">Faça o upload do arquivo</p>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="step-icon mb-3 mx-auto">
+                                <div class="icon-wrapper">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <div class="step-number">4</div>
+                            </div>
+                            <h6 class="fw-bold small mb-2">Pronto</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.8rem;">Vendedores importados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    /* Gradientes modernos */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+    
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+    }
+    
+    /* Drop Zone Moderna */
+    .drop-zone {
+        border: 3px dashed #dee2e6;
+        border-radius: 1rem;
+        padding: 2rem 1rem;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+        position: relative;
+    }
+    
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+        border-color: #667eea;
+        background: #f0f4ff;
+        transform: translateY(-2px);
+    }
+    
+    .drop-zone.drag-over {
+        border-style: solid;
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Steps Icons */
+    .step-icon {
+        position: relative;
+        width: 80px;
+        height: 80px;
+    }
+    
+    .step-icon .icon-wrapper {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .step-icon .icon-wrapper:hover {
+        transform: scale(1.1) rotateY(180deg);
+    }
+    
+    .step-icon .step-number {
+        position: absolute;
+        top: -5px;
+        right: 0px;
+        background: #fff;
+        color: #667eea;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.85rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        border: 2px solid #667eea;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .drop-zone {
+            padding: 1.5rem 1rem;
+        }
+        
+        .step-icon .icon-wrapper {
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+        }
+        
+        .step-icon {
+            width: 60px;
+            height: 60px;
+        }
+        
+        .step-icon .step-number {
+            width: 24px;
+            height: 24px;
+            font-size: 0.75rem;
+        }
+        
+        h2 {
+            font-size: 1.5rem !important;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // =================
+    // DRAG AND DROP
+    // =================
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('arquivo');
+    const dropZoneContent = dropZone.querySelector('.drop-zone-content');
+    const dropZoneFileInfo = dropZone.querySelector('.drop-zone-file-info');
+    
+    // Prevenir comportamento padrão
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    // Highlight na área de drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('drag-over');
+        });
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('drag-over');
+        });
+    });
+    
+    // Handle drop
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            fileInput.files = files;
+            displayFileInfo(files[0]);
+        }
+    });
+    
+    // Handle file select
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            displayFileInfo(e.target.files[0]);
+        }
+    });
+    
+    // Exibir informações do arquivo
+    function displayFileInfo(file) {
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        
+        dropZoneContent.classList.add('d-none');
+        dropZoneFileInfo.classList.remove('d-none');
+    }
+    
+    // Remover arquivo
+    window.removeFile = function() {
+        fileInput.value = '';
+        dropZoneContent.classList.remove('d-none');
+        dropZoneFileInfo.classList.add('d-none');
+    };
+    
+    // Formatar tamanho
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    // =================
+    // SUBMIT FORM
+    // =================
+    const form = document.getElementById('formImportacao');
+    const btnImportar = document.getElementById('btnImportar');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const uploadIcon = document.getElementById('uploadIcon');
+    const btnText = document.getElementById('btnText');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    form.addEventListener('submit', (e) => {
+        // Mostrar loading
+        loadingSpinner.classList.remove('d-none');
+        uploadIcon.classList.add('d-none');
+        btnText.textContent = 'Processando...';
+        btnImportar.disabled = true;
+        
+        // Progress bar
+        progressContainer.classList.remove('d-none');
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            if (progress <= 90) {
+                progressBar.style.width = progress + '%';
+                progressText.textContent = progress + '%';
+            } else {
+                clearInterval(interval);
+            }
+        }, 200);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar Metas - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-bullseye text-primary me-2"></i>Configurar Metas Avançadas
+            </h2>
+            <p class="text-muted mb-0">Crie metas de valor ou volume com balanceamento automático</p>
+        </div>
+        <a href="{{ url_for('relatorio_metas_avancado') }}" class="btn btn-outline-primary">
+            <i class="bi bi-graph-up me-2"></i>Ver Relatório
+        </a>
+    </div>
+
+    <!-- Tabs para tipo de meta -->
+    <ul class="nav nav-tabs mb-4" id="tipoMetaTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="valor-tab" data-bs-toggle="tab" data-bs-target="#meta-valor"
+                    type="button" role="tab">
+                <i class="bi bi-currency-dollar me-2"></i>Meta de Valor
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="volume-tab" data-bs-toggle="tab" data-bs-target="#meta-volume"
+                    type="button" role="tab">
+                <i class="bi bi-box-seam me-2"></i>Meta de Volume
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="tipoMetaContent">
+        <!-- TAB: META DE VALOR -->
+        <div class="tab-pane fade show active" id="meta-valor" role="tabpanel">
+            <form method="post" id="formMetaValor">
+                <input type="hidden" name="tipo_meta" value="valor">
+
+                <div class="row g-4">
+                    <!-- Coluna Esquerda: Configuração -->
+                    <div class="col-lg-5">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-gradient-primary text-white py-3">
+                                <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Configuração da Meta</h6>
+                            </div>
+                            <div class="card-body p-4">
+                                <!-- Vendedor -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Vendedor <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="vendedor_id" id="vendedor_valor" required>
+                                        <option value="">Selecione um vendedor</option>
+                                        {% for vendedor in vendedores %}
+                                            <option value="{{ vendedor.id }}">{{ vendedor.nome }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Período -->
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Mês <span class="text-danger">*</span></label>
+                                            <select class="form-select" name="mes" required>
+                                                {% for m in range(1, 13) %}
+                                                    <option value="{{ m }}">
+                                                        {{ ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                                                             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][m] }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Ano <span class="text-danger">*</span></label>
+                                            <select class="form-select" name="ano" required>
+                                                {% for a in anos %}
+                                                    <option value="{{ a }}">{{ a }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Período Histórico -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Período Histórico</label>
+                                    <select class="form-select" name="periodo_historico">
+                                        <option value="3">3 meses</option>
+                                        <option value="6" selected>6 meses</option>
+                                        <option value="9">9 meses</option>
+                                        <option value="12">12 meses</option>
+                                    </select>
+                                    <small class="text-muted">Quantidade de meses anteriores para cálculo</small>
+                                </div>
+
+                                <!-- Tipo de Balanceamento -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Tipo de Balanceamento</label>
+                                    <select class="form-select" name="tipo_balanceamento">
+                                        <option value="simples" selected>Média Simples</option>
+                                        <option value="ponderado">Média Ponderada (prioriza meses recentes)</option>
+                                        <option value="tendencia">Com Tendência (prevê crescimento/queda)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Botões -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="calcular" class="btn btn-primary">
+                                        <i class="bi bi-calculator me-2"></i>Calcular Meta
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita: Resultado do Cálculo -->
+                    <div class="col-lg-7">
+                        {% if dados_calculo %}
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-gradient-success text-white py-3">
+                                <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>Meta Calculada</h6>
+                            </div>
+                            <div class="card-body p-4">
+                                <!-- Cards de Resultado -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info mb-0">
+                                            <small class="text-uppercase fw-bold d-block mb-1">Meta Sugerida (Valor)</small>
+                                            <h3 class="mb-0">R$ {{ "%.2f"|format(dados_calculo.meta_valor) }}</h3>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-secondary mb-0">
+                                            <small class="text-uppercase fw-bold d-block mb-1">Média Mensal Histórica</small>
+                                            <h4 class="mb-0">R$ {{ "%.2f"|format(dados_calculo.media_mensal_valor) }}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tendência (se aplicável) -->
+                                {% if dados_calculo.tendencia != 0 %}
+                                <div class="alert alert-warning mb-4">
+                                    <i class="bi bi-graph-up-arrow me-2"></i>
+                                    <strong>Tendência Detectada:</strong>
+                                    {% if dados_calculo.tendencia > 0 %}
+                                        Crescimento de {{ "%.1f"|format(dados_calculo.tendencia) }}% ao mês
+                                    {% else %}
+                                        Queda de {{ "%.1f"|format(dados_calculo.tendencia|abs) }}% ao mês
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Histórico -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="bi bi-clock-history me-2"></i>Histórico ({{ dados_calculo.meses_analisados }} meses)
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Mês</th>
+                                                    <th class="text-end">Valor</th>
+                                                    <th class="text-end">Volume</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for hist in dados_calculo.historico %}
+                                                <tr>
+                                                    <td>{{ hist.mes_nome }}/{{ hist.ano }}</td>
+                                                    <td class="text-end">R$ {{ "%.2f"|format(hist.total_valor) }}</td>
+                                                    <td class="text-end">{{ hist.total_volume }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Ajuste Manual (Opcional) -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Ajustar Meta Manualmente (Opcional)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        <input type="number" class="form-control" name="ajuste_manual"
+                                               step="0.01" placeholder="{{ '%.2f'|format(dados_calculo.meta_valor) }}">
+                                    </div>
+                                    <small class="text-muted">Deixe vazio para usar o valor calculado</small>
+                                </div>
+
+                                <!-- Botão Salvar -->
+                                <div class="d-grid">
+                                    <button type="submit" name="salvar" class="btn btn-success btn-lg">
+                                        <i class="bi bi-save me-2"></i>Salvar Meta
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <i class="bi bi-calculator text-muted" style="font-size: 4rem;"></i>
+                                <h5 class="text-muted mt-3">Configure e calcule a meta</h5>
+                                <p class="text-muted">Preencha os campos ao lado e clique em "Calcular Meta"</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- TAB: META DE VOLUME -->
+        <div class="tab-pane fade" id="meta-volume" role="tabpanel">
+            <form method="post" id="formMetaVolume">
+                <input type="hidden" name="tipo_meta" value="volume">
+
+                <div class="row g-4">
+                    <!-- Similar ao Meta de Valor, mas com Volume -->
+                    <div class="col-lg-5">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-gradient-info text-white py-3">
+                                <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Configuração da Meta</h6>
+                            </div>
+                            <div class="card-body p-4">
+                                <!-- Campos idênticos ao Meta de Valor -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Vendedor <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="vendedor_id" required>
+                                        <option value="">Selecione um vendedor</option>
+                                        {% for vendedor in vendedores %}
+                                            <option value="{{ vendedor.id }}">{{ vendedor.nome }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Mês <span class="text-danger">*</span></label>
+                                            <select class="form-select" name="mes" required>
+                                                {% for m in range(1, 13) %}
+                                                    <option value="{{ m }}">
+                                                        {{ ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                                                             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][m] }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Ano <span class="text-danger">*</span></label>
+                                            <select class="form-select" name="ano" required>
+                                                {% for a in anos %}
+                                                    <option value="{{ a }}">{{ a }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Período Histórico</label>
+                                    <select class="form-select" name="periodo_historico">
+                                        <option value="3">3 meses</option>
+                                        <option value="6" selected>6 meses</option>
+                                        <option value="9">9 meses</option>
+                                        <option value="12">12 meses</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Tipo de Balanceamento</label>
+                                    <select class="form-select" name="tipo_balanceamento">
+                                        <option value="simples" selected>Média Simples</option>
+                                        <option value="ponderado">Média Ponderada</option>
+                                        <option value="tendencia">Com Tendência</option>
+                                    </select>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="calcular" class="btn btn-info text-white">
+                                        <i class="bi bi-calculator me-2"></i>Calcular Meta
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resultado do Cálculo de Volume -->
+                    <div class="col-lg-7">
+                        {% if dados_calculo and request.form.get('tipo_meta') == 'volume' %}
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-gradient-info text-white py-3">
+                                <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>Meta Calculada</h6>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info mb-0">
+                                            <small class="text-uppercase fw-bold d-block mb-1">Meta Sugerida (Volume)</small>
+                                            <h3 class="mb-0">{{ dados_calculo.meta_volume }} vendas</h3>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-secondary mb-0">
+                                            <small class="text-uppercase fw-bold d-block mb-1">Média Mensal</small>
+                                            <h4 class="mb-0">{{ dados_calculo.media_mensal_volume }} vendas</h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Ajustar Meta Manualmente (Opcional)</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="ajuste_manual"
+                                               placeholder="{{ dados_calculo.meta_volume }}">
+                                        <span class="input-group-text">vendas</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" name="salvar" class="btn btn-info btn-lg text-white">
+                                        <i class="bi bi-save me-2"></i>Salvar Meta
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <i class="bi bi-box-seam text-muted" style="font-size: 4rem;"></i>
+                                <h5 class="text-muted mt-3">Configure e calcule a meta de volume</h5>
+                                <p class="text-muted">Preencha os campos ao lado e clique em "Calcular Meta"</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.bg-gradient-success {
+    background: linear-gradient(135deg, #0cebeb 0%, #20e3b2 100%, #29ffc6 100%);
+}
+.bg-gradient-info {
+    background: linear-gradient(135deg, #13547a 0%, #80d0c7 100%);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,17 @@
+[build]
+  # Diretório base para o build
+  base = "."
+  # Comando de build (instala dependências Node se necessário)
+  command = "npm install"
+  # Diretório a ser publicado
+  publish = "."
+
+# Configuração de redirecionamento para Single Page Apps ou Documentação
+[[redirects]]
+  from = "/"
+  to = "/docs/MANUAL_DO_USUARIO.html"
+  status = 200
+
+# Se quiser servir o app Flask no Netlify (via Functions), seria necessário configuração extra
+# Mas como o app usa APScheduler e Banco de Dados persistente, recomendamos Railway para o Backend.
+# Este arquivo configura o Netlify para servir a DOCUMENTAÇÃO do sistema.

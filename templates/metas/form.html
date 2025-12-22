@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}{% if meta %}Editar{% else %}Nova{% endif %} Meta - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Modernizado -->
+    <div class="modern-header mb-4">
+        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">METAS E COMISSÕES</p>
+        <h1 class="page-title-modern mb-2">
+            <i class="bi bi-bullseye"></i> {% if meta %}Editar Meta{% else %}Nova Meta{% endif %}
+        </h1>
+        <p class="text-muted mb-3">Defina metas mensais e acompanhe o desempenho dos vendedores</p>
+        <a href="{{ url_for('lista_metas') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0" style="border-radius: 12px; border-left: 4px solid #10b981 !important;">
+            <div class="card-body p-4">
+                <form method="POST" id="metaForm">
+                    {{ form.hidden_tag() }}
+
+                    <!-- Seção Vendedor -->
+                    <div class="alert alert-success border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.1) 100%); border-left: 4px solid #10b981 !important;">
+                        <h6 class="mb-2">
+                            <i class="bi bi-person-circle"></i> Vendedor
+                        </h6>
+                        <small class="text-muted">A meta será vinculada ao vendedor selecionado, incluindo seu supervisor</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <label class="form-label text-uppercase small fw-semibold text-muted">
+                                <i class="bi bi-person-circle text-success"></i> {{ form.vendedor_id.label.text }}
+                                <span class="badge bg-danger ms-2">OBRIGATÓRIO</span>
+                            </label>
+                            {{ form.vendedor_id(class="form-select form-select-lg") }}
+                            {% if form.vendedor_id.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.vendedor_id.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted d-flex align-items-center mt-2">
+                                <i class="bi bi-info-circle me-1"></i> Vendedor que terá esta meta atribuída
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Período -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-calendar-month"></i> {{ form.mes.label.text }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.mes(class="form-select") }}
+                            {% if form.mes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.mes.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-calendar"></i> {{ form.ano.label.text }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.ano(class="form-control", placeholder="Ex: 2024") }}
+                            {% if form.ano.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.ano.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Valores -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-bullseye"></i> {{ form.valor_meta.label.text }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-currency-dollar"></i></span>
+                                {{ form.valor_meta(class="form-control", placeholder="0,00", id="valorMeta") }}
+                            </div>
+                            {% if form.valor_meta.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.valor_meta.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Valor objetivo para o período</small>
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-cash-stack"></i> {{ form.receita_alcancada.label.text }}
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-currency-dollar"></i></span>
+                                {{ form.receita_alcancada(class="form-control", placeholder="0,00", id="receitaAlcancada") }}
+                            </div>
+                            {% if form.receita_alcancada.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.receita_alcancada.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Receita já alcançada (opcional)</small>
+                        </div>
+                    </div>
+
+                    <!-- Status e Observações -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-clipboard-check"></i> {{ form.status_comissao.label.text }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.status_comissao(class="form-select") }}
+                            {% if form.status_comissao.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.status_comissao.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-12 mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-chat-left-text"></i> {{ form.observacoes.label.text }}
+                            </label>
+                            {{ form.observacoes(class="form-control", rows="3", placeholder="Observações sobre esta meta (opcional)...") }}
+                            {% if form.observacoes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.observacoes.errors %}<div>{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Preview da Comissão -->
+                    <div class="card mb-4 border-success d-none" id="commissionPreview">
+                        <div class="card-body text-center">
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-calculator"></i> Comissão Calculada
+                            </p>
+                            <h2 class="text-success mb-2" id="commissionValue">R$ 0,00</h2>
+                            <div class="progress mb-2 progress-md">
+                                <div class="progress-bar" id="progressBar" role="progressbar" data-percent="0">
+                                    <span id="percentualAlcance">0</span>%
+                                </div>
+                            </div>
+                            <p class="mb-0">
+                                <span class="badge bg-primary" id="faixaBadge">Faixa 1</span>
+                                Taxa de <strong><span id="taxaComissao">0</span>%</strong> sobre a receita alcançada
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Info Faixas -->
+                    <div class="alert alert-info border-0 shadow-sm">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle"></i> Faixas de Comissão
+                        </h6>
+                        <div class="row g-2 small">
+                            <div class="col-md-6 col-lg-4"><i class="bi bi-circle-fill text-danger"></i> <strong>0-50%:</strong> 1% de comissão</div>
+                            <div class="col-md-6 col-lg-4"><i class="bi bi-circle-fill text-warning"></i> <strong>51-75%:</strong> 2% de comissão</div>
+                            <div class="col-md-6 col-lg-4"><i class="bi bi-circle-fill text-info"></i> <strong>76-100%:</strong> 3% de comissão</div>
+                            <div class="col-md-6 col-lg-4"><i class="bi bi-circle-fill text-success"></i> <strong>101-125%:</strong> 4% de comissão</div>
+                            <div class="col-md-6 col-lg-4"><i class="bi bi-star-fill text-success"></i> <strong>>125%:</strong> 5% de comissão</div>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between gap-2">
+                        <a href="{{ url_for('lista_metas') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Salvar Meta
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Calcula comissão em tempo real
+function calcularComissao() {
+    const valorMeta = parseFloat(document.getElementById('valorMeta').value) || 0;
+    const receitaAlcancada = parseFloat(document.getElementById('receitaAlcancada').value) || 0;
+
+    if (valorMeta > 0 && receitaAlcancada >= 0) {
+        const percentual = (receitaAlcancada / valorMeta) * 100;
+        let taxaComissao = 0;
+        let faixa = '';
+        let corBarra = '';
+
+        // Determina faixa, taxa e cor
+        if (percentual <= 50) {
+            taxaComissao = 1;
+            faixa = '<i class="bi bi-circle-fill text-danger"></i> Faixa 1';
+            corBarra = 'bg-danger';
+        } else if (percentual <= 75) {
+            taxaComissao = 2;
+            faixa = '<i class="bi bi-circle-fill text-warning"></i> Faixa 2';
+            corBarra = 'bg-warning';
+        } else if (percentual <= 100) {
+            taxaComissao = 3;
+            faixa = '<i class="bi bi-circle-fill text-info"></i> Faixa 3';
+            corBarra = 'bg-info';
+        } else if (percentual <= 125) {
+            taxaComissao = 4;
+            faixa = '<i class="bi bi-circle-fill text-success"></i> Faixa 4';
+            corBarra = 'bg-success';
+        } else {
+            taxaComissao = 5;
+            faixa = '<i class="bi bi-star-fill text-success"></i> Faixa 5';
+            corBarra = 'bg-success';
+        }
+
+        const comissao = receitaAlcancada * (taxaComissao / 100);
+        const percentualDisplay = Math.min(percentual, 150); // Limita visualização
+
+        // Atualiza preview
+        document.getElementById('commissionPreview').classList.remove('d-none');
+        document.getElementById('commissionValue').textContent =
+            'R$ ' + comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('percentualAlcance').textContent = percentual.toFixed(1);
+        document.getElementById('taxaComissao').textContent = taxaComissao;
+        document.getElementById('faixaBadge').innerHTML = faixa;
+
+        const progressBar = document.getElementById('progressBar');
+        progressBar.className = 'progress-bar ' + corBarra;
+        progressBar.style.width = percentualDisplay + '%';
+    } else {
+        document.getElementById('commissionPreview').classList.add('d-none');
+    }
+}
+
+// Eventos
+document.getElementById('valorMeta').addEventListener('input', calcularComissao);
+document.getElementById('receitaAlcancada').addEventListener('input', calcularComissao);
+document.addEventListener('DOMContentLoaded', calcularComissao);
+
+// Validação
+document.getElementById('metaForm').addEventListener('submit', function(e) {
+    const valorMeta = parseFloat(document.getElementById('valorMeta').value) || 0;
+    if (valorMeta <= 0) {
+        e.preventDefault();
+        alert('O valor da meta deve ser maior que zero!');
+        document.getElementById('valorMeta').focus();
+    }
+});
+</script>
+{% endblock %}

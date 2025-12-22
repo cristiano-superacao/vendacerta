@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Login - {{ vendedor.nome }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('lista_vendedores') }}">Vendedores</a></li>
+                    <li class="breadcrumb-item active">Editar Login</li>
+                </ol>
+            </nav>
+
+            <!-- Card de Editar Login -->
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-xl-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-gradient-info text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pencil-square me-2"></i>
+                                Editar Login de Acesso
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Informações do Vendedor -->
+                            <div class="alert alert-info border-info mb-4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="alert-heading mb-2">
+                                            <i class="bi bi-person-badge me-2"></i>Vendedor
+                                        </h6>
+                                        <p class="mb-1"><strong>Nome:</strong> {{ vendedor.nome }}</p>
+                                        <p class="mb-0"><strong>Email:</strong> {{ vendedor.email }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="alert-heading mb-2">
+                                            <i class="bi bi-person-check me-2"></i>Login Atual
+                                        </h6>
+                                        <p class="mb-1"><strong>Usuário:</strong> {{ usuario.nome }}</p>
+                                        <p class="mb-0"><strong>Email:</strong> {{ usuario.email }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Formulário -->
+                            <form method="POST" class="needs-validation" novalidate>
+                                <div class="row g-3">
+                                    <!-- Nome -->
+                                    <div class="col-12">
+                                        <label for="nome" class="form-label fw-semibold">
+                                            <i class="bi bi-person me-1 text-primary"></i>
+                                            Nome Completo
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-control form-control-lg"
+                                               id="nome"
+                                               name="nome"
+                                               value="{{ usuario.nome }}"
+                                               required
+                                               placeholder="Nome completo do usuário">
+                                        <div class="invalid-feedback">
+                                            Por favor, informe o nome.
+                                        </div>
+                                    </div>
+
+                                    <!-- Email -->
+                                    <div class="col-12">
+                                        <label for="email" class="form-label fw-semibold">
+                                            <i class="bi bi-envelope me-1 text-primary"></i>
+                                            Email de Login
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="email"
+                                               class="form-control form-control-lg"
+                                               id="email"
+                                               name="email"
+                                               value="{{ usuario.email }}"
+                                               required
+                                               placeholder="email@empresa.com">
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Este será o email usado para fazer login no sistema
+                                        </div>
+                                        <div class="invalid-feedback">
+                                            Por favor, informe um email válido.
+                                        </div>
+                                    </div>
+
+                                    <!-- Divisor -->
+                                    <div class="col-12">
+                                        <hr class="my-3">
+                                        <h6 class="text-muted mb-3">
+                                            <i class="bi bi-shield-lock me-2"></i>
+                                            Alterar Senha (Opcional)
+                                        </h6>
+                                        <div class="alert alert-warning border-warning py-2">
+                                            <small>
+                                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                                Deixe em branco para manter a senha atual
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Nova Senha -->
+                                    <div class="col-md-6">
+                                        <label for="nova_senha" class="form-label fw-semibold">
+                                            <i class="bi bi-key me-1 text-warning"></i>
+                                            Nova Senha
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password"
+                                                   class="form-control"
+                                                   id="nova_senha"
+                                                   name="nova_senha"
+                                                   minlength="6"
+                                                   placeholder="Mínimo 6 caracteres">
+                                            <button class="btn btn-outline-secondary"
+                                                    type="button"
+                                                    onclick="togglePassword('nova_senha', this)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Mínimo 6 caracteres
+                                        </div>
+                                    </div>
+
+                                    <!-- Confirmar Senha -->
+                                    <div class="col-md-6">
+                                        <label for="confirmar_senha" class="form-label fw-semibold">
+                                            <i class="bi bi-key-fill me-1 text-warning"></i>
+                                            Confirmar Nova Senha
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password"
+                                                   class="form-control"
+                                                   id="confirmar_senha"
+                                                   name="confirmar_senha"
+                                                   minlength="6"
+                                                   placeholder="Digite novamente">
+                                            <button class="btn btn-outline-secondary"
+                                                    type="button"
+                                                    onclick="togglePassword('confirmar_senha', this)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="invalid-feedback">
+                                            As senhas devem ser iguais.
+                                        </div>
+                                    </div>
+
+                                    <!-- Botões de Ação -->
+                                    <div class="col-12 mt-4">
+                                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                            <a href="{{ url_for('lista_vendedores') }}"
+                                               class="btn btn-outline-secondary px-4">
+                                                <i class="bi bi-x-circle me-2"></i>
+                                                Cancelar
+                                            </a>
+                                            <button type="submit" class="btn btn-info px-4">
+                                                <i class="bi bi-check-circle me-2"></i>
+                                                Salvar Alterações
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Card de Ajuda -->
+                    <div class="card mt-4 border-primary">
+                        <div class="card-body">
+                            <h6 class="card-title text-primary">
+                                <i class="bi bi-question-circle me-2"></i>
+                                Dicas de Segurança
+                            </h6>
+                            <ul class="mb-0 small">
+                                <li>Use senhas fortes com letras, números e símbolos</li>
+                                <li>Não compartilhe a senha com outras pessoas</li>
+                                <li>Altere a senha periodicamente</li>
+                                <li>O email deve ser único no sistema</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para validação -->
+<script>
+// Validação do formulário
+(function() {
+    'use strict';
+
+    const forms = document.querySelectorAll('.needs-validation');
+
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            const novaSenha = document.getElementById('nova_senha').value;
+            const confirmarSenha = document.getElementById('confirmar_senha').value;
+
+            // Se uma senha foi informada, validar
+            if (novaSenha || confirmarSenha) {
+                if (novaSenha !== confirmarSenha) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    document.getElementById('confirmar_senha').setCustomValidity('As senhas não coincidem');
+                } else {
+                    document.getElementById('confirmar_senha').setCustomValidity('');
+                }
+            }
+
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+
+// Função para mostrar/ocultar senha
+function togglePassword(fieldId, button) {
+    const field = document.getElementById(fieldId);
+    const icon = button.querySelector('i');
+
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+// Validar senhas em tempo real
+document.getElementById('confirmar_senha').addEventListener('input', function() {
+    const novaSenha = document.getElementById('nova_senha').value;
+    const confirmarSenha = this.value;
+
+    if (confirmarSenha && novaSenha !== confirmarSenha) {
+        this.setCustomValidity('As senhas não coincidem');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+</script>
+
+<style>
+.bg-gradient-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card-header {
+    border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #17a2b8;
+    box-shadow: 0 0 0 0.25rem rgba(23, 162, 184, 0.25);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    border: none;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.alert-info {
+    background-color: rgba(23, 162, 184, 0.1);
+}
+
+.input-group .btn {
+    min-width: 45px;
+}
+</style>
+{% endblock %}
