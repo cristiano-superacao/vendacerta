@@ -32,4 +32,4 @@ dependsOn = ["install"]
 cmds = [". .venv/bin/activate && python init_railway.py"]
 
 [start]
-cmd = "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(find /nix/store -name libstdc++.so.6 -printf '%h\n' 2>/dev/null | head -n 1) && . .venv/bin/activate && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --keep-alive 5 --log-level info --access-logfile - --error-logfile - --preload"
+cmd = "chmod +x startup.sh && ./startup.sh"
