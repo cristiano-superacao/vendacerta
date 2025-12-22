@@ -30,4 +30,4 @@ dependsOn = ["install"]
 cmds = [". .venv/bin/activate && python init_railway.py"]
 
 [start]
-cmd = "chmod +x startup.sh && ./startup.sh"
+cmd = "ls -la /app && chmod +x /app/startup.sh && /app/startup.sh"

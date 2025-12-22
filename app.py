@@ -73,6 +73,7 @@ from forms import (
     OrdemServicoAvaliarForm,
     OrdemServicoAndamentoForm,
     OrdemServicoAvaliacaoForm,
+    UsuarioForm,
 )
 from calculo_projecao import calcular_projecao_mes, formatar_moeda
 
@@ -1552,98 +1553,24 @@ def lista_supervisores():
 @login_required
 def novo_supervisor():
     """Cadastrar novo supervisor"""
-    from forms import UsuarioForm
-
     form = UsuarioForm()
-
-    # Setar cargo como supervisor antes da validação
-    if request.method == "GET":
-        form.cargo.data = "supervisor"
-
-    # Preencher choices de empresas (apenas para super admin)
-    if current_user.is_super_admin:
-        empresas = Empresa.query.filter_by(ativo=True).all()
-        form.empresa_id.choices = [(e.id, e.nome) for e in empresas]
-    else:
-        # Usuário normal só pode criar supervisor na sua empresa
-        form.empresa_id.choices = [
-            (current_user.empresa_id, current_user.empresa.nome)
-        ]
-        form.empresa_id.data = current_user.empresa_id
-
-    # Buscar gerentes e administradores disponíveis
-    if current_user.is_super_admin:
-        # Super admin vê todos os gerentes e admins
-        gerentes_disponiveis = Usuario.query.filter(
-            Usuario.cargo.in_(["gerente", "admin"]), Usuario.ativo
-        ).all()
-    else:
-        # Usuário normal vê apenas gerentes/admins da sua empresa
-        gerentes_disponiveis = Usuario.query.filter(
-            Usuario.cargo.in_(["gerente", "admin"]),
-            Usuario.empresa_id == current_user.empresa_id,
-            Usuario.ativo,
-        ).all()
+    gerentes_disponiveis = _prepare_supervisor_form(form)
 
     if form.validate_on_submit():
-        # Verificar se é super admin ou se está
-        # criando na própria empresa
-        empresa_id_form = form.empresa_id.data
-        if not current_user.is_super_admin:
-            if empresa_id_form != current_user.empresa_id:
-                msg = "Você só pode criar supervisores " "na sua empresa!"
-                flash(msg, "danger")
-                return redirect(url_for("lista_supervisores"))
-
-        # Validar gerente_id
-        gerente_id = request.form.get("gerente_id")
-        if not gerente_id or gerente_id == "":
-            msg = (
-                "É obrigatório vincular o supervisor "
-                "a um Gerente ou Administrador!"
-            )
-            flash(msg, "danger")
-            return render_template(
-                "supervisores/form.html",
-                form=form,
-                gerentes_disponiveis=gerentes_disponiveis,
-                titulo="Novo Supervisor",
-            )
-
-        try:
-            supervisor = Usuario(
-                nome=form.nome.data,
-                email=form.email.data,
-                cargo="supervisor",  # Forçar cargo supervisor
-                empresa_id=empresa_id_form,
-                gerente_id=int(gerente_id),
-                ativo=bool(form.ativo.data),
-                bloqueado=bool(form.bloqueado.data),
-            )
-            if form.bloqueado.data:
-                supervisor.motivo_bloqueio = form.motivo_bloqueio.data
-            else:
-                supervisor.motivo_bloqueio = None
-
-            # Senha padrão
-            supervisor.set_senha("senha123")
-
-            db.session.add(supervisor)
-            db.session.commit()
-
-            msg = f"Supervisor {supervisor.nome} criado com sucesso! Senha padrão: senha123"
-            flash(msg, "success")
+        if not current_user.is_super_admin and form.empresa_id.data != current_user.empresa_id:
+            flash("Você só pode criar supervisores na sua empresa!", "danger")
             return redirect(url_for("lista_supervisores"))
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Erro ao criar supervisor: {str(e)}", "danger")
-            return redirect(url_for("novo_supervisor"))
 
-    # Se houver erros de validação, mostrar
-    if form.errors:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f"{field}: {error}", "danger")
+        if not request.form.get("gerente_id"):
+            flash("É obrigatório vincular o supervisor a um Gerente ou Administrador!", "danger")
+        else:
+            try:
+                supervisor = _save_supervisor_from_form(form)
+                flash(f"Supervisor {supervisor.nome} criado com sucesso! Senha padrão: senha123", "success")
+                return redirect(url_for("lista_supervisores"))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Erro ao criar supervisor: {str(e)}", "danger")
 
     return render_template(
         "supervisores/form.html",
@@ -1656,93 +1583,29 @@ def novo_supervisor():
 @login_required
 def editar_supervisor(id):
     """Editar supervisor existente"""
-
     supervisor = Usuario.query.get_or_404(id)
 
-    # Verificar permissão
-    if not current_user.is_super_admin:
-        if supervisor.empresa_id != current_user.empresa_id:
-            msg = "Você não tem permissão " "para editar este supervisor."
-            flash(msg, "danger")
-            return redirect(url_for("lista_supervisores"))
-
-    # Verificar se é realmente um supervisor
     if supervisor.cargo != "supervisor":
         flash("Este usuário não é um supervisor.", "warning")
         return redirect(url_for("lista_supervisores"))
+    if not current_user.is_super_admin and supervisor.empresa_id != current_user.empresa_id:
+        flash("Você não tem permissão para editar este supervisor.", "danger")
+        return redirect(url_for("lista_supervisores"))
 
     form = UsuarioForm(usuario_id=id, obj=supervisor)
-
-    # Setar cargo como supervisor (campo obrigatório)
-    form.cargo.data = "supervisor"
-
-    # Preencher choices de empresas
-    if current_user.is_super_admin:
-        empresas = Empresa.query.filter_by(ativo=True).all()
-        form.empresa_id.choices = [(e.id, e.nome) for e in empresas]
-    else:
-        form.empresa_id.choices = [
-            (current_user.empresa_id, current_user.empresa.nome)
-        ]
-
-    # Buscar gerentes e administradores disponíveis
-    if current_user.is_super_admin:
-        gerentes_disponiveis = Usuario.query.filter(
-            Usuario.cargo.in_(["gerente", "admin"]),
-            Usuario.id != supervisor.id,
-            Usuario.ativo,
-        ).all()
-    else:
-        gerentes_disponiveis = Usuario.query.filter(
-            Usuario.cargo.in_(["gerente", "admin"]),
-            Usuario.empresa_id == current_user.empresa_id,
-            Usuario.id != supervisor.id,
-            Usuario.ativo,
-        ).all()
-
-    if request.method == "GET":
-        form.ativo.data = 1 if supervisor.ativo else 0
-        form.bloqueado.data = 1 if supervisor.bloqueado else 0
+    gerentes_disponiveis = _prepare_supervisor_form(form, supervisor)
 
     if form.validate_on_submit():
-        # Verificar permissão novamente
-        empresa_id_form = form.empresa_id.data
-        if not current_user.is_super_admin:
-            if empresa_id_form != current_user.empresa_id:
-                msg = "Você só pode editar supervisores " "da sua empresa!"
-                flash(msg, "danger")
-                return redirect(url_for("lista_supervisores"))
-
-        # Validar gerente_id
-        gerente_id = request.form.get("gerente_id")
-        if not gerente_id or gerente_id == "":
-            msg = (
-                "É obrigatório vincular o supervisor "
-                "a um Gerente ou Administrador!"
-            )
-            flash(msg, "danger")
-            return render_template(
-                "supervisores/form.html",
-                form=form,
-                supervisor=supervisor,
-                gerentes_disponiveis=gerentes_disponiveis,
-                titulo="Editar Supervisor",
-            )
-
-        supervisor.nome = form.nome.data
-        supervisor.email = form.email.data
-        supervisor.empresa_id = empresa_id_form
-        supervisor.gerente_id = int(gerente_id)
-        supervisor.ativo = bool(form.ativo.data)
-        supervisor.bloqueado = bool(form.bloqueado.data)
-        if form.bloqueado.data:
-            supervisor.motivo_bloqueio = form.motivo_bloqueio.data
+        if not request.form.get("gerente_id"):
+            flash("É obrigatório vincular o supervisor a um Gerente ou Administrador!", "danger")
         else:
-            supervisor.motivo_bloqueio = None
-
-        db.session.commit()
-        flash(f"Supervisor {supervisor.nome} atualizado!", "success")
-        return redirect(url_for("lista_supervisores"))
+            try:
+                _save_supervisor_from_form(form, supervisor)
+                flash(f"Supervisor {supervisor.nome} atualizado!", "success")
+                return redirect(url_for("lista_supervisores"))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Erro ao atualizar supervisor: {str(e)}", "danger")
 
     return render_template(
         "supervisores/form.html",
@@ -6977,6 +6840,116 @@ def enviar_mensagem_equipe():
 
     return render_template("mensagens/enviar_equipe.html", equipes=equipes)
 
+# ===== FUNÇÕES AUXILIARES PARA METAS =====
+
+def _prepare_meta_form(form):
+    """Prepara o formulário de meta, populando os vendedores."""
+    vendedores = filtrar_vendedores_por_escopo(current_user)
+    form.vendedor_id.choices = [(v.id, v.nome) for v in vendedores]
+
+def _save_meta_from_form(form, meta=None):
+    """Salva uma meta (nova ou existente) a partir dos dados do formulário."""
+    vendedor = Vendedor.query.get(form.vendedor_id.data)
+    if not vendedor:
+        raise ValueError("Vendedor não encontrado.")
+
+    if not current_user.is_super_admin and vendedor.empresa_id != current_user.empresa_id:
+        raise PermissionError("Você só pode gerenciar metas da sua empresa.")
+
+    if meta:  # Edição
+        meta.valor_meta = form.valor_meta.data
+        meta.mes = form.mes.data
+        meta.ano = form.ano.data
+        meta.vendedor_id = form.vendedor_id.data
+    else:  # Criação
+        meta = Meta(
+            valor_meta=form.valor_meta.data,
+            mes=form.mes.data,
+            ano=form.ano.data,
+            vendedor_id=form.vendedor_id.data,
+            empresa_id=vendedor.empresa_id,
+        )
+        db.session.add(meta)
+    
+    db.session.commit()
+    return meta
+
+# ===== FUNÇÕES AUXILIARES PARA COMPRAS DE CLIENTES =====
+
+def _prepare_compra_cliente_form(form, cliente_id=None):
+    """Prepara o formulário de compra, populando clientes e produtos."""
+    clientes = filtrar_clientes_por_escopo(current_user)
+    form.cliente_id.choices = [(c.id, c.nome) for c in clientes]
+
+    produtos_query = Produto.query.filter_by(ativo=True)
+    if not current_user.is_super_admin:
+        produtos_query = produtos_query.filter_by(empresa_id=current_user.empresa_id)
+    
+    produtos = produtos_query.order_by(Produto.nome).all()
+    form.produto_id.choices = [(p.id, f"{p.nome} - {formatar_moeda(p.preco)}") for p in produtos]
+
+    if cliente_id:
+        form.cliente_id.data = cliente_id
+
+def _update_meta_for_compra(vendedor_id, valor_compra, data_compra, anular=False):
+    """Atualiza a receita alcançada na meta do vendedor."""
+    meta = Meta.query.filter_by(
+        vendedor_id=vendedor_id,
+        mes=data_compra.month,
+        ano=data_compra.year,
+    ).first()
+    if meta:
+        if anular:
+            meta.receita_alcancada = (meta.receita_alcancada or 0) - valor_compra
+        else:
+            meta.receita_alcancada = (meta.receita_alcancada or 0) + valor_compra
+        db.session.commit()
+
+def _save_compra_cliente_from_form(form, compra=None):
+    """Salva uma compra (nova ou existente) a partir dos dados do formulário."""
+    cliente = Cliente.query.get(form.cliente_id.data)
+    if not cliente:
+        raise ValueError("Cliente não encontrado.")
+
+    if not current_user.is_super_admin and cliente.empresa_id != current_user.empresa_id:
+        raise PermissionError("Você só pode registrar compras para clientes da sua empresa.")
+
+    produto = Produto.query.get(form.produto_id.data)
+    if not produto:
+        raise ValueError("Produto não encontrado.")
+
+    valor_total = produto.preco * form.quantidade.data
+    data_compra = form.data_compra.data
+
+    if compra:  # Edição
+        # Reverter valor antigo da meta
+        _update_meta_for_compra(compra.vendedor_id, compra.valor_total, compra.data_compra, anular=True)
+
+        compra.cliente_id = cliente.id
+        compra.produto_id = produto.id
+        compra.quantidade = form.quantidade.data
+        compra.data_compra = data_compra
+        compra.valor_total = valor_total
+        compra.vendedor_id = cliente.vendedor_id
+        compra.empresa_id = cliente.empresa_id
+    else:  # Criação
+        compra = CompraCliente(
+            cliente_id=cliente.id,
+            produto_id=produto.id,
+            quantidade=form.quantidade.data,
+            data_compra=data_compra,
+            valor_total=valor_total,
+            vendedor_id=cliente.vendedor_id,
+            empresa_id=cliente.empresa_id,
+        )
+        db.session.add(compra)
+    
+    db.session.commit()
+    # Atualizar com o novo valor
+    _update_meta_for_compra(cliente.vendedor_id, valor_total, data_compra)
+    
+    return compra
+
 # ===== ROTAS DE METAS =====
 
 @app.route("/metas/importar", methods=["GET", "POST"])
@@ -7622,6 +7595,49 @@ def api_vendedor_supervisor(vendedor_id):
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+# ===== FUNÇÕES AUXILIARES PARA EQUIPES =====
+
+def _prepare_equipe_form(form):
+    """Prepara o formulário de equipe, populando os supervisores e vendedores."""
+    supervisores = Usuario.query.filter(
+        Usuario.cargo == "supervisor",
+        Usuario.ativo == True,
+        Usuario.empresa_id == current_user.empresa_id,
+    ).all()
+    vendedores = Vendedor.query.filter(
+        Vendedor.ativo == True, Vendedor.empresa_id == current_user.empresa_id
+    ).all()
+
+    form.supervisor_id.choices = [(s.id, s.nome) for s in supervisores]
+    form.vendedores.choices = [(v.id, v.nome) for v in vendedores]
+
+def _save_equipe_from_form(form, equipe=None):
+    """Salva uma equipe (nova ou existente) a partir dos dados do formulário."""
+    if not current_user.is_super_admin and form.empresa_id.data != current_user.empresa_id:
+        raise PermissionError("Você só pode gerenciar equipes da sua empresa.")
+
+    if equipe:  # Edição
+        equipe.nome = form.nome.data
+        equipe.supervisor_id = form.supervisor_id.data
+        equipe.empresa_id = form.empresa_id.data
+    else:  # Criação
+        equipe = Equipe(
+            nome=form.nome.data,
+            supervisor_id=form.supervisor_id.data,
+            empresa_id=form.empresa_id.data,
+        )
+        db.session.add(equipe)
+        db.session.flush()  # Garante que o ID da equipe esteja disponível
+
+    # Atualizar vendedores da equipe
+    vendedores_selecionados = Vendedor.query.filter(
+        Vendedor.id.in_(form.vendedores.data)
+    ).all()
+    equipe.vendedores = vendedores_selecionados
+    
+    db.session.commit()
+    return equipe
 
 # ===== ROTAS DE EQUIPES =====
 

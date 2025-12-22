@@ -102,7 +102,6 @@ test_*.py
 # Scripts auxiliares
 scripts/
 migrations_scripts/
-*.sh
 
 # ----------------------------------------------------------------------------
 # 🏗️ BUILD E DISTRIBUIÇÃO
