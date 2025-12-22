@@ -18,7 +18,12 @@ else
     exit 1
 fi
 
-# 1.1 Configurar LD_LIBRARY_PATH para libstdc++ (Fix Pandas/Numpy)
+# 1.1. Adicionar diretório do projeto ao PYTHONPATH
+echo "🐍 Adicionando diretório atual ao PYTHONPATH..."
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+echo "✅ PYTHONPATH atualizado."
+
+# 1.2. Configurar LD_LIBRARY_PATH para libstdc++ (Fix Pandas/Numpy)
 echo "🔧 Configurando bibliotecas do sistema..."
 LIBSTDC=$(find /nix/store -name libstdc++.so.6 -printf '%h\n' 2>/dev/null | head -n 1)
 if [ -n "$LIBSTDC" ]; then
