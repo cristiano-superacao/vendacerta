@@ -4697,21 +4697,18 @@ def lista_clientes():
 def novo_cliente():
     """Cadastrar novo cliente"""
     try:
+        # Criar formulário com empresa_id para popular dropdowns automaticamente
         form = ClienteForm(empresa_id=current_user.empresa_id)
         
-        # Popular dropdown de vendedores com base no escopo do usuário
-        vendedores = filtrar_vendedores_por_escopo(current_user)
-        form.vendedor_id.choices = [(v.id, v.nome) for v in vendedores]
-        
         # Se o usuário for vendedor, pré-selecionar seu ID
-        if current_user.cargo == "vendedor":
+        if request.method == "GET" and current_user.cargo == "vendedor":
             vendedor_atual = Vendedor.query.filter_by(usuario_id=current_user.id).first()
             if vendedor_atual:
                 form.vendedor_id.data = vendedor_atual.id
                 
     except Exception as e:
         app.logger.error(f"Erro ao inicializar formulário de cliente: {str(e)}")
-        flash(f"Erro interno ao carregar formulário. Tente novamente ou contate o suporte.", "danger")
+        flash("Erro ao carregar formulário. Tente novamente.", "danger")
         return redirect(url_for("lista_clientes"))
 
     if form.validate_on_submit():
