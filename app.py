@@ -835,19 +835,49 @@ def init_database():
             # Criar todas as tabelas se não existirem
             db.create_all()
             
-            # Verificar se existe usuário admin
-            admin = Usuario.query.filter_by(email='admin@vendacerta.com').first()
-            if not admin:
+            # Verificar e garantir acesso de admin (Auto-Recovery)
+            admins_to_check = ['admin@vendacerta.com', 'admin@metas.com']
+            admin_found = False
+            
+            for email in admins_to_check:
+                admin = Usuario.query.filter_by(email=email).first()
+                if admin:
+                    # Se existir, garantir que a senha seja admin123 e seja super admin
+                    from werkzeug.security import generate_password_hash
+                    admin.senha_hash = generate_password_hash('admin123')
+                    admin.is_super_admin = True
+                    admin.ativo = True
+                    admin.cargo = 'admin'
+                    db.session.commit()
+                    app.logger.info(f"[OK] Admin {email} recuperado/resetado para senha 'admin123'")
+                    admin_found = True
+            
+            # Se nenhum dos dois existir, criar o padrão
+            if not admin_found:
                 app.logger.info("[PROC] Criando usuario admin padrao...")
                 from werkzeug.security import generate_password_hash
                 
+                # Criar empresa padrão se necessário
+                empresa_padrao = Empresa.query.filter_by(cnpj='00000000000000').first()
+                if not empresa_padrao:
+                    empresa_padrao = Empresa(
+                        nome='Empresa Padrão',
+                        cnpj='00000000000000',
+                        email='contato@empresa.com',
+                        plano='enterprise',
+                        ativo=True
+                    )
+                    db.session.add(empresa_padrao)
+                    db.session.commit()
+
                 admin = Usuario(
                     nome='Administrador',
                     email='admin@vendacerta.com',
                     senha_hash=generate_password_hash('admin123'),
                     cargo='admin',
                     is_super_admin=True,
-                    ativo=True
+                    ativo=True,
+                    empresa_id=empresa_padrao.id
                 )
                 db.session.add(admin)
                 db.session.commit()
