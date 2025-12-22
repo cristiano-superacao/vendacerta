@@ -192,6 +192,21 @@ def ensure_excel_available():
         EXCEL_AVAILABLE = False
         EXCEL_ERROR_MESSAGE = str(e)
         print(f"❌ Falha ao habilitar Excel por lazy-load: {e}")
+        
+        # Debug avançado para logs do Railway
+        import os
+        print(f"🔍 DEBUG ENV:")
+        print(f"   LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH', 'N/A')}")
+        print(f"   PATH: {os.environ.get('PATH', 'N/A')}")
+        try:
+            # Tentar listar bibliotecas disponíveis (apenas Linux)
+            if os.path.exists('/usr/lib'):
+                print(f"   /usr/lib exists")
+            if os.path.exists('/nix/store'):
+                print(f"   /nix/store exists")
+        except:
+            pass
+            
         return False
 
 # (endpoints de status movidos para depois da inicialização do app)

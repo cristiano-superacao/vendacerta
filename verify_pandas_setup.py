@@ -40,6 +40,15 @@ def main():
             import ctypes.util
             libopenblas = ctypes.util.find_library('openblas')
             print(f"OpenBLAS: {'✅ Encontrado' if libopenblas else '⚠️ Não encontrado (pode causar erro no numpy)'}")
+            
+            # Verificar libstdc++
+            libstdc = ctypes.util.find_library('stdc++')
+            print(f"libstdc++: {'✅ Encontrado' if libstdc else '❌ Não encontrado (CRÍTICO)'}")
+            
+            if not libstdc:
+                print("   Tentando localizar manualmente...")
+                os.system("find /nix/store -name libstdc++.so.6 2>/dev/null | head -n 3")
+                print("   LD_LIBRARY_PATH atual:", os.environ.get('LD_LIBRARY_PATH', 'N/A'))
         except:
             print("Não foi possível verificar bibliotecas de sistema.")
 
