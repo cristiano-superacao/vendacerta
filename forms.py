@@ -468,10 +468,12 @@ class ClienteForm(FlaskForm):
                 cargo='supervisor',
                 ativo=True
             ).order_by(Usuario.nome).all()
-            self.supervisor_id.choices = [('', 'Nenhum')] + [(s.id, s.nome) for s in supervisores]
+            # Usa 0 para representar "Nenhum" e evitar erro de conversão int('')
+            self.supervisor_id.choices = [(0, 'Nenhum')] + [(s.id, s.nome) for s in supervisores]
         else:
             self.vendedor_id.choices = []
-            self.supervisor_id.choices = [('', 'Nenhum')]
+            # Lista padrão quando não há empresa: apenas opção "Nenhum"
+            self.supervisor_id.choices = [(0, 'Nenhum')]
 
     def validate(self, extra_validators=None):
         """Validação customizada: CPF OU CNPJ deve ser preenchido"""
