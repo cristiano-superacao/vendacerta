@@ -18,7 +18,8 @@ def gerar_planilha_clientes(clientes: List[dict]) -> Tuple[bool, BytesIO | None,
         import pandas as pd
         df = pd.DataFrame(clientes)
         buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+        # Usar openpyxl que já está no requirements.txt
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name="Clientes")
         buffer.seek(0)
         return True, buffer, None
