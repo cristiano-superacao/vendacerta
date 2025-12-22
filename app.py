@@ -753,6 +753,11 @@ def public_status():
     return jsonify(status_info), 200
 
 # ===== ENDPOINTS DE STATUS (Excel/DB/Env) =====
+@app.route("/ping")
+def ping():
+    """Healthcheck simples para Railway"""
+    return "pong", 200
+
 @app.route("/status/excel")
 @login_required
 def status_excel():

@@ -14,8 +14,7 @@ nixPkgs = [
     "lcms2",
     "libwebp",
     "libtiff",
-    "openblas",
-    "gfortran"
+    "openblas"
 ]
 
 [phases.install]
