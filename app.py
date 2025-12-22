@@ -4693,10 +4693,22 @@ def lista_clientes():
 
 @app.route("/clientes/novo", methods=["GET", "POST"])
 @login_required
+@permission_required("pode_criar_cliente")
 def novo_cliente():
     """Cadastrar novo cliente"""
     try:
         form = ClienteForm(empresa_id=current_user.empresa_id)
+        
+        # Popular dropdown de vendedores com base no escopo do usuário
+        vendedores = filtrar_vendedores_por_escopo(current_user)
+        form.vendedor_id.choices = [(v.id, v.nome) for v in vendedores]
+        
+        # Se o usuário for vendedor, pré-selecionar seu ID
+        if current_user.cargo == "vendedor":
+            vendedor_atual = Vendedor.query.filter_by(usuario_id=current_user.id).first()
+            if vendedor_atual:
+                form.vendedor_id.data = vendedor_atual.id
+                
     except Exception as e:
         app.logger.error(f"Erro ao inicializar formulário de cliente: {str(e)}")
         flash(f"Erro interno ao carregar formulário. Tente novamente ou contate o suporte.", "danger")
@@ -4901,6 +4913,7 @@ def ver_cliente(id):
 
 @app.route("/clientes/<int:id>/editar", methods=["GET", "POST"])
 @login_required
+@permission_required("pode_editar_cliente")
 def editar_cliente(id):
     """Editar cliente existente"""
     cliente = Cliente.query.get_or_404(id)
