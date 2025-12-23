@@ -66,6 +66,14 @@
                         <h6 class="text-primary mb-3"><i class="bi bi-box-seam me-2"></i>Selecionar produtos do estoque</h6>
 
                         {% if produtos %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">Produtos em estoque: {{ produtos|length }}</small>
+                            <div class="input-group input-group-sm" style="max-width: 260px;">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" id="filtro-produtos" placeholder="Buscar por nome ou código...">
+                            </div>
+                        </div>
+
                         <div class="table-responsive mb-3">
                             <table class="table table-sm align-middle mb-0">
                                 <thead class="table-light">
@@ -78,7 +86,11 @@
                                 </thead>
                                 <tbody>
                                     {% for produto in produtos %}
-                                    <tr>
+                                    <tr data-produto-linha="1"
+                                        data-nome="{{ produto.nome|lower }}"
+                                        data-codigo="{{ (produto.codigo or '')|lower }}"
+                                        data-nome-exibicao="{{ produto.nome }}"
+                                        data-codigo-exibicao="{{ produto.codigo or '' }}">
                                         <td>
                                             <div class="fw-semibold">{{ produto.nome }}</div>
                                             <small class="text-muted">Cód: {{ produto.codigo }}</small>
@@ -207,6 +219,47 @@
         </div>
     </div>
 </div>
+    <!-- Modal de resumo da venda -->
+    <div class="modal fade" id="resumoVendaModal" tabindex="-1" aria-labelledby="resumoVendaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resumoVendaModalLabel"><i class="bi bi-receipt me-2"></i>Resumo da venda</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">Confira os itens antes de confirmar o registro da venda.</p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produto</th>
+                                    <th class="text-end">Qtd.</th>
+                                    <th class="text-end">Preço</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resumo-itens-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <div class="text-end">
+                            <small class="text-muted d-block">Total da venda</small>
+                            <strong class="fs-5 text-success">R$ <span id="resumo-total-valor">0.00</span></strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar e editar</button>
+                    <button type="button" class="btn btn-success" id="btn-confirmar-resumo">
+                        <i class="bi bi-check-circle me-2"></i>Confirmar e registrar venda
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -216,6 +269,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const qtyInputs = document.querySelectorAll('.produto-quantidade');
     const totalSpan = document.getElementById('total-produtos');
     const valorInput = document.getElementById('valor_compra');
+    const filtroInput = document.getElementById('filtro-produtos');
+    const linhasProdutos = document.querySelectorAll('tr[data-produto-linha="1"]');
+    const formCompra = document.querySelector('form');
+    const resumoModalEl = document.getElementById('resumoVendaModal');
+    const resumoBody = document.getElementById('resumo-itens-body');
+    const resumoTotalSpan = document.getElementById('resumo-total-valor');
+    const btnConfirmarResumo = document.getElementById('btn-confirmar-resumo');
+    let envioConfirmado = false;
+    let resumoModal = null;
+
+    if (resumoModalEl && window.bootstrap && bootstrap.Modal) {
+        resumoModal = new bootstrap.Modal(resumoModalEl);
+    }
 
     function recalcTotal() {
         let total = 0;
@@ -234,9 +300,113 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function aplicarFiltro() {
+        if (!linhasProdutos.length) return;
+        const termo = (filtroInput ? filtroInput.value : '').toLowerCase().trim();
+        let mostrados = 0;
+
+        linhasProdutos.forEach(function (linha) {
+            const nome = (linha.dataset.nome || '').toLowerCase();
+            const codigo = (linha.dataset.codigo || '').toLowerCase();
+            let visivel = false;
+
+            if (termo) {
+                visivel = nome.includes(termo) || codigo.includes(termo);
+            } else {
+                visivel = mostrados < 10; // mostra apenas os 10 primeiros sem filtro
+            }
+
+            if (visivel) {
+                linha.classList.remove('d-none');
+                mostrados++;
+            } else {
+                linha.classList.add('d-none');
+            }
+        });
+    }
+
     qtyInputs.forEach(function (input) {
         input.addEventListener('input', recalcTotal);
     });
+
+    if (filtroInput) {
+        filtroInput.addEventListener('input', aplicarFiltro);
+    }
+
+    aplicarFiltro(); // aplica a regra inicial de mostrar só 10
+
+    if (formCompra && resumoModal) {
+        formCompra.addEventListener('submit', function (e) {
+            if (envioConfirmado) {
+                return; // deixa seguir o fluxo normal
+            }
+
+            e.preventDefault();
+
+            const itensSelecionados = [];
+            let total = 0;
+
+            qtyInputs.forEach(function (input) {
+                const qtdRaw = (input.value || '').replace(',', '.');
+                const qtd = parseFloat(qtdRaw) || 0;
+                if (qtd <= 0) return;
+
+                const preco = parseFloat(input.dataset.preco || '0') || 0;
+                const linha = input.closest('tr');
+                const nome = linha ? (linha.dataset.nomeExibicao || '') : '';
+                const codigo = linha ? (linha.dataset.codigoExibicao || '') : '';
+                const subtotal = qtd * preco;
+                total += subtotal;
+
+                itensSelecionados.push({
+                    nome: nome,
+                    codigo: codigo,
+                    quantidade: qtd,
+                    preco: preco,
+                    subtotal: subtotal
+                });
+            });
+
+            if (!itensSelecionados.length) {
+                // Nenhum item selecionado: envia normalmente (pode ser valor manual)
+                envioConfirmado = true;
+                formCompra.submit();
+                return;
+            }
+
+            if (valorInput) {
+                valorInput.value = total.toFixed(2);
+            }
+
+            if (resumoBody) {
+                resumoBody.innerHTML = itensSelecionados.map(function (item) {
+                    return '<tr>' +
+                        '<td>' +
+                            '<div class="fw-semibold">' + item.nome + '</div>' +
+                            '<small class="text-muted">Cód: ' + (item.codigo || '-') + '</small>' +
+                        '</td>' +
+                        '<td class="text-end">' + item.quantidade + '</td>' +
+                        '<td class="text-end">R$ ' + item.preco.toFixed(2) + '</td>' +
+                        '<td class="text-end">R$ ' + item.subtotal.toFixed(2) + '</td>' +
+                    '</tr>';
+                }).join('');
+            }
+
+            if (resumoTotalSpan) {
+                resumoTotalSpan.textContent = total.toFixed(2);
+            }
+
+            resumoModal.show();
+        });
+    }
+
+    if (btnConfirmarResumo && formCompra && resumoModal) {
+        btnConfirmarResumo.addEventListener('click', function () {
+            envioConfirmado = true;
+            resumoModal.hide();
+            formCompra.submit();
+        });
+    }
 });
 </script>
 {% endblock %}
