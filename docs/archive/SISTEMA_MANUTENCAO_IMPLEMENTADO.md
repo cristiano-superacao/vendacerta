@@ -129,7 +129,7 @@ Sistema completo de Ordens de Serviço (OS) integrado ao VendaCerta, incluindo:
 - Controle de permissões por cargo
 
 ### 👥 Sistema de Usuários
-**Novos cargos focados em manutenção adicionados:**
+**Novos cargos e departamento focados em manutenção adicionados:**
 
 1. **gerente_manutencao**
    - Visão geral de todas as OS e indicadores
@@ -158,6 +158,11 @@ Sistema completo de Ordens de Serviço (OS) integrado ao VendaCerta, incluindo:
    - Apoia o time na comunicação e no acompanhamento das OS
    - Não cria/edita/aprova/cancela OS
    - Não possui acesso aos módulos de vendas, clientes ou estoque
+
+### 🏢 Departamento de Manutenção
+- Departamento dedicado às operações de OS, técnicos e estoque ligado à manutenção
+- Cargos `gerente_manutencao`, `supervisor_manutencao`, `tecnico` e `auxiliar` são sugeridos automaticamente para este departamento no cadastro de funcionários
+- Mantém separado o fluxo de manutenção dos demais departamentos (Comercial, Financeiro, RH, TI)
 
 ---
 
