@@ -66,13 +66,15 @@
                         <h6 class="text-primary mb-3"><i class="bi bi-box-seam me-2"></i>Selecionar produtos do estoque</h6>
 
                         {% if produtos %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
                             <small class="text-muted">Produtos em estoque: {{ produtos|length }}</small>
                             <div class="input-group input-group-sm" style="max-width: 260px;">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                                 <input type="text" class="form-control" id="filtro-produtos" placeholder="Buscar por nome ou código...">
                             </div>
                         </div>
+
+                        <small id="info-listagem-produtos" class="text-muted d-block mb-2"></small>
 
                         <div class="table-responsive mb-3">
                             <table class="table table-sm align-middle mb-0">
@@ -270,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const totalSpan = document.getElementById('total-produtos');
     const valorInput = document.getElementById('valor_compra');
     const filtroInput = document.getElementById('filtro-produtos');
+    const infoListagem = document.getElementById('info-listagem-produtos');
     const linhasProdutos = document.querySelectorAll('tr[data-produto-linha="1"]');
     const formCompra = document.querySelector('form');
     const resumoModalEl = document.getElementById('resumoVendaModal');
@@ -302,7 +305,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function aplicarFiltro() {
         if (!linhasProdutos.length) return;
-        const termo = (filtroInput ? filtroInput.value : '').toLowerCase().trim();
+        const termoBruto = (filtroInput ? filtroInput.value : '');
+        const termo = termoBruto.toLowerCase().trim();
         let mostrados = 0;
 
         linhasProdutos.forEach(function (linha) {
@@ -323,6 +327,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 linha.classList.add('d-none');
             }
         });
+
+        if (infoListagem) {
+            if (termo) {
+                infoListagem.textContent = `Mostrando ${mostrados} produto(s) encontrados para "${termoBruto}".`;
+            } else {
+                const total = linhasProdutos.length;
+                const limite = Math.min(10, total);
+                infoListagem.textContent = `Mostrando ${limite} de ${total} produto(s). Use a busca para localizar outros itens.`;
+            }
+        }
     }
 
     qtyInputs.forEach(function (input) {
