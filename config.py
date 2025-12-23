@@ -31,13 +31,13 @@ class Config:
             database_url = None
             print("[CONFIG] ⚠️  DATABASE_URL vazia detectada - sera construida via PG*")
     
-    # Log para debug
+    # Log para debug (sem emojis para evitar problemas de encoding em alguns ambientes)
     if database_url:
         # Mascara senha para segurança nos logs
         safe_url = database_url.split('@')[1] if '@' in database_url else 'local'
-        print(f"[CONFIG] ✅ DATABASE_URL encontrada - Host: {safe_url.split('/')[0]}")
+        print(f"[CONFIG] DATABASE_URL encontrada - Host: {safe_url.split('/')[0]}")
     else:
-        print(f"[CONFIG] 🔧 DATABASE_URL nao encontrada, construindo via variaveis PG*...")
+        print("[CONFIG] DATABASE_URL nao encontrada, construindo via variaveis PG*...")
     
     # Constrói a partir das variáveis individuais do PostgreSQL (Railway sempre fornece)
     if not database_url:
@@ -49,16 +49,16 @@ class Config:
         
         if all([pgdatabase, pghost, pguser, pgpassword]):
             database_url = f'postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}'
-            print(f"[CONFIG] ✅ URL construida via PG* variables")
+            print("[CONFIG] URL construida via PG* variables")
             print(f"[CONFIG]    Host: {pghost}:{pgport}")
             print(f"[CONFIG]    Database: {pgdatabase}")
             print(f"[CONFIG]    User: {pguser}")
         else:
-            print(f"[CONFIG] ❌ Variaveis PG* incompletas - PostgreSQL obrigatório")
-            print(f"[CONFIG]    PGDATABASE: {'✅' if pgdatabase else '❌ FALTA'}")
-            print(f"[CONFIG]    PGHOST: {'✅' if pghost else '❌ FALTA'}")
-            print(f"[CONFIG]    PGUSER: {'✅' if pguser else '❌ FALTA'}")
-            print(f"[CONFIG]    PGPASSWORD: {'✅' if pgpassword else '❌ FALTA'}")
+            print("[CONFIG] Variaveis PG* incompletas - PostgreSQL obrigatório")
+            print(f"[CONFIG]    PGDATABASE: {'OK' if pgdatabase else 'FALTA'}")
+            print(f"[CONFIG]    PGHOST: {'OK' if pghost else 'FALTA'}")
+            print(f"[CONFIG]    PGUSER: {'OK' if pguser else 'FALTA'}")
+            print(f"[CONFIG]    PGPASSWORD: {'OK' if pgpassword else 'FALTA'}")
             raise RuntimeError("CONFIG: Banco obrigatório PostgreSQL não configurado. Defina DATABASE_URL ou PG* (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE).")
 
     # ==========================================
@@ -68,19 +68,19 @@ class Config:
         # Fix para Heroku/Render/Railway: postgres:// -> postgresql://
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            print("[CONFIG] 🔧 Corrigido: postgres:// → postgresql://")
+            print("[CONFIG] Corrigido: postgres:// -> postgresql://")
         
         # Valida formato básico
         if database_url.startswith('postgresql://'):
-            print("[CONFIG] ✅ DATABASE_URL válida - PostgreSQL configurado")
+            print("[CONFIG] DATABASE_URL válida - PostgreSQL configurado")
         else:
-            print(f"[CONFIG] ⚠️  DATABASE_URL com formato inesperado: {database_url[:20]}...")
+            print(f"[CONFIG] DATABASE_URL com formato inesperado: {database_url[:20]}...")
 
     # Define URI final do SQLAlchemy (PostgreSQL obrigatório)
     if not database_url:
         raise RuntimeError("CONFIG: DATABASE_URL não definida e não foi possível construir via PG*. Configure o PostgreSQL.")
     SQLALCHEMY_DATABASE_URI = database_url
-    print("[CONFIG] 🚀 Sistema configurado para PostgreSQL (PRODUÇÃO)")
+    print("[CONFIG] Sistema configurado para PostgreSQL (PRODUÇÃO)")
 
     # Configuração de Múltiplos Bancos (Binds) para Modularização
     # Permite separar dados em bancos diferentes ou usar o mesmo banco (default)

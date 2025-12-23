@@ -25,7 +25,11 @@
                             <h2 class="mb-1">{{ cliente.nome }}</h2>
                             <p class="text-muted mb-0">
                                 <i class="bi bi-calendar3 me-1"></i>
-                                Cadastrado em {{ cliente.data_cadastro.strftime('%d/%m/%Y às %H:%M') }}
+                                {% if cliente.data_cadastro %}
+                                    Cadastrado em {{ cliente.data_cadastro.strftime('%d/%m/%Y às %H:%M') }}
+                                {% else %}
+                                    Data de cadastro não disponível
+                                {% endif %}
                             </p>
                         </div>
                     </div>
