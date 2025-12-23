@@ -5866,6 +5866,13 @@ def registrar_compra(id):
     """Registrar compra do cliente"""
     cliente = Cliente.query.get_or_404(id)
 
+    # Produtos de estoque disponíveis para venda (mesma empresa)
+    produtos = (
+        Produto.query.filter_by(empresa_id=cliente.empresa_id, ativo=True)
+        .order_by(Produto.nome)
+        .all()
+    )
+
     # Verificar permissão
     if not verificar_acesso_cliente(cliente):
         flash(
@@ -5908,7 +5915,12 @@ def registrar_compra(id):
             db.session.rollback()
             flash(f"Erro ao registrar compra: {str(e)}", "danger")
 
-    return render_template("clientes/compra.html", form=form, cliente=cliente)
+    return render_template(
+        "clientes/compra.html",
+        form=form,
+        cliente=cliente,
+        produtos=produtos,
+    )
 
 @app.route("/clientes/relatorio")
 @login_required
