@@ -29,6 +29,40 @@
     </div>
 </div>
 
+<!-- Atalhos Rápidos do Vendedor -->
+<div class="container-fluid px-3 pt-3">
+    <div class="row g-2">
+        {% if current_user.pode_acessar_clientes %}
+        <div class="col-4 col-sm-3 col-md-2">
+            <a href="{{ url_for('lista_clientes') }}" class="btn btn-outline-light bg-white w-100 text-start shadow-sm">
+                <i class="bi bi-person-lines-fill me-2 text-primary"></i>
+                <span class="d-none d-sm-inline">Meus Clientes</span>
+                <span class="d-sm-none">Clientes</span>
+            </a>
+        </div>
+        {% endif %}
+
+        {% if current_user.pode_acessar_estoque %}
+        <div class="col-4 col-sm-3 col-md-2">
+            <a href="{{ url_for('lista_estoque') }}" class="btn btn-outline-light bg-white w-100 text-start shadow-sm">
+                <i class="bi bi-box-seam me-2 text-success"></i>
+                <span class="d-none d-sm-inline">Estoque</span>
+                <span class="d-sm-none">Estoque</span>
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="col-4 col-sm-3 col-md-2">
+            <a href="{{ url_for('relatorio_vendas') }}" class="btn btn-outline-light bg-white w-100 text-start shadow-sm">
+                <i class="bi bi-graph-up-arrow me-2 text-info"></i>
+                <span class="d-none d-sm-inline">Relatório</span>
+                <span class="d-sm-none">Vendas</span>
+            </a>
+        </div>
+    </div>
+    
+</div>
+
 <!-- Resumo Rápido -->
 <div class="container-fluid px-3 py-4">
     {% if not meta_atual %}

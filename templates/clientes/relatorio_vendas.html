@@ -16,9 +16,11 @@
             <button onclick="window.print()" class="btn btn-outline-primary">
                 <i class="bi bi-printer me-2"></i>Imprimir
             </button>
+            {% if current_user.pode_exportar_dados %}
             <a href="{{ url_for('exportar_clientes') }}" class="btn btn-success">
                 <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
             </a>
+            {% endif %}
         </div>
     </div>
 

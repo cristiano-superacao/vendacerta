@@ -11,15 +11,23 @@
             <p class="text-muted mb-0">Gerencie sua carteira de clientes</p>
         </div>
         <div class="btn-group">
+            {% if current_user.pode_exportar_dados %}
             <a href="{{ url_for('exportar_clientes') }}" class="btn btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
             </a>
+            {% endif %}
+
+            {% if current_user.pode_importar_clientes %}
             <a href="{{ url_for('importar_clientes') }}" class="btn btn-outline-primary">
                 <i class="bi bi-cloud-upload me-2"></i>Importar Excel
             </a>
+            {% endif %}
+
+            {% if current_user.pode_criar_clientes %}
             <a href="{{ url_for('novo_cliente') }}" class="btn btn-success">
                 <i class="bi bi-plus-circle me-2"></i>Novo Cliente
             </a>
+            {% endif %}
         </div>
     </div>
 
