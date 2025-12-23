@@ -5867,9 +5867,28 @@ def registrar_compra(id):
     cliente = Cliente.query.get_or_404(id)
 
     # Produtos de estoque disponíveis para venda (mesma empresa)
+    # Exibe apenas os 10 mais vendidos para simplificar a escolha do vendedor
+    from sqlalchemy import func, desc
+
+    vendas_subq = (
+        db.session.query(
+            EstoqueMovimento.produto_id,
+            func.sum(EstoqueMovimento.quantidade).label("total_vendido"),
+        )
+        .filter(
+            EstoqueMovimento.empresa_id == cliente.empresa_id,
+            EstoqueMovimento.tipo == "saida",
+            EstoqueMovimento.motivo == "venda",
+        )
+        .group_by(EstoqueMovimento.produto_id)
+        .subquery()
+    )
+
     produtos = (
         Produto.query.filter_by(empresa_id=cliente.empresa_id, ativo=True)
-        .order_by(Produto.nome)
+        .outerjoin(vendas_subq, Produto.id == vendas_subq.c.produto_id)
+        .order_by(desc(vendas_subq.c.total_vendido), Produto.nome)
+        .limit(10)
         .all()
     )
 
