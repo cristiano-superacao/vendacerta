@@ -76,7 +76,7 @@
 
                         <small id="info-listagem-produtos" class="text-muted d-block mb-2"></small>
 
-                        <div class="table-responsive mb-3">
+                        <div class="table-responsive mb-2">
                             <table class="table table-sm align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
@@ -106,7 +106,9 @@
                                         <td class="text-end">
                                             <input type="number"
                                                    min="0"
+                                                   max="{{ produto.estoque_atual|int }}"
                                                    step="1"
+                                                   inputmode="numeric"
                                                    class="form-control form-control-sm text-end produto-quantidade"
                                                    data-preco="{{ produto.preco_venda or 0 }}"
                                                    name="produto_{{ produto.id }}">
@@ -116,6 +118,8 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <small class="text-muted d-block mb-2">A quantidade máxima de cada item é limitada ao estoque disponível.</small>
 
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <small class="text-muted">Total dos produtos selecionados</small>
