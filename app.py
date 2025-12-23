@@ -3580,6 +3580,15 @@ def vendedor_dashboard():
             historico=[],
         )
 
+    # Garantir que percentual de alcance e comissão estejam atualizados
+    try:
+        meta_atual.calcular_comissao()
+        db.session.commit()
+    except Exception as e:
+        app.logger.error(
+            f"Erro ao recalcular comissão da meta {meta_atual.id} no dashboard do vendedor: {e}"
+        )
+
     # Calcular projeção
     projecao = calcular_projecao_mes(
         receita_atual=meta_atual.receita_alcancada,
