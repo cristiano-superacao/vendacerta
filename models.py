@@ -329,21 +329,102 @@ class Meta(db.Model):
     )
 
     def calcular_comissao(self):
-        """Calcula o percentual de alcance e a comissão"""
+        """Calcula o percentual de alcance e a comissão.
+
+        Prioridade:
+        1) Usar faixas configuradas em FaixaComissaoVendedor (por empresa ou globais),
+           exatamente como exibidas na tela de "Configuração de Faixas de Comissão".
+        2) Se não houver faixas configuradas, usar o cálculo padrão de calculo_comissao.py
+           para manter compatibilidade.
+        """
         from calculo_comissao import calcular_percentual_alcance, calcular_comissao
 
+        # Tipo de meta financeiro (padrão)
         if self.tipo_meta == 'valor':
-            if self.valor_meta and self.valor_meta > 0:
-                self.percentual_alcance = calcular_percentual_alcance(self.receita_alcancada, self.valor_meta)
-                self.comissao_total = calcular_comissao(self.receita_alcancada, self.percentual_alcance)
-            else:
+            if not self.valor_meta or self.valor_meta <= 0:
                 self.percentual_alcance = 0.0
                 self.comissao_total = 0.0
+                return
+
+            # 1) Percentual de alcance da meta
+            self.percentual_alcance = calcular_percentual_alcance(
+                self.receita_alcancada or 0.0,
+                self.valor_meta,
+            )
+
+            # 2) Tentar usar faixas configuradas em FaixaComissaoVendedor
+            taxa_aplicada = None
+
+            try:
+                # Descobrir empresa do vendedor, se disponível
+                empresa_id = None
+                if hasattr(self, 'vendedor') and self.vendedor is not None:
+                    empresa_id = getattr(self.vendedor, 'empresa_id', None)
+
+                from models import FaixaComissaoVendedor  # evitar import circular em tempo de definição
+
+                query = FaixaComissaoVendedor.query.filter_by(ativa=True)
+                if empresa_id:
+                    faixas = (
+                        query.filter_by(empresa_id=empresa_id)
+                        .order_by(FaixaComissaoVendedor.alcance_min)
+                        .all()
+                    )
+                else:
+                    faixas = []
+
+                # Se não houver faixas da empresa, buscar faixas globais
+                if not faixas:
+                    faixas = (
+                        FaixaComissaoVendedor.query.filter(
+                            FaixaComissaoVendedor.empresa_id.is_(None),
+                            FaixaComissaoVendedor.ativa.is_(True),
+                        )
+                        .order_by(FaixaComissaoVendedor.alcance_min)
+                        .all()
+                    )
+
+                if faixas:
+                    perc = self.percentual_alcance or 0.0
+                    # Garante ordenação por alcance_min
+                    faixas_ordenadas = sorted(
+                        faixas, key=lambda f: (f.alcance_min or 0)
+                    )
+                    for faixa in faixas_ordenadas:
+                        if perc <= (faixa.alcance_max or perc):
+                            taxa_aplicada = faixa.taxa_comissao
+                            break
+                    # Se não entrou em nenhuma faixa explícita, usa a última
+                    if taxa_aplicada is None:
+                        taxa_aplicada = faixas_ordenadas[-1].taxa_comissao
+
+            except Exception:
+                # Em caso de qualquer erro, mantemos taxa_aplicada = None
+                taxa_aplicada = None
+
+            if taxa_aplicada is not None:
+                # Comissão baseada na taxa configurada
+                self.comissao_total = (self.receita_alcancada or 0.0) * float(
+                    taxa_aplicada
+                )
+            else:
+                # Fallback: cálculo padrão legado
+                self.comissao_total = calcular_comissao(
+                    self.receita_alcancada or 0.0,
+                    self.percentual_alcance,
+                )
+
+        # Tipo de meta em volume mantém comportamento anterior,
+        # usando o cálculo padrão de comissão.
         elif self.tipo_meta == 'volume':
             if self.volume_meta and self.volume_meta > 0:
-                self.percentual_alcance = (self.volume_alcancado / self.volume_meta) * 100
-                # Comissão baseada no percentual de alcance
-                self.comissao_total = calcular_comissao(self.volume_alcancado, self.percentual_alcance)
+                self.percentual_alcance = (
+                    (self.volume_alcancado or 0) / self.volume_meta
+                ) * 100
+                self.comissao_total = calcular_comissao(
+                    self.volume_alcancado or 0,
+                    self.percentual_alcance,
+                )
             else:
                 self.percentual_alcance = 0.0
                 self.comissao_total = 0.0
