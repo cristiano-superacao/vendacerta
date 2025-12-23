@@ -4848,7 +4848,10 @@ def criar_funcionario():
                     )
 
                 gerente_responsavel = Usuario.query.get(gerente_id_val)
-                if not gerente_responsavel or gerente_responsavel.cargo != "gerente":
+                if not gerente_responsavel or gerente_responsavel.cargo not in [
+                    "gerente",
+                    "gerente_manutencao",
+                ]:
                     flash(
                         "⚠️ Gerente responsável não encontrado ou inválido.",
                         "warning",
@@ -5180,7 +5183,10 @@ def editar_funcionario(id):
                     )
 
                 gerente_responsavel = Usuario.query.get(gerente_id_val)
-                if not gerente_responsavel or gerente_responsavel.cargo != "gerente":
+                if not gerente_responsavel or gerente_responsavel.cargo not in [
+                    "gerente",
+                    "gerente_manutencao",
+                ]:
                     flash(
                         "⚠️ Gerente responsável não encontrado ou inválido.",
                         "warning",
