@@ -3958,6 +3958,18 @@ def criar_login_vendedor(id):
                 pode_exportar_dados=False,
                 pode_ver_todas_metas=False,
                 pode_aprovar_comissoes=False,
+                # Clientes: vendedor pode cadastrar e gerenciar sua carteira
+                pode_acessar_clientes=True,
+                pode_criar_clientes=True,
+                pode_editar_clientes=True,
+                pode_excluir_clientes=False,
+                pode_importar_clientes=False,
+                # Estoque: acesso somente leitura ao saldo/níveis
+                pode_acessar_estoque=True,
+                pode_gerenciar_produtos=False,
+                pode_movimentar_estoque=False,
+                pode_ver_custos=False,
+                pode_ajustar_estoque=False,
             )
             usuario.set_senha(senha)
 
