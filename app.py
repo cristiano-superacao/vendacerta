@@ -4312,7 +4312,7 @@ def download_template_vendedores():
 @app.route("/funcionarios")
 @login_required
 def lista_funcionarios():
-    """Lista todos os funcionários - Apenas Admin"""
+    """Lista todos os usuários/funcionários da empresa (somente Admin)."""
     # Apenas Admin pode gerenciar funcionários
     if current_user.cargo != "admin":
         flash(
@@ -4321,20 +4321,19 @@ def lista_funcionarios():
         )
         return redirect(url_for("dashboard"))
 
-    # Filtrar por empresa se não for super admin
+    # Super admin enxerga todos os usuários (exceto super admins)
     if current_user.is_super_admin:
         funcionarios = (
-            Usuario.query.filter(
-                Usuario.cargo.in_(["gerente", "rh", "financeiro", "admin"])
-            )
+            Usuario.query.filter(Usuario.is_super_admin.is_(False))
             .order_by(Usuario.nome)
             .all()
         )
     else:
+        # Admin comum vê todos os usuários da própria empresa (exceto super admins)
         funcionarios = (
             Usuario.query.filter(
                 Usuario.empresa_id == current_user.empresa_id,
-                Usuario.cargo.in_(["gerente", "rh", "financeiro"]),
+                Usuario.is_super_admin.is_(False),
             )
             .order_by(Usuario.nome)
             .all()
