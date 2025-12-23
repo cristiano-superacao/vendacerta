@@ -44,7 +44,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                 </div>
-                <h3 class="stats-value-modern mb-1">{{ equipes|length }}</h3>
+                <h3 class="stats-value-modern mb-1">{{ stats.total_equipes }}</h3>
                 <p class="stats-label-modern mb-0">
                     <i class="bi bi-diagram-3"></i> EQUIPES CADASTRADAS
                 </p>
@@ -60,7 +60,7 @@
                         <i class="bi bi-person-badge"></i>
                     </div>
                 </div>
-                <h3 class="stats-value-modern mb-1">{{ equipes|sum(attribute='vendedores_count') }}</h3>
+                <h3 class="stats-value-modern mb-1">{{ stats.total_vendedores }}</h3>
                 <p class="stats-label-modern mb-0">
                     <i class="bi bi-people"></i> VENDEDORES ALOCADOS
                 </p>
@@ -153,6 +153,92 @@
 </div>
 {% endif %}
 {% endblock %}
+
+{% if pagination and pagination.pages > 1 %}
+<div class="container-fluid pb-4 mt-3">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body py-2">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0 text-muted small">
+                        Mostrando {{ pagination.per_page * (pagination.page - 1) + 1 }}
+                        até {{ [pagination.per_page * pagination.page, pagination.total] | min }}
+                        de {{ pagination.total }} equipes
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <nav>
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            {# Primeira página #}
+                            {% if pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_equipes', page=1) }}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_equipes', page=pagination.prev_num) }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                            </li>
+                            {% endif %}
+
+                            {# Páginas numeradas #}
+                            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                {% if page_num %}
+                                    {% if page_num == pagination.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('lista_equipes', page=page_num) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {# Última página #}
+                            {% if pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_equipes', page=pagination.next_num) }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_equipes', page=pagination.pages) }}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% block extra_css %}
 <style>

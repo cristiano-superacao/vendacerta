@@ -1637,18 +1637,54 @@ def download_template_supervisores():
 @login_required
 def lista_supervisores():
     """Lista todos os supervisores"""
-    if current_user.is_super_admin:
-        supervisores = Usuario.query.filter_by(
-            cargo="supervisor", ativo=True
-        ).all()
-    else:
-        supervisores = Usuario.query.filter_by(
-            empresa_id=current_user.empresa_id, cargo="supervisor", ativo=True
-        ).all()
+    page = request.args.get("page", 1, type=int)
 
-    # Adicionar estatísticas
+    # Quantidade de registros por página
+    per_page = 20
+
+    # Query base por escopo de empresa
+    if current_user.is_super_admin:
+        base_query = Usuario.query.filter_by(cargo="supervisor", ativo=True)
+    else:
+        base_query = Usuario.query.filter_by(
+            empresa_id=current_user.empresa_id,
+            cargo="supervisor",
+            ativo=True,
+        )
+
+    # Estatísticas globais
+    total_supervisores = base_query.count()
+    total_vendedores_supervisionados = (
+        Vendedor.query.filter(
+            Vendedor.ativo.is_(True),
+            Vendedor.supervisor_id.in_(
+                [s.id for s in base_query.with_entities(Usuario.id).all()]
+            ),
+        ).count()
+        if total_supervisores > 0
+        else 0
+    )
+    media_vendedores = (
+        total_vendedores_supervisionados / total_supervisores
+        if total_supervisores > 0
+        else 0
+    )
+
+    stats = {
+        "total": total_supervisores,
+        "total_vendedores": total_vendedores_supervisionados,
+        "media_vendedores": media_vendedores,
+    }
+
+    # Paginação ordenada por nome
+    pagination = base_query.order_by(Usuario.nome).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    supervisores_pagina = pagination.items
+
+    # Preparar dados com contagem de vendedores por supervisor apenas da página
     supervisores_data = []
-    for supervisor in supervisores:
+    for supervisor in supervisores_pagina:
         total_vendedores = Vendedor.query.filter_by(
             supervisor_id=supervisor.id, ativo=True
         ).count()
@@ -1657,7 +1693,10 @@ def lista_supervisores():
         )
 
     return render_template(
-        "supervisores/lista.html", supervisores=supervisores_data
+        "supervisores/lista.html",
+        supervisores=supervisores_data,
+        pagination=pagination,
+        stats=stats,
     )
 
 @app.route("/supervisores/novo", methods=["GET", "POST"])
@@ -8994,17 +9033,41 @@ def _save_equipe_from_form(form, equipe=None):
 @login_required
 def lista_equipes():
     """Lista todas as equipes"""
+    page = request.args.get("page", 1, type=int)
+
     # Filtrar equipes por empresa (exceto super admin)
     if current_user.is_super_admin:
-        equipes = Equipe.query.filter_by(ativa=True).all()
+        base_query = Equipe.query.filter_by(ativa=True)
     else:
-        equipes = Equipe.query.filter_by(
+        base_query = Equipe.query.filter_by(
             empresa_id=current_user.empresa_id, ativa=True
-        ).all()
+        )
 
-    # Adiciona estatísticas de cada equipe
+    # Estatísticas globais
+    total_equipes = base_query.count()
+    total_vendedores_alocados = 0
+
+    # Para contar vendedores por equipe globalmente, usamos uma lista de IDs
+    equipe_ids = [e.id for e in base_query.with_entities(Equipe.id).all()]
+    if equipe_ids:
+        total_vendedores_alocados = Vendedor.query.filter(
+            Vendedor.ativo.is_(True), Vendedor.equipe_id.in_(equipe_ids)
+        ).count()
+
+    stats = {
+        "total_equipes": total_equipes,
+        "total_vendedores": total_vendedores_alocados,
+    }
+
+    # Paginação ordenada por nome de equipe
+    pagination = base_query.order_by(Equipe.nome).paginate(
+        page=page, per_page=15, error_out=False
+    )
+    equipes_pagina = pagination.items
+
+    # Adiciona estatísticas de cada equipe (apenas da página)
     equipes_data = []
-    for equipe in equipes:
+    for equipe in equipes_pagina:
         vendedores_count = Vendedor.query.filter_by(
             equipe_id=equipe.id, ativo=True
         ).count()
@@ -9016,7 +9079,12 @@ def lista_equipes():
             }
         )
 
-    return render_template("equipes/lista.html", equipes=equipes_data)
+    return render_template(
+        "equipes/lista.html",
+        equipes=equipes_data,
+        pagination=pagination,
+        stats=stats,
+    )
 
 @app.route("/equipes/nova", methods=["GET", "POST"])
 @login_required
