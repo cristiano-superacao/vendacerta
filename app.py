@@ -6210,74 +6210,115 @@ def relatorio_vendas():
 
     query = query.filter(Cliente.ativo)
 
-    # Executar query
+    # Executar query principal (clientes base)
     clientes_base = query.all()
 
-    # Processar dados detalhados
-    relatorio_dados = []
-    total_compras_geral = 0
-    total_valor_geral = 0
+    # Se não houver clientes, retorna relatório vazio rapidamente
+    if not clientes_base:
+        relatorio_dados = []
+        total_compras_geral = 0
+        total_valor_geral = 0
+    else:
+        # Otimização: buscar compras em lote para evitar N+1 queries
+        cliente_ids = [row.id for row in clientes_base]
 
-    for cliente_row in clientes_base:
-        cliente = Cliente.query.get(cliente_row.id)
-
-        # Buscar compras do ano
-        compras_ano = CompraCliente.query.filter(
-            CompraCliente.cliente_id == cliente.id,
+        # Compras do ano para todos os clientes filtrados
+        compras_ano_todos = CompraCliente.query.filter(
+            CompraCliente.cliente_id.in_(cliente_ids),
             extract("year", CompraCliente.data_compra) == ano,
         ).all()
 
-        total_compras_ano = len(compras_ano)
-        valor_total_ano = (
-            sum([c.valor for c in compras_ano]) if compras_ano else 0
+        from collections import defaultdict
+
+        compras_ano_por_cliente = defaultdict(list)
+        for compra in compras_ano_todos:
+            compras_ano_por_cliente[compra.cliente_id].append(compra)
+
+        # Última compra (todas as datas) por cliente, via agregação
+        ultima_compra_rows = (
+            db.session.query(
+                CompraCliente.cliente_id,
+                db.func.max(CompraCliente.data_compra).label("ultima_data"),
+            )
+            .filter(CompraCliente.cliente_id.in_(cliente_ids))
+            .group_by(CompraCliente.cliente_id)
+            .all()
         )
+        ultima_compra_por_cliente = {
+            row.cliente_id: row.ultima_data for row in ultima_compra_rows
+        }
 
-        # Última compra
-        ultima_compra = cliente.compras.order_by(
-            CompraCliente.data_compra.desc()
-        ).first()
+        # Buscar objetos Cliente em lote
+        clientes_objs = Cliente.query.filter(Cliente.id.in_(cliente_ids)).all()
+        clientes_map = {c.id: c for c in clientes_objs}
 
-        # Formas de pagamento usadas
-        formas_usadas = set(
-            [c.forma_pagamento for c in compras_ano if c.forma_pagamento]
-        )
+        # Processar dados detalhados
+        relatorio_dados = []
+        total_compras_geral = 0
+        total_valor_geral = 0
 
-        # Status
-        status_cor = cliente.get_status_cor()
+        for cliente_row in clientes_base:
+            cliente = clientes_map.get(cliente_row.id)
+            if not cliente:
+                continue
 
-        # Filtrar por status se necessário
-        if status and status_cor != status:
-            continue
+            compras_ano = compras_ano_por_cliente.get(cliente.id, [])
 
-        relatorio_dados.append(
-            {
-                "id": cliente.id,
-                "cpf": cliente.cpf or "-",
-                "cnpj": cliente.cnpj or "-",
-                "nome": cliente.nome,
-                "cidade": cliente.cidade or "-",
-                "bairro": cliente.bairro or "-",
-                "vendedor": cliente_row.vendedor_nome,
-                "supervisor": cliente_row.supervisor_nome or "-",
-                "compras_ano": total_compras_ano,
-                "valor_total_ano": valor_total_ano,
-                "ultima_compra": (
-                    ultima_compra.data_compra if ultima_compra else None
-                ),
-                "formas_pagamento": (
-                    ", ".join(formas_usadas) if formas_usadas else "-"
-                ),
-                "status": status_cor,
-                "dias_sem_compra": (
-                    (datetime.now() - ultima_compra.data_compra).days
-                    if ultima_compra
-                    else None
-                ),
+            total_compras_ano = len(compras_ano)
+            valor_total_ano = (
+                sum(c.valor for c in compras_ano) if compras_ano else 0
+            )
+
+            # Última compra (qualquer ano)
+            ultima_data = ultima_compra_por_cliente.get(cliente.id)
+
+            # Formas de pagamento usadas (apenas no ano filtrado)
+            formas_usadas = {
+                c.forma_pagamento
+                for c in compras_ano
+                if c.forma_pagamento
             }
-        )
 
-        total_compras_geral += total_compras_ano
-        total_valor_geral += valor_total_ano
+            # Status replicando lógica de Cliente.get_status_cor
+            if not ultima_data:
+                status_cor = "vermelho"
+                dias_sem_compra = None
+            else:
+                dias_sem_compra = (datetime.now() - ultima_data).days
+                if dias_sem_compra <= 30:
+                    status_cor = "verde"
+                elif dias_sem_compra <= 38:
+                    status_cor = "amarelo"
+                else:
+                    status_cor = "vermelho"
+
+            # Filtrar por status se necessário
+            if status and status_cor != status:
+                continue
+
+            relatorio_dados.append(
+                {
+                    "id": cliente.id,
+                    "cpf": cliente.cpf or "-",
+                    "cnpj": cliente.cnpj or "-",
+                    "nome": cliente.nome,
+                    "cidade": cliente.cidade or "-",
+                    "bairro": cliente.bairro or "-",
+                    "vendedor": cliente_row.vendedor_nome,
+                    "supervisor": cliente_row.supervisor_nome or "-",
+                    "compras_ano": total_compras_ano,
+                    "valor_total_ano": valor_total_ano,
+                    "ultima_compra": ultima_data,
+                    "formas_pagamento": (
+                        ", ".join(formas_usadas) if formas_usadas else "-"
+                    ),
+                    "status": status_cor,
+                    "dias_sem_compra": dias_sem_compra,
+                }
+            )
+
+            total_compras_geral += total_compras_ano
+            total_valor_geral += valor_total_ano
 
     # Ordenar por compras do ano (decrescente)
     relatorio_dados.sort(key=lambda x: x["compras_ano"], reverse=True)
@@ -8915,12 +8956,13 @@ def nova_equipe():
     # Preencher choices de supervisores da mesma empresa
     if current_user.is_super_admin:
         supervisores = Usuario.query.filter(
-            Usuario.cargo.in_(["supervisor", "admin"]), Usuario.ativo.is_(True)
+            Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
+            Usuario.ativo.is_(True),
         ).all()
     else:
         supervisores = Usuario.query.filter(
             Usuario.empresa_id == current_user.empresa_id,
-            Usuario.cargo.in_(["supervisor", "admin"]),
+            Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
             Usuario.ativo.is_(True),
         ).all()
     form.supervisor_id.choices = [(s.id, s.nome) for s in supervisores]
@@ -8967,13 +9009,13 @@ def editar_equipe(id):
         # Preencher choices de supervisores da mesma empresa
         if current_user.is_super_admin:
             supervisores = Usuario.query.filter(
-                Usuario.cargo.in_(["supervisor", "admin"]),
+                Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
                 Usuario.ativo.is_(True),
             ).all()
         else:
             supervisores = Usuario.query.filter(
                 Usuario.empresa_id == current_user.empresa_id,
-                Usuario.cargo.in_(["supervisor", "admin"]),
+                Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
                 Usuario.ativo.is_(True),
             ).all()
         form.supervisor_id.choices = [(s.id, s.nome) for s in supervisores]
@@ -10207,6 +10249,8 @@ def lista_produtos():
     busca = request.args.get("busca", "")
     categoria = request.args.get("categoria", "")
     status_estoque = request.args.get("status", "")
+    page = request.args.get("page", 1, type=int)
+    per_page = 25
 
     query = Produto.query.filter_by(empresa_id=current_user.empresa_id)
 
@@ -10233,7 +10277,13 @@ def lista_produtos():
     elif status_estoque == "normal":
         query = query.filter(Produto.estoque_atual > Produto.estoque_minimo)
 
-    produtos = query.order_by(Produto.nome).all()
+    pagination = query.order_by(Produto.nome).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False,
+    )
+
+    produtos = pagination.items
 
     return render_template(
         "estoque/produtos.html",
@@ -10243,6 +10293,7 @@ def lista_produtos():
             "categoria": categoria,
             "status": status_estoque,
         },
+        pagination=pagination,
     )
 
 @app.route("/estoque/produto/novo", methods=["GET", "POST"])
