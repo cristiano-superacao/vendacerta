@@ -17,7 +17,8 @@
                 <i class="bi bi-printer me-2"></i>Imprimir
             </button>
             {% if current_user.pode_exportar_dados %}
-            <a href="{{ url_for('exportar_clientes') }}" class="btn btn-success">
+            <a href="{{ url_for('exportar_relatorio_vendas', ano=ano, status=filtros.status, vendedor_id=filtros.vendedor_id, supervisor_id=filtros.supervisor_id, cidade=filtros.cidade, bairro=filtros.bairro) }}"
+               class="btn btn-success">
                 <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
             </a>
             {% endif %}
@@ -90,7 +91,7 @@
             <form method="get" class="row g-3">
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Ano</label>
-                    <select name="ano" class="form-select">
+                    <select name="ano" class="form-select" aria-label="Filtrar por ano">
                         {% for y in range(2020, 2030) %}
                             <option value="{{ y }}" {% if y == ano %}selected{% endif %}>{{ y }}</option>
                         {% endfor %}
@@ -99,7 +100,7 @@
 
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Status</label>
-                    <select name="status" class="form-select">
+                    <select name="status" class="form-select" aria-label="Filtrar por status">
                         <option value="">Todos</option>
                         <option value="verde" {% if filtros.status == 'verde' %}selected{% endif %}>🟢 Positivado</option>
                         <option value="amarelo" {% if filtros.status == 'amarelo' %}selected{% endif %}>🟡 Atenção</option>
@@ -109,7 +110,7 @@
 
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Vendedor</label>
-                    <select name="vendedor_id" class="form-select">
+                    <select name="vendedor_id" class="form-select" aria-label="Filtrar por vendedor">
                         <option value="">Todos</option>
                         {% for vendedor in vendedores %}
                             <option value="{{ vendedor.id }}" {% if filtros.vendedor_id == vendedor.id %}selected{% endif %}>
@@ -121,7 +122,7 @@
 
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Supervisor</label>
-                    <select name="supervisor_id" class="form-select">
+                    <select name="supervisor_id" class="form-select" aria-label="Filtrar por supervisor">
                         <option value="">Todos</option>
                         {% for supervisor in supervisores %}
                             <option value="{{ supervisor.id }}" {% if filtros.supervisor_id == supervisor.id %}selected{% endif %}>
@@ -180,7 +181,7 @@
                 <table class="table table-hover table-striped align-middle mb-0" id="tabelaRelatorio">
                     <thead class="table-dark">
                         <tr>
-                            <th class="text-center" style="width: 60px;">#</th>
+                            <th class="text-center">#</th>
                             <th>Nome do Cliente</th>
                             <th>CPF</th>
                             <th>CNPJ</th>
@@ -199,7 +200,7 @@
                         {% for item in relatorio %}
                         <tr>
                             <td class="text-center">
-                                <a href="{{ url_for('ver_cliente', id=item.id) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ url_for('ver_cliente', id=item.id) }}" class="btn btn-sm btn-outline-primary" title="Ver cliente" aria-label="Ver cliente {{ item.nome }}">
                                     <i class="bi bi-eye"></i>
                                 </a>
                             </td>

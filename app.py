@@ -6324,6 +6324,271 @@ def relatorio_vendas():
         },
     )
 
+
+@app.route("/clientes/relatorio-vendas/exportar")
+@login_required
+def exportar_relatorio_vendas():
+    """Exportar Relatório de Vendas por Cliente para Excel.
+
+    Usa exatamente os mesmos filtros e a mesma lógica do relatório em tela,
+    gerando uma planilha com as colunas principais de análise, mantendo a
+    experiência visual profissional para quem exporta os dados.
+    """
+    from sqlalchemy import extract
+
+    # Verificar dependências do Excel
+    if not EXCEL_AVAILABLE and not ensure_excel_available():
+        flash(
+            "Erro: Bibliotecas Excel não instaladas. Contate o administrador.",
+            "danger",
+        )
+        return redirect(url_for("relatorio_vendas"))
+
+    # Verificar permissão de exportação (mesma regra de clientes)
+    if not pode_exportar(current_user, "clientes"):
+        cargos_permitidos = ", ".join(
+            get_cargos_permitidos_exportacao("clientes")
+        )
+        flash(
+            f"Apenas {cargos_permitidos} podem exportar o relatório de vendas.",
+            "danger",
+        )
+        return redirect(url_for("relatorio_vendas"))
+
+    try:
+        # Filtros (mesmos da tela)
+        ano = request.args.get("ano", datetime.now().year, type=int)
+        vendedor_id = request.args.get("vendedor_id", type=int)
+        supervisor_id = request.args.get("supervisor_id", type=int)
+        cidade = request.args.get("cidade", "")
+        bairro = request.args.get("bairro", "")
+        status = request.args.get("status", "")
+
+        SupervisorAlias = db.aliased(Usuario)
+
+        query = (
+            db.session.query(
+                Cliente.id,
+                Cliente.cpf,
+                Cliente.cnpj,
+                Cliente.nome,
+                Cliente.cidade,
+                Cliente.bairro,
+                Vendedor.nome.label("vendedor_nome"),
+                SupervisorAlias.nome.label("supervisor_nome"),
+            )
+            .join(Vendedor, Cliente.vendedor_id == Vendedor.id)
+            .outerjoin(
+                SupervisorAlias, Vendedor.supervisor_id == SupervisorAlias.id
+            )
+        )
+
+        # Escopo por permissão
+        if current_user.cargo == "vendedor" and current_user.vendedor_id:
+            query = query.filter(Cliente.vendedor_id == current_user.vendedor_id)
+        elif current_user.cargo == "supervisor":
+            vendedores_ids = [
+                v.id
+                for v in Vendedor.query.filter_by(
+                    supervisor_id=current_user.id, ativo=True
+                ).all()
+            ]
+            if vendedores_ids:
+                query = query.filter(Cliente.vendedor_id.in_(vendedores_ids))
+            else:
+                query = query.filter(Cliente.id == -1)
+        elif not current_user.is_super_admin:
+            query = query.filter(Cliente.empresa_id == current_user.empresa_id)
+
+        # Demais filtros
+        if vendedor_id:
+            query = query.filter(Cliente.vendedor_id == vendedor_id)
+        if supervisor_id:
+            query = query.filter(Vendedor.supervisor_id == supervisor_id)
+        if cidade:
+            query = query.filter(Cliente.cidade.ilike(f"%{cidade}%"))
+        if bairro:
+            query = query.filter(Cliente.bairro.ilike(f"%{bairro}%"))
+
+        query = query.filter(Cliente.ativo)
+
+        clientes_base = query.all()
+
+        # Montar dados do relatório (mesma regra da tela)
+        relatorio_dados = []
+        total_compras_geral = 0
+        total_valor_geral = 0
+
+        for cliente_row in clientes_base:
+            cliente = Cliente.query.get(cliente_row.id)
+
+            compras_ano = CompraCliente.query.filter(
+                CompraCliente.cliente_id == cliente.id,
+                extract("year", CompraCliente.data_compra) == ano,
+            ).all()
+
+            total_compras_ano = len(compras_ano)
+            valor_total_ano = (
+                sum([c.valor for c in compras_ano]) if compras_ano else 0
+            )
+
+            ultima_compra = cliente.compras.order_by(
+                CompraCliente.data_compra.desc()
+            ).first()
+
+            formas_usadas = set(
+                [c.forma_pagamento for c in compras_ano if c.forma_pagamento]
+            )
+
+            status_cor = cliente.get_status_cor()
+
+            if status and status_cor != status:
+                continue
+
+            relatorio_dados.append(
+                {
+                    "nome": cliente.nome,
+                    "cpf": cliente.cpf or "-",
+                    "cnpj": cliente.cnpj or "-",
+                    "cidade": cliente.cidade or "-",
+                    "bairro": cliente.bairro or "-",
+                    "vendedor": cliente_row.vendedor_nome,
+                    "supervisor": cliente_row.supervisor_nome or "-",
+                    "compras_ano": total_compras_ano,
+                    "valor_total_ano": valor_total_ano,
+                    "ultima_compra": ultima_compra.data_compra if ultima_compra else None,
+                    "formas_pagamento": ", ".join(formas_usadas)
+                    if formas_usadas
+                    else "-",
+                    "status": status_cor,
+                    "dias_sem_compra": (
+                        (datetime.now() - ultima_compra.data_compra).days
+                        if ultima_compra
+                        else None
+                    ),
+                }
+            )
+
+            total_compras_geral += total_compras_ano
+            total_valor_geral += valor_total_ano
+
+        # Ordenar como na tela
+        relatorio_dados.sort(key=lambda x: x["compras_ano"], reverse=True)
+
+        # Criar workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Relatorio_Vendas_{ano}"
+
+        header_fill = PatternFill(
+            start_color="0066CC", end_color="0066CC", fill_type="solid"
+        )
+        header_font = Font(color="FFFFFF", bold=True)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+
+        headers = [
+            "Nome do Cliente",
+            "CPF",
+            "CNPJ",
+            "Cidade",
+            "Bairro",
+            "Vendedor",
+            "Supervisor",
+            f"Compras {ano}",
+            "Valor Total (R$)",
+            "Última Compra",
+            "Dias sem Compra",
+            "Formas Pagamento",
+            "Status",
+        ]
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+
+        status_map = {
+            "verde": "Positivado",
+            "amarelo": "Atenção",
+            "vermelho": "Sem Compras",
+        }
+
+        row_idx = 2
+        for item in relatorio_dados:
+            ultima = (
+                item["ultima_compra"].strftime("%d/%m/%Y")
+                if item["ultima_compra"]
+                else "Nunca"
+            )
+            dias_sem = (
+                item["dias_sem_compra"]
+                if item["dias_sem_compra"] is not None
+                else "-"
+            )
+            status_legivel = status_map.get(item["status"], item["status"])
+
+            ws.cell(row=row_idx, column=1, value=item["nome"])
+            ws.cell(row=row_idx, column=2, value=item["cpf"])
+            ws.cell(row=row_idx, column=3, value=item["cnpj"])
+            ws.cell(row=row_idx, column=4, value=item["cidade"])
+            ws.cell(row=row_idx, column=5, value=item["bairro"])
+            ws.cell(row=row_idx, column=6, value=item["vendedor"])
+            ws.cell(row=row_idx, column=7, value=item["supervisor"])
+            ws.cell(row=row_idx, column=8, value=item["compras_ano"])
+            ws.cell(row=row_idx, column=9, value=item["valor_total_ano"])
+            ws.cell(row=row_idx, column=10, value=ultima)
+            ws.cell(row=row_idx, column=11, value=dias_sem)
+            ws.cell(row=row_idx, column=12, value=item["formas_pagamento"])
+            ws.cell(row=row_idx, column=13, value=status_legivel)
+
+            row_idx += 1
+
+        # Linha de totais
+        ws.cell(row=row_idx, column=1, value="TOTAIS:")
+        ws.cell(row=row_idx, column=8, value=total_compras_geral)
+        ws.cell(row=row_idx, column=9, value=total_valor_geral)
+
+        # Ajustar larguras
+        column_widths = [
+            35,  # Nome
+            16,  # CPF
+            20,  # CNPJ
+            20,  # Cidade
+            20,  # Bairro
+            25,  # Vendedor
+            25,  # Supervisor
+            14,  # Compras ano
+            18,  # Valor total
+            16,  # Última compra
+            16,  # Dias sem compra
+            28,  # Formas pagamento
+            14,  # Status
+        ]
+
+        for col, width in enumerate(column_widths, 1):
+            ws.column_dimensions[
+                ws.cell(row=1, column=col).column_letter
+            ].width = width
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"relatorio_vendas_{ano}_{timestamp}.xlsx"
+
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename,
+        )
+
+    except Exception as e:
+        flash(f"Erro ao exportar relatório de vendas: {str(e)}", "danger")
+        return redirect(url_for("relatorio_vendas"))
+
 @app.route("/clientes/exportar")
 @login_required
 def exportar_clientes():
