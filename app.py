@@ -1861,6 +1861,128 @@ def definir_senha_supervisor(id):
         "supervisores/definir_senha.html", supervisor=supervisor
     )
 
+# ===== FUNÇÕES AUXILIARES PARA SUPERVISORES =====
+
+def _prepare_supervisor_form(form, supervisor=None):
+    """Prepara o formulário de supervisor.
+
+    - Restringe o cargo para "supervisor".
+    - Popula a lista de empresas conforme o escopo do usuário.
+    - Retorna a lista de gerentes/administradores disponíveis
+      para vincular ao supervisor.
+    """
+
+    # Garantir que o cargo esteja fixo como supervisor
+    form.cargo.choices = [("supervisor", "Supervisor de Vendas")]
+    if not form.cargo.data:
+        form.cargo.data = "supervisor"
+
+    # Empresas disponíveis
+    if current_user.is_super_admin:
+        empresas = Empresa.query.filter_by(ativo=True).order_by(Empresa.nome).all()
+    else:
+        empresas = (
+            Empresa.query.filter_by(id=current_user.empresa_id, ativo=True)
+            .order_by(Empresa.nome)
+            .all()
+        )
+
+    form.empresa_id.choices = [(e.id, e.nome) for e in empresas]
+
+    # Empresa selecionada
+    if supervisor and supervisor.empresa_id:
+        form.empresa_id.data = supervisor.empresa_id
+    elif not supervisor and not current_user.is_super_admin and current_user.empresa_id:
+        form.empresa_id.data = current_user.empresa_id
+
+    # Valores padrão de status para novo cadastro
+    if not supervisor:
+        if form.ativo.data is None:
+            form.ativo.data = 1
+        if form.bloqueado.data is None:
+            form.bloqueado.data = 0
+
+    # Gerentes/administradores disponíveis para vincular
+    if current_user.is_super_admin:
+        gerentes_query = Usuario.query.filter(
+            Usuario.ativo.is_(True),
+            Usuario.cargo.in_(["admin", "gerente"]),
+        )
+    else:
+        gerentes_query = Usuario.query.filter(
+            Usuario.empresa_id == current_user.empresa_id,
+            Usuario.ativo.is_(True),
+            Usuario.cargo.in_(["admin", "gerente"]),
+        )
+
+    gerentes_disponiveis = gerentes_query.order_by(Usuario.nome).all()
+    return gerentes_disponiveis
+
+
+def _save_supervisor_from_form(form, supervisor=None):
+    """Cria ou atualiza um supervisor a partir do formulário.
+
+    Retorna a instância de Usuario correspondente ao supervisor.
+    """
+
+    empresa_id = form.empresa_id.data
+    empresa = Empresa.query.get(empresa_id)
+    if not empresa:
+        raise ValueError("Empresa não encontrada.")
+
+    # Garantir que usuário comum só gerencie supervisores da própria empresa
+    if not current_user.is_super_admin and empresa_id != current_user.empresa_id:
+        raise PermissionError("Você só pode gerenciar supervisores da sua empresa.")
+
+    # Gerente responsável (campo vem do formulário HTML)
+    gerente_id_raw = request.form.get("gerente_id")
+    if not gerente_id_raw:
+        raise ValueError("É obrigatório vincular o supervisor a um Gerente ou Administrador.")
+
+    try:
+        gerente_id = int(gerente_id_raw)
+    except ValueError:
+        raise ValueError("Gerente/Administrador selecionado é inválido.")
+
+    gerente = Usuario.query.get(gerente_id)
+    if not gerente or gerente.cargo not in ["admin", "gerente"]:
+        raise ValueError("Gerente/Administrador responsável não encontrado ou inválido.")
+
+    if (
+        not current_user.is_super_admin
+        and gerente.empresa_id != current_user.empresa_id
+    ):
+        raise PermissionError(
+            "Você só pode vincular supervisores a gerentes da sua empresa."
+        )
+
+    if supervisor is None:
+        # Criação de novo supervisor
+        supervisor = Usuario(
+            nome=form.nome.data,
+            email=form.email.data,
+            cargo="supervisor",
+            empresa_id=empresa_id,
+            ativo=bool(form.ativo.data),
+            bloqueado=bool(form.bloqueado.data),
+            motivo_bloqueio=form.motivo_bloqueio.data or None,
+            gerente_id=gerente.id,
+        )
+        supervisor.set_senha("senha123")
+        db.session.add(supervisor)
+    else:
+        # Atualização de supervisor existente
+        supervisor.nome = form.nome.data
+        supervisor.email = form.email.data
+        supervisor.empresa_id = empresa_id
+        supervisor.ativo = bool(form.ativo.data)
+        supervisor.bloqueado = bool(form.bloqueado.data)
+        supervisor.motivo_bloqueio = form.motivo_bloqueio.data or None
+        supervisor.gerente_id = gerente.id
+
+    db.session.commit()
+    return supervisor
+
 # ===== CONTINUAÇÃO - ROTAS DE SUPER ADMIN - USUÁRIOS =====
 
 @app.route("/super-admin/usuarios/criar", methods=["GET", "POST"])
