@@ -230,7 +230,18 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-muted mb-2">Confira os itens antes de confirmar o registro da venda.</p>
+                    <p class="small text-muted mb-2">Confira os itens e os dados principais antes de confirmar o registro da venda.</p>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-2 mb-md-0">
+                            <small class="text-muted d-block">Cliente</small>
+                            <strong>{{ cliente.nome }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">Forma de pagamento</small>
+                            <strong id="resumo-forma-pagamento">-</strong>
+                        </div>
+                    </div>
                     <div class="table-responsive mb-3">
                         <table class="table table-sm align-middle mb-0">
                             <thead class="table-light">
@@ -279,6 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const resumoBody = document.getElementById('resumo-itens-body');
     const resumoTotalSpan = document.getElementById('resumo-total-valor');
     const btnConfirmarResumo = document.getElementById('btn-confirmar-resumo');
+    const resumoFormaSpan = document.getElementById('resumo-forma-pagamento');
     let envioConfirmado = false;
     let resumoModal = null;
 
@@ -408,6 +420,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (resumoTotalSpan) {
                 resumoTotalSpan.textContent = total.toFixed(2);
+            }
+
+            if (resumoFormaSpan && formCompra) {
+                const selectForma = formCompra.querySelector('[name="forma_pagamento"]');
+                let texto = '-';
+                if (selectForma && selectForma.options && selectForma.selectedIndex >= 0) {
+                    texto = (selectForma.options[selectForma.selectedIndex].textContent || '').trim() || '-';
+                }
+                resumoFormaSpan.textContent = texto;
             }
 
             resumoModal.show();
