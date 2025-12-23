@@ -101,6 +101,19 @@ class Usuario(UserMixin, db.Model):
         foreign_keys=[supervisor_id]
     )
 
+    # Vínculo opcional com um vendedor específico (login de vendedor)
+    vendedor_id = db.Column(
+        db.Integer,
+        db.ForeignKey('vendedores.id'),
+        nullable=True,
+        index=True
+    )
+    vendedor = db.relationship(
+        'Vendedor',
+        backref=db.backref('usuario_login', uselist=False),
+        foreign_keys=[vendedor_id]
+    )
+
     # Super admin (acessa todas as empresas)
     is_super_admin = db.Column(
         db.Boolean,

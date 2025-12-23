@@ -84,6 +84,7 @@ def fix_database():
             required_user_columns = {
                 'supervisor_id': 'INTEGER',
                 'gerente_id': 'INTEGER',
+                'vendedor_id': 'INTEGER',
                 'departamento': 'VARCHAR(50)',
                 'pode_gerenciar_tecnicos': 'BOOLEAN DEFAULT FALSE',
                 'pode_atribuir_tecnicos': 'BOOLEAN DEFAULT FALSE'
@@ -101,16 +102,21 @@ def fix_database():
                         conn.commit()
                         print(f"   ✅ Coluna {column_name} adicionada com sucesso em usuarios!")
 
-                        # Se for supervisor_id ou gerente_id, adicionar foreign key e índice
-                        if column_name in ['supervisor_id', 'gerente_id']:
+                        # Adicionar foreign keys e índices para colunas de relacionamento
+                        if column_name in ['supervisor_id', 'gerente_id', 'vendedor_id']:
                             try:
                                 # Adicionar constraint de foreign key
+                                if column_name in ['supervisor_id', 'gerente_id']:
+                                    ref_table = 'usuarios'
+                                else:
+                                    ref_table = 'vendedores'
+
                                 fk_name = f"fk_usuarios_{column_name.replace('_id', '')}"
                                 fk_sql = f"""
                                 ALTER TABLE usuarios 
                                 ADD CONSTRAINT {fk_name} 
                                 FOREIGN KEY ({column_name}) 
-                                REFERENCES usuarios(id) 
+                                REFERENCES {ref_table}(id) 
                                 ON DELETE SET NULL
                                 """
                                 conn.execute(text(fk_sql))
