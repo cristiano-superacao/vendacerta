@@ -9912,6 +9912,10 @@ def lista_ordens_servico():
     prioridade = request.args.get("prioridade", "")
     tecnico_id = request.args.get("tecnico_id", "")
     busca = request.args.get("busca", "")
+    page = request.args.get("page", 1, type=int)
+
+    # Quantidade de registros por página (equilíbrio entre performance e usabilidade)
+    per_page = 15
 
     # Query base
     query = OrdemServico.query.filter_by(empresa_id=current_user.empresa_id)
@@ -9946,8 +9950,20 @@ def lista_ordens_servico():
             )
         )
 
-    # Ordenar por data de abertura (mais recentes primeiro)
-    ordens = query.order_by(OrdemServico.data_abertura.desc()).all()
+    # Estatísticas por status (baseadas no conjunto filtrado, antes da paginação)
+    stats_query = query
+    stats = {
+        "aguardando_aprovacao": stats_query.filter_by(status="aguardando_aprovacao").count(),
+        "em_andamento": stats_query.filter_by(status="em_andamento").count(),
+        "concluida": stats_query.filter_by(status="concluida").count(),
+        "total": stats_query.count(),
+    }
+
+    # Paginação: ordenar por data de abertura (mais recentes primeiro)
+    pagination = query.order_by(OrdemServico.data_abertura.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    ordens = pagination.items
 
     # Buscar técnicos para o filtro
     tecnicos = (
@@ -9959,6 +9975,8 @@ def lista_ordens_servico():
     return render_template(
         "os/lista.html",
         ordens=ordens,
+        pagination=pagination,
+        stats=stats,
         tecnicos=tecnicos,
         filtros={
             "status": status,

@@ -21,13 +21,6 @@
 
 <!-- Cards de Estatísticas -->
 <div class="row g-3 mb-4">
-    {% set stats = {
-        'aguardando_aprovacao': ordens|selectattr('status', 'equalto', 'aguardando_aprovacao')|list|length,
-        'em_andamento': ordens|selectattr('status', 'equalto', 'em_andamento')|list|length,
-        'concluida': ordens|selectattr('status', 'equalto', 'concluida')|list|length,
-        'total': ordens|length
-    } %}
-
     <!-- Card Aguardando Aprovação -->
     <div class="col-12 col-sm-6 col-lg-3">
         <div class="stats-card-clean stats-card-red h-100">
@@ -450,3 +443,87 @@
 }
 </style>
 {% endblock %}
+
+{% if pagination and pagination.pages > 1 %}
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0 text-muted small">
+                    Mostrando {{ pagination.per_page * (pagination.page - 1) + 1 }}
+                    até {{ [pagination.per_page * pagination.page, pagination.total] | min }}
+                    de {{ pagination.total }} ordens de serviço
+                </p>
+            </div>
+            <div class="col-md-6">
+                <nav>
+                    <ul class="pagination pagination-sm justify-content-end mb-0">
+                        {# Primeira página #}
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=1, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=pagination.prev_num, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                        </li>
+                        {% endif %}
+
+                        {# Páginas numeradas #}
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == pagination.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('lista_ordens_servico', page=page_num, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {# Última página #}
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=pagination.next_num, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=pagination.pages, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+    </div>
+{% endif %}
