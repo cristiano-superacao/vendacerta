@@ -1,6 +1,6 @@
 # forms.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, FloatField, SelectField, TextAreaField, IntegerField, BooleanField, SelectMultipleField, SubmitField
+from wtforms import StringField, PasswordField, FloatField, SelectField, TextAreaField, IntegerField, BooleanField, SelectMultipleField, SubmitField, DateField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional
 from models import Usuario, Vendedor, Equipe, Empresa, Cliente
 import re
@@ -691,10 +691,12 @@ class OrdemServicoAndamentoForm(FlaskForm):
         ('aguardando_peca', 'Aguardando Peça'),
         ('concluida', 'Concluída')
     ], validators=[DataRequired()])
+    data_previsao = DateField('Previsão de Conclusão', format='%Y-%m-%d', validators=[Optional()])
     descricao_solucao = TextAreaField('Descrição da Solução', validators=[Optional()])
     feedback_tecnico = TextAreaField('Feedback do Técnico', validators=[Optional()])
     valor_mao_obra = FloatField('Valor Mão de Obra (R$)', validators=[Optional()], default=0)
     valor_pecas = FloatField('Valor Peças (R$)', validators=[Optional()], default=0)
+    submit = SubmitField('Atualizar Ordem de Serviço')
 
 class OrdemServicoAvaliacaoForm(FlaskForm):
     """Formulário para avaliação do cliente"""
