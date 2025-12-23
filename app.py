@@ -5682,6 +5682,7 @@ def ver_cliente(id):
     # Estatísticas do cliente
     total_compras = cliente.compras.count()
     total_compras_mes = cliente.get_total_compras_mes()
+    agora = datetime.utcnow()
 
     return render_template(
         "clientes/ver.html",
@@ -5689,6 +5690,7 @@ def ver_cliente(id):
         compras=compras,
         total_compras=total_compras,
         total_compras_mes=total_compras_mes,
+        now=agora,
     )
 
 @app.route("/clientes/<int:id>/editar", methods=["GET", "POST"])
