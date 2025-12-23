@@ -1193,3 +1193,64 @@ body {
     transition: width 0.6s ease;
 }
 
+/* ===== UTILITÁRIOS VENDACERTA (RESPONSIVO) ===== */
+
+/* Altura maior para barras de progresso em cards de desempenho */
+.vc-progress-lg {
+    height: 30px;
+}
+
+/* Bordas coloridas para cards de resumo */
+.vc-card-border-indigo {
+    border-left: 4px solid #6366f1 !important;
+}
+
+.vc-card-border-emerald {
+    border-left: 4px solid #10b981 !important;
+}
+
+.vc-card-border-pink {
+    border-left: 4px solid #ec4899 !important;
+}
+
+/* Texto auxiliar em rosa */
+.vc-text-pink {
+    color: #ec4899 !important;
+}
+
+/* Badges circulares para ranking */
+.vc-badge-circle {
+    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vc-badge-circle-sm {
+    font-size: 1rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Badge pequena para contador de mensagens no header mobile */
+.vc-badge-messages {
+    font-size: 0.65rem;
+}
+
+/* Largura máxima para grupos de busca compactos em tabelas */
+.vc-input-group-narrow {
+    max-width: 260px;
+}
+
+/* Coluna de quantidade estreita em tabelas de produtos */
+.vc-col-qtd {
+    width: 110px;
+}
+

@@ -15,13 +15,13 @@
             </div>
             <div class="d-flex gap-2">
                 <!-- Botão de Mensagens com Badge -->
-                <a href="{{ url_for('caixa_entrada') }}" class="btn btn-sm btn-outline-light position-relative">
+                <a href="{{ url_for('caixa_entrada') }}" class="btn btn-sm btn-outline-light position-relative" title="Mensagens" aria-label="Mensagens">
                     <i class="bi bi-envelope-fill"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;" id="badge-mensagens">
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger vc-badge-messages" id="badge-mensagens">
                         0
                     </span>
                 </a>
-                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light">
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light" title="Sair" aria-label="Sair">
                     <i class="bi bi-box-arrow-right"></i>
                 </a>
             </div>
@@ -73,7 +73,7 @@
         </div>
     {% else %}
         <!-- Card de Desempenho do Mês -->
-        <div class="card shadow-sm border-0 mb-4" style="border-left: 4px solid #6366f1 !important;">
+        <div class="card shadow-sm border-0 mb-4 vc-card-border-indigo">
             <div class="card-header bg-white border-0 py-3">
                 <h5 class="mb-0 fw-bold text-primary">
                     <i class="bi bi-graph-up-arrow"></i> Meu Desempenho - {{ historico[0].mes_nome if historico else hoje.strftime('%b') }}/{{ hoje.year }}
@@ -86,10 +86,10 @@
                         <span class="fw-semibold">Meta do Mês</span>
                         <span class="text-muted">{{ meta_atual.percentual_alcance|round(1) }}%</span>
                     </div>
-                    <div class="progress" style="height: 30px;">
-                        <div class="progress-bar {% if meta_atual.percentual_alcance >= 100 %}bg-success{% elif meta_atual.percentual_alcance >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
+                    <div class="progress vc-progress-lg">
+                        <div class="progress-bar {% if meta_atual.percentual_alcance >= 100 %}bg-success w-100{% elif meta_atual.percentual_alcance >= 70 %}bg-warning w-75{% elif meta_atual.percentual_alcance >= 40 %}bg-danger w-50{% else %}bg-danger w-25{% endif %}"
                              role="progressbar"
-                             style="width: {{ [meta_atual.percentual_alcance, 100]|min }}%">
+                             aria-label="Progresso da meta em {{ meta_atual.percentual_alcance|round(1) }}%">
                             <strong>{{ meta_atual.percentual_alcance|round(1) }}%</strong>
                         </div>
                     </div>
@@ -171,7 +171,7 @@
 
         <!-- Ranking da Equipe -->
         {% if ranking_equipe %}
-        <div class="card shadow-sm border-0 mb-4" style="border-left: 4px solid #10b981 !important;">
+        <div class="card shadow-sm border-0 mb-4 vc-card-border-emerald">
             <div class="card-header bg-white border-0 py-3">
                 <h5 class="mb-0 fw-bold text-success">
                     <i class="bi bi-trophy-fill"></i> Ranking da Equipe
@@ -185,19 +185,19 @@
                             <!-- Posição -->
                             <div class="me-3">
                                 {% if item.posicao == 1 %}
-                                    <span class="badge bg-warning text-dark" style="font-size: 1.2rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span class="badge bg-warning text-dark vc-badge-circle">
                                         <i class="bi bi-trophy-fill"></i>
                                     </span>
                                 {% elif item.posicao == 2 %}
-                                    <span class="badge bg-secondary" style="font-size: 1.2rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span class="badge bg-secondary vc-badge-circle">
                                         <i class="bi bi-trophy"></i>
                                     </span>
                                 {% elif item.posicao == 3 %}
-                                    <span class="badge bg-danger" style="font-size: 1.2rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span class="badge bg-danger vc-badge-circle">
                                         <i class="bi bi-trophy"></i>
                                     </span>
                                 {% else %}
-                                    <span class="badge bg-light text-dark border" style="font-size: 1rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span class="badge bg-light text-dark border vc-badge-circle-sm">
                                         {{ item.posicao }}º
                                     </span>
                                 {% endif %}
@@ -228,9 +228,9 @@
 
         <!-- Histórico Rápido (últimos 3 meses) -->
         {% if historico %}
-        <div class="card shadow-sm border-0 mt-4" style="border-left: 4px solid #ec4899 !important;">
+        <div class="card shadow-sm border-0 mt-4 vc-card-border-pink">
             <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0 fw-bold" style="color: #ec4899;">
+            <h5 class="mb-0 fw-bold vc-text-pink">
                     <i class="bi bi-clock-history"></i> Histórico
                 </h5>
             </div>

@@ -6029,6 +6029,21 @@ def registrar_compra(id):
 
                 db.session.add(movimento)
 
+            # Atualizar meta do vendedor com o valor total da compra
+            # utilizando a mesma data da compra para encontrar a meta do mês
+            try:
+                _update_meta_for_compra(
+                    cliente.vendedor_id,
+                    valor_compra,
+                    compra.data_compra,
+                )
+            except Exception as e:
+                # Em caso de erro na atualização de meta, registramos log
+                # mas não impedimos o registro da venda/estoque.
+                app.logger.error(
+                    f"Erro ao atualizar meta para venda {compra.id}: {e}"
+                )
+
             db.session.commit()
 
             flash("Compra registrada com sucesso!", "success")
@@ -7822,7 +7837,12 @@ def _prepare_compra_cliente_form(form, cliente_id=None):
         form.cliente_id.data = cliente_id
 
 def _update_meta_for_compra(vendedor_id, valor_compra, data_compra, anular=False):
-    """Atualiza a receita alcançada na meta do vendedor."""
+    """Atualiza a receita alcançada e a comissão na meta do vendedor.
+
+    Esta função é utilizada sempre que uma compra é registrada ou anulada,
+    garantindo que o Ranking de Metas e os relatórios enxerguem a receita
+    real do vendedor no período e a comissão correspondente.
+    """
     meta = Meta.query.filter_by(
         vendedor_id=vendedor_id,
         mes=data_compra.month,
@@ -7833,7 +7853,14 @@ def _update_meta_for_compra(vendedor_id, valor_compra, data_compra, anular=False
             meta.receita_alcancada = (meta.receita_alcancada or 0) - valor_compra
         else:
             meta.receita_alcancada = (meta.receita_alcancada or 0) + valor_compra
-        db.session.commit()
+
+        # Recalcular percentual de alcance e comissão da meta
+        try:
+            meta.calcular_comissao()
+        except Exception as e:
+            app.logger.error(
+                f"Erro ao recalcular comissão da meta {meta.id}: {e}"
+            )
 
 def _save_compra_cliente_from_form(form, compra=None):
     """Salva uma compra (nova ou existente) a partir dos dados do formulário."""
@@ -7874,10 +7901,11 @@ def _save_compra_cliente_from_form(form, compra=None):
         )
         db.session.add(compra)
     
-    db.session.commit()
-    # Atualizar com o novo valor
+    # Atualizar meta do vendedor com o novo valor e depois
+    # persistir tanto a compra quanto a meta em uma única transação
     _update_meta_for_compra(cliente.vendedor_id, valor_total, data_compra)
-    
+    db.session.commit()
+
     return compra
 
 # ===== ROTAS DE METAS =====

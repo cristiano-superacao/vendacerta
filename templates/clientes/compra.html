@@ -68,7 +68,7 @@
                         {% if produtos %}
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <small class="text-muted">Produtos em estoque: {{ produtos|length }}</small>
-                            <div class="input-group input-group-sm" style="max-width: 260px;">
+                            <div class="input-group input-group-sm vc-input-group-narrow">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                                 <input type="text" class="form-control" id="filtro-produtos" placeholder="Buscar por nome ou código...">
                             </div>
@@ -83,7 +83,7 @@
                                         <th>Produto</th>
                                         <th class="text-center d-none d-md-table-cell">Estoque</th>
                                         <th class="text-end">Preço</th>
-                                        <th class="text-end" style="width: 110px;">Qtd.</th>
+                                        <th class="text-end vc-col-qtd">Qtd.</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -111,7 +111,9 @@
                                                    inputmode="numeric"
                                                    class="form-control form-control-sm text-end produto-quantidade"
                                                    data-preco="{{ produto.preco_venda or 0 }}"
-                                                   name="produto_{{ produto.id }}">
+                                                   name="produto_{{ produto.id }}"
+                                                   placeholder="0"
+                                                   aria-label="Quantidade do produto {{ produto.nome }}">
                                         </td>
                                     </tr>
                                     {% endfor %}
