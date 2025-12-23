@@ -408,7 +408,7 @@
             </li>
 
             <!-- Seção Ordens de Serviço (Manutenção) -->
-            {% if current_user.cargo in ['admin', 'supervisor_manutencao', 'administrativo', 'tecnico'] %}
+            {% if current_user.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao', 'administrativo', 'tecnico'] %}
             <li class="nav-divider"></li>
             <li class="nav-section-header">
                 <small class="text-white-70 fw-semibold">MANUTENÇÃO</small>

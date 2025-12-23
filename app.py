@@ -2013,6 +2013,27 @@ def super_admin_criar_usuario():
         # Senha padrão
         usuario.set_senha("senha123")
 
+        # Permissões padrão específicas para cargo auxiliar
+        if usuario.cargo == "auxiliar":
+            usuario.pode_enviar_mensagens = True
+            usuario.pode_acessar_os = True
+            usuario.pode_criar_os = False
+            usuario.pode_aprovar_os = False
+            usuario.pode_atualizar_os = False
+            usuario.pode_cancelar_os = False
+
+            usuario.pode_acessar_clientes = False
+            usuario.pode_criar_clientes = False
+            usuario.pode_editar_clientes = False
+            usuario.pode_excluir_clientes = False
+            usuario.pode_importar_clientes = False
+
+            usuario.pode_acessar_estoque = False
+            usuario.pode_gerenciar_produtos = False
+            usuario.pode_movimentar_estoque = False
+            usuario.pode_ver_custos = False
+            usuario.pode_ajustar_estoque = False
+
         db.session.add(usuario)
         db.session.commit()
 
@@ -4588,6 +4609,59 @@ def criar_funcionario():
         )
         return redirect(url_for("dashboard"))
 
+    # Buscar hierarquia disponível na empresa para o formulário
+    if current_user.is_super_admin:
+        admins_disponiveis = (
+            Usuario.query.filter(
+                Usuario.cargo == "admin", Usuario.ativo.is_(True)
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        gerentes_disponiveis = (
+            Usuario.query.filter(
+                Usuario.cargo.in_(["gerente", "gerente_manutencao"]),
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        supervisores_disponiveis = (
+            Usuario.query.filter(
+                Usuario.cargo == "supervisor", Usuario.ativo.is_(True)
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+    else:
+        admins_disponiveis = (
+            Usuario.query.filter(
+                Usuario.empresa_id == current_user.empresa_id,
+                Usuario.cargo == "admin",
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        gerentes_disponiveis = (
+            Usuario.query.filter(
+                Usuario.empresa_id == current_user.empresa_id,
+                Usuario.cargo.in_(["gerente", "gerente_manutencao"]),
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        supervisores_disponiveis = (
+            Usuario.query.filter(
+                Usuario.empresa_id == current_user.empresa_id,
+                Usuario.cargo == "supervisor",
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+
     if request.method == "POST":
         try:
             nome = request.form.get("nome", "").strip()
@@ -4596,6 +4670,11 @@ def criar_funcionario():
             departamento = request.form.get("departamento", "").strip()
             senha = request.form.get("senha", "").strip()
             confirmar_senha = request.form.get("confirmar_senha", "").strip()
+
+            # Vínculos hierárquicos (opcionais conforme cargo)
+            admin_id_raw = request.form.get("admin_id", "").strip()
+            gerente_id_raw = request.form.get("gerente_id", "").strip()
+            supervisor_id_raw = request.form.get("supervisor_id", "").strip()
 
             # Validações
             if not all([nome, email, cargo, senha]):
@@ -4617,7 +4696,10 @@ def criar_funcionario():
             cargos_permitidos = [
                 "admin",
                 "gerente",
+                "gerente_manutencao",
                 "supervisor",
+                "supervisor_manutencao",
+                "auxiliar",
                 "vendedor",
                 "tecnico",
                 "financeiro",
@@ -4631,7 +4713,191 @@ def criar_funcionario():
             # Verificar se email já existe
             if Usuario.query.filter_by(email=email).first():
                 flash("⚠️ Este e-mail já está cadastrado!", "warning")
-                return render_template("funcionarios/form.html")
+                return render_template(
+                    "funcionarios/form.html",
+                    funcionario=None,
+                    admins_disponiveis=admins_disponiveis,
+                    gerentes_disponiveis=gerentes_disponiveis,
+                    supervisores_disponiveis=supervisores_disponiveis,
+                )
+
+            # Regras de hierarquia
+            gerente_id = None
+            supervisor_id = None
+
+            # Todo GERENTE (incluindo gerente de manutenção) deve estar vinculado a um ADMIN
+            if cargo in ["gerente", "gerente_manutencao"]:
+                if not admins_disponiveis:
+                    flash(
+                        "⚠️ Nenhum administrador disponível para vincular o gerente. Cadastre um administrador primeiro.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                if not admin_id_raw:
+                    flash(
+                        "⚠️ Selecione o Administrador responsável por este gerente.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                try:
+                    admin_id = int(admin_id_raw)
+                except ValueError:
+                    flash("⚠️ Administrador selecionado inválido.", "warning")
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                admin = Usuario.query.get(admin_id)
+                if not admin or admin.cargo != "admin":
+                    flash(
+                        "⚠️ Administrador responsável não encontrado ou inválido.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                gerente_id = admin.id
+
+            # Todo SUPERVISOR (incluindo supervisor de manutenção) deve estar vinculado a um GERENTE
+            if cargo in ["supervisor", "supervisor_manutencao"]:
+                if not gerentes_disponiveis:
+                    flash(
+                        "⚠️ Nenhum gerente disponível para vincular o supervisor. Cadastre um gerente primeiro.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                if not gerente_id_raw:
+                    flash(
+                        "⚠️ Selecione o Gerente responsável por este supervisor.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                try:
+                    gerente_id_val = int(gerente_id_raw)
+                except ValueError:
+                    flash("⚠️ Gerente selecionado inválido.", "warning")
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                gerente_responsavel = Usuario.query.get(gerente_id_val)
+                if not gerente_responsavel or gerente_responsavel.cargo != "gerente":
+                    flash(
+                        "⚠️ Gerente responsável não encontrado ou inválido.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                gerente_id = gerente_responsavel.id
+
+            # Todos VENDEDOR, TÉCNICO, AUXILIAR e USUÁRIO devem estar vinculados a um SUPERVISOR
+            cargos_que_precisam_supervisor = [
+                "vendedor",
+                "tecnico",
+                "auxiliar",
+                "usuario",
+            ]
+            if cargo in cargos_que_precisam_supervisor:
+                if not supervisores_disponiveis:
+                    flash(
+                        "⚠️ Nenhum supervisor disponível para vincular este funcionário. Cadastre um supervisor primeiro.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                if not supervisor_id_raw:
+                    flash(
+                        "⚠️ Selecione o Supervisor responsável por este funcionário.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                try:
+                    supervisor_id_val = int(supervisor_id_raw)
+                except ValueError:
+                    flash("⚠️ Supervisor selecionado inválido.", "warning")
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                supervisor_responsavel = Usuario.query.get(supervisor_id_val)
+                if not supervisor_responsavel or supervisor_responsavel.cargo != "supervisor":
+                    flash(
+                        "⚠️ Supervisor responsável não encontrado ou inválido.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=None,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                supervisor_id = supervisor_responsavel.id
 
             # Criar funcionário
             funcionario = Usuario(
@@ -4645,6 +4911,8 @@ def criar_funcionario():
                     else None
                 ),
                 ativo=True,
+                gerente_id=gerente_id,
+                supervisor_id=supervisor_id,
             )
             funcionario.set_senha(senha)
 
@@ -4683,12 +4951,69 @@ def editar_funcionario(id):
             )
             return redirect(url_for("lista_funcionarios"))
 
+    # Buscar hierarquia disponível na empresa para o formulário
+    if current_user.is_super_admin:
+        admins_disponiveis = (
+            Usuario.query.filter(
+                Usuario.cargo == "admin", Usuario.ativo.is_(True)
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        gerentes_disponiveis = (
+            Usuario.query.filter(
+                Usuario.cargo.in_(["gerente", "gerente_manutencao"]),
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        supervisores_disponiveis = (
+            Usuario.query.filter(
+                Usuario.cargo == "supervisor", Usuario.ativo.is_(True)
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+    else:
+        admins_disponiveis = (
+            Usuario.query.filter(
+                Usuario.empresa_id == current_user.empresa_id,
+                Usuario.cargo == "admin",
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        gerentes_disponiveis = (
+            Usuario.query.filter(
+                Usuario.empresa_id == current_user.empresa_id,
+                Usuario.cargo.in_(["gerente", "gerente_manutencao"]),
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+        supervisores_disponiveis = (
+            Usuario.query.filter(
+                Usuario.empresa_id == current_user.empresa_id,
+                Usuario.cargo == "supervisor",
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.nome)
+            .all()
+        )
+
     if request.method == "POST":
         try:
             nome = request.form.get("nome", "").strip()
             email = request.form.get("email", "").strip().lower()
             cargo = request.form.get("cargo", "").strip()
             departamento = request.form.get("departamento", "").strip() or None
+
+            admin_id_raw = request.form.get("admin_id", "").strip()
+            gerente_id_raw = request.form.get("gerente_id", "").strip()
+            supervisor_id_raw = request.form.get("supervisor_id", "").strip()
 
             # Validações
             if not all([nome, email, cargo]):
@@ -4697,14 +5022,21 @@ def editar_funcionario(id):
                     "warning",
                 )
                 return render_template(
-                    "funcionarios/form.html", funcionario=funcionario
+                    "funcionarios/form.html",
+                    funcionario=funcionario,
+                    admins_disponiveis=admins_disponiveis,
+                    gerentes_disponiveis=gerentes_disponiveis,
+                    supervisores_disponiveis=supervisores_disponiveis,
                 )
 
             # Verificar se cargo é válido
             cargos_permitidos = [
                 "admin",
                 "gerente",
+                "gerente_manutencao",
                 "supervisor",
+                "supervisor_manutencao",
+                "auxiliar",
                 "vendedor",
                 "tecnico",
                 "financeiro",
@@ -4714,14 +5046,201 @@ def editar_funcionario(id):
             if cargo not in cargos_permitidos:
                 flash("⚠️ Cargo inválido!", "warning")
                 return render_template(
-                    "funcionarios/form.html", funcionario=funcionario
+                    "funcionarios/form.html",
+                    funcionario=funcionario,
+                    admins_disponiveis=admins_disponiveis,
+                    gerentes_disponiveis=gerentes_disponiveis,
+                    supervisores_disponiveis=supervisores_disponiveis,
                 )
+
+            # Regras de hierarquia
+            gerente_id = funcionario.gerente_id
+            supervisor_id = funcionario.supervisor_id
+
+            # Todo GERENTE (incluindo gerente de manutenção) deve estar vinculado a um ADMIN
+            if cargo in ["gerente", "gerente_manutencao"]:
+                if not admins_disponiveis:
+                    flash(
+                        "⚠️ Nenhum administrador disponível para vincular o gerente. Cadastre um administrador primeiro.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                if not admin_id_raw:
+                    flash(
+                        "⚠️ Selecione o Administrador responsável por este gerente.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                try:
+                    admin_id = int(admin_id_raw)
+                except ValueError:
+                    flash("⚠️ Administrador selecionado inválido.", "warning")
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                admin = Usuario.query.get(admin_id)
+                if not admin or admin.cargo != "admin":
+                    flash(
+                        "⚠️ Administrador responsável não encontrado ou inválido.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                gerente_id = admin.id
+
+            # Todo SUPERVISOR (incluindo supervisor de manutenção) deve estar vinculado a um GERENTE
+            if cargo in ["supervisor", "supervisor_manutencao"]:
+                if not gerentes_disponiveis:
+                    flash(
+                        "⚠️ Nenhum gerente disponível para vincular o supervisor. Cadastre um gerente primeiro.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                if not gerente_id_raw:
+                    flash(
+                        "⚠️ Selecione o Gerente responsável por este supervisor.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                try:
+                    gerente_id_val = int(gerente_id_raw)
+                except ValueError:
+                    flash("⚠️ Gerente selecionado inválido.", "warning")
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                gerente_responsavel = Usuario.query.get(gerente_id_val)
+                if not gerente_responsavel or gerente_responsavel.cargo != "gerente":
+                    flash(
+                        "⚠️ Gerente responsável não encontrado ou inválido.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                gerente_id = gerente_responsavel.id
+
+            # Todos VENDEDOR, TÉCNICO, AUXILIAR e USUÁRIO devem estar vinculados a um SUPERVISOR
+            cargos_que_precisam_supervisor = [
+                "vendedor",
+                "tecnico",
+                "auxiliar",
+                "usuario",
+            ]
+            if cargo in cargos_que_precisam_supervisor:
+                if not supervisores_disponiveis:
+                    flash(
+                        "⚠️ Nenhum supervisor disponível para vincular este funcionário. Cadastre um supervisor primeiro.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                if not supervisor_id_raw:
+                    flash(
+                        "⚠️ Selecione o Supervisor responsável por este funcionário.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                try:
+                    supervisor_id_val = int(supervisor_id_raw)
+                except ValueError:
+                    flash("⚠️ Supervisor selecionado inválido.", "warning")
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                supervisor_responsavel = Usuario.query.get(supervisor_id_val)
+                if not supervisor_responsavel or supervisor_responsavel.cargo != "supervisor":
+                    flash(
+                        "⚠️ Supervisor responsável não encontrado ou inválido.",
+                        "warning",
+                    )
+                    return render_template(
+                        "funcionarios/form.html",
+                        funcionario=funcionario,
+                        admins_disponiveis=admins_disponiveis,
+                        gerentes_disponiveis=gerentes_disponiveis,
+                        supervisores_disponiveis=supervisores_disponiveis,
+                    )
+
+                supervisor_id = supervisor_responsavel.id
+            elif cargo not in ["gerente", "supervisor"]:
+                # Para outros cargos, vínculo com supervisor é opcional
+                supervisor_id = supervisor_id or None
 
             # Atualizar dados
             funcionario.nome = nome
             funcionario.email = email
             funcionario.cargo = cargo
             funcionario.departamento = departamento
+            funcionario.gerente_id = gerente_id
+            funcionario.supervisor_id = supervisor_id
 
             # Verificar se quer alterar senha
             nova_senha = request.form.get("senha", "").strip()
@@ -4751,7 +5270,13 @@ def editar_funcionario(id):
             db.session.rollback()
             flash(f"Erro ao atualizar funcionário: {str(e)}", "danger")
 
-    return render_template("funcionarios/form.html", funcionario=funcionario)
+    return render_template(
+        "funcionarios/form.html",
+        funcionario=funcionario,
+        admins_disponiveis=admins_disponiveis,
+        gerentes_disponiveis=gerentes_disponiveis,
+        supervisores_disponiveis=supervisores_disponiveis,
+    )
 
 @app.route("/funcionarios/<int:id>/deletar", methods=["POST"])
 @login_required
@@ -8844,13 +9369,15 @@ def api_dados_grafico_metas(vendedor_id):
 @login_required
 def lista_ordens_servico():
     """Lista todas as ordens de serviço com filtros"""
-    # Verificar permissões: admin, supervisor_manutencao, administrativo,
-    # tecnico
+    # Verificar permissões: admin, gerente_manutencao, supervisor_manutencao,
+    # administrativo, tecnico e auxiliar (apenas visualização)
     cargos_permitidos = [
         "admin",
+        "gerente_manutencao",
         "supervisor_manutencao",
         "administrativo",
         "tecnico",
+        "auxiliar",
     ]
     if current_user.cargo not in cargos_permitidos:
         flash(
@@ -8975,7 +9502,8 @@ def visualizar_ordem_servico(id):
         flash("Ordem de serviço não encontrada.", "danger")
         return redirect(url_for("lista_ordens_servico"))
 
-    # Verificar permissão (técnico só vê suas próprias OS)
+    # Verificar permissão (técnico só vê suas próprias OS; auxiliar vê
+    # apenas OS da própria empresa, validação extra pode ser aplicada depois)
     if current_user.cargo == "tecnico":
         tecnico = Tecnico.query.filter_by(
             usuario_id=current_user.id, empresa_id=current_user.empresa_id
@@ -8996,8 +9524,8 @@ def visualizar_ordem_servico(id):
 @login_required
 def aprovar_ordem_servico(id):
     """Aprovar ou reprovar ordem de serviço - Supervisor de Manutenção"""
-    # Apenas supervisor_manutencao e admin podem aprovar
-    if current_user.cargo not in ["admin", "supervisor_manutencao"]:
+    # Apenas gerente/supervisor de manutenção e admin podem aprovar
+    if current_user.cargo not in ["admin", "gerente_manutencao", "supervisor_manutencao"]:
         flash(
             "Acesso negado! Apenas Supervisor de Manutenção pode aprovar ordens.",
             "danger",

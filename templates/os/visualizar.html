@@ -19,7 +19,7 @@
                 </p>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                {% if current_user.cargo in ['admin', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
+                {% if current_user.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
                 <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}" class="btn btn-success">
                     <i class="bi bi-check-lg"></i>
                     <span>Aprovar OS</span>

@@ -196,6 +196,12 @@ from forms import (
 ### ADMIN
 - Todas as permissões = 1
 
+### GERENTE_MANUTENCAO
+- Todas permissões de OS = 1
+- Todas permissões de Estoque = 1
+- Gerenciar e atribuir técnicos = 1
+- Ver dashboard e exportar dados = 1
+
 ### SUPERVISOR_MANUTENCAO
 - Todas permissões de OS = 1
 - Todas permissões de Estoque = 1
@@ -209,6 +215,11 @@ from forms import (
 ### TECNICO
 - Atualizar OS = 1
 - Acessar estoque (somente visualização)
+
+### AUXILIAR
+- pode_acessar_os = 1
+- pode_enviar_mensagens = 1
+- Demais permissões = 0 (sem acesso a estoque, vendas ou clientes)
 
 ### VENDEDOR
 - Todas permissões de Vendas = 1

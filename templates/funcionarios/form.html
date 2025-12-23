@@ -104,8 +104,17 @@
                                             <option value="gerente" {{ 'selected' if funcionario and funcionario.cargo == 'gerente' else '' }}>
                                                 🎯 Gerente
                                             </option>
+                                            <option value="gerente_manutencao" {{ 'selected' if funcionario and funcionario.cargo == 'gerente_manutencao' else '' }}>
+                                                🛠️ Gerente de Manutenção
+                                            </option>
                                             <option value="supervisor" {{ 'selected' if funcionario and funcionario.cargo == 'supervisor' else '' }}>
                                                 📊 Supervisor
+                                            </option>
+                                            <option value="supervisor_manutencao" {{ 'selected' if funcionario and funcionario.cargo == 'supervisor_manutencao' else '' }}>
+                                                🛠️ Supervisor de Manutenção
+                                            </option>
+                                            <option value="auxiliar" {{ 'selected' if funcionario and funcionario.cargo == 'auxiliar' else '' }}>
+                                                🧰 Auxiliar (OS e Mensagens)
                                             </option>
                                             <option value="vendedor" {{ 'selected' if funcionario and funcionario.cargo == 'vendedor' else '' }}>
                                                 💼 Vendedor
@@ -160,6 +169,96 @@
                                     <small class="text-muted">
                                         <i class="bi bi-info-circle me-1"></i>
                                         Organização interna da empresa
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vínculos Hierárquicos -->
+                        <div class="mb-4">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-diagram-3 me-2"></i>Vínculos Hierárquicos
+                            </h6>
+
+                            <div class="row g-3">
+                                <!-- Admin responsável (para GERENTE) -->
+                                <div class="col-md-6" id="admin-container" style="display: none;">
+                                    <label for="admin_id" class="form-label">
+                                        Administrador Responsável <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-person-badge text-muted"></i>
+                                        </span>
+                                        <select class="form-select" id="admin_id" name="admin_id">
+                                            <option value="">Selecione o administrador...</option>
+                                            {% if admins_disponiveis %}
+                                                {% for admin in admins_disponiveis %}
+                                                    <option value="{{ admin.id }}"
+                                                        {% if funcionario and funcionario.cargo == 'gerente' and funcionario.gerente_id == admin.id %}selected{% endif %}>
+                                                        👑 {{ admin.nome }} (Admin)
+                                                    </option>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </select>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Todo gerente deve estar vinculado a um administrador.
+                                    </small>
+                                </div>
+
+                                <!-- Gerente responsável (para SUPERVISOR) -->
+                                <div class="col-md-6" id="gerente-container" style="display: none;">
+                                    <label for="gerente_id" class="form-label">
+                                        Gerente Responsável <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-person-workspace text-muted"></i>
+                                        </span>
+                                        <select class="form-select" id="gerente_id" name="gerente_id">
+                                            <option value="">Selecione o gerente...</option>
+                                            {% if gerentes_disponiveis %}
+                                                {% for gerente in gerentes_disponiveis %}
+                                                    <option value="{{ gerente.id }}"
+                                                        {% if funcionario and funcionario.cargo == 'supervisor' and funcionario.gerente_id == gerente.id %}selected{% endif %}>
+                                                        🎯 {{ gerente.nome }} (Gerente)
+                                                    </option>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </select>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Todo supervisor deve estar vinculado a um gerente.
+                                    </small>
+                                </div>
+
+                                <!-- Supervisor responsável (para vendedor, técnico, usuário, auxiliar) -->
+                                <div class="col-md-6" id="supervisor-container" style="display: none;">
+                                    <label for="supervisor_id" class="form-label">
+                                        Supervisor Responsável <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-person-lines-fill text-muted"></i>
+                                        </span>
+                                        <select class="form-select" id="supervisor_id" name="supervisor_id">
+                                            <option value="">Selecione o supervisor...</option>
+                                            {% if supervisores_disponiveis %}
+                                                {% for supervisor in supervisores_disponiveis %}
+                                                    <option value="{{ supervisor.id }}"
+                                                        {% if funcionario and funcionario.supervisor_id == supervisor.id %}selected{% endif %}>
+                                                        📊 {{ supervisor.nome }} (Supervisor)
+                                                    </option>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </select>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Vendedores, técnicos, auxiliares e usuários devem estar vinculados a um supervisor.
                                     </small>
                                 </div>
                             </div>
@@ -415,12 +514,38 @@ document.getElementById('cargo').addEventListener('change', function() {
         departamento.value = 'rh';
     } else if (cargo === 'financeiro') {
         departamento.value = 'financeiro';
-    } else if (cargo === 'gerente' || cargo === 'vendedor' || cargo === 'supervisor') {
+    } else if (cargo === 'gerente' || cargo === 'vendedor' || cargo === 'supervisor' || cargo === 'auxiliar') {
         departamento.value = 'comercial';
     } else if (cargo === 'tecnico') {
         departamento.value = 'ti';
     } else if (cargo === 'admin') {
         departamento.value = 'administrativo';
+    }
+
+    // Controle de exibição dos vínculos hierárquicos
+    const adminContainer = document.getElementById('admin-container');
+    const gerenteContainer = document.getElementById('gerente-container');
+    const supervisorContainer = document.getElementById('supervisor-container');
+
+    adminContainer.style.display = 'none';
+    gerenteContainer.style.display = 'none';
+    supervisorContainer.style.display = 'none';
+
+    if (cargo === 'gerente') {
+        adminContainer.style.display = 'block';
+    } else if (cargo === 'supervisor') {
+        gerenteContainer.style.display = 'block';
+    } else if (cargo === 'vendedor' || cargo === 'tecnico' || cargo === 'usuario' || cargo === 'auxiliar') {
+        supervisorContainer.style.display = 'block';
+    }
+});
+
+// Ajustar exibição inicial dos vínculos ao carregar a página (modo edição)
+window.addEventListener('DOMContentLoaded', function() {
+    const cargoSelect = document.getElementById('cargo');
+    if (cargoSelect) {
+        const event = new Event('change');
+        cargoSelect.dispatchEvent(event);
     }
 });
 </script>

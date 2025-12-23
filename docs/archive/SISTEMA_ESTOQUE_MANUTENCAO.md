@@ -51,11 +51,13 @@ RESUMO DO SISTEMA DE ESTOQUE E MANUTENÇÃO - IMPLEMENTAÇÃO COMPLETA
 
 📝 CARGOS DO SISTEMA:
 - admin                  - Acesso total
+- gerente_manutencao     - Gestão estratégica de manutenção/estoque (NOVO)
 - supervisor_vendas      - Supervisiona vendedores (já existe)
 - supervisor_manutencao  - Aprova OS, supervisiona técnicos (NOVO)
 - administrativo         - Triagem, cria OS (NOVO)
 - tecnico                - Atualiza OS atribuídas (NOVO)
 - vendedor               - Vendas (já existe)
+- auxiliar               - Apoio em OS e mensagens (NOVO)
 
 🔄 FLUXO DE TRABALHO:
 
@@ -121,7 +123,7 @@ Exemplo:
 @app.route('/os/nova')
 @login_required
 def nova_os():
-    if current_user.cargo not in ['admin', 'administrativo', 'supervisor_manutencao']:
+   if current_user.cargo not in ['admin', 'gerente_manutencao', 'administrativo', 'supervisor_manutencao']:
         flash('Acesso negado!', 'danger')
         return redirect(url_for('index'))
     ...
@@ -136,6 +138,7 @@ def nova_os():
 🚀 PARA COMEÇAR A USAR:
 
 1. Criar usuários com novos cargos:
+   - gerente_manutencao
    - supervisor_manutencao
    - administrativo  
    - tecnico

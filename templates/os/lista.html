@@ -236,7 +236,7 @@
                                    class="btn btn-sm btn-outline-primary" title="Visualizar">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                {% if current_user.cargo in ['admin', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
+                                {% if current_user.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
                                 <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}"
                                    class="btn btn-sm btn-outline-success" title="Aprovar">
                                     <i class="bi bi-check-lg"></i>
@@ -381,7 +381,7 @@
                            class="btn btn-sm btn-outline-primary flex-fill">
                             <i class="bi bi-eye me-1"></i>Ver
                         </a>
-                        {% if current_user.cargo in ['admin', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
+                        {% if current_user.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
                         <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}"
                            class="btn btn-sm btn-outline-success flex-fill">
                             <i class="bi bi-check-lg me-1"></i>Aprovar

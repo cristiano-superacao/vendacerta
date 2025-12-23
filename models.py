@@ -1230,13 +1230,13 @@ class OrdemServico(db.Model):
     def pode_aprovar(self, usuario):
         """Verifica se usuário pode aprovar a OS"""
         return (
-            usuario.cargo in ['admin', 'supervisor_manutencao']
+            usuario.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao']
             or usuario.is_super_admin
         )
 
     def pode_editar(self, usuario):
         """Verifica se usuário pode editar a OS"""
-        if usuario.is_super_admin or usuario.cargo == 'admin':
+        if usuario.is_super_admin or usuario.cargo in ['admin', 'gerente_manutencao']:
             return True
         if usuario.cargo == 'supervisor_manutencao':
             return True

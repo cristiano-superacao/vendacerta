@@ -60,7 +60,7 @@ Sistema completo de Ordens de Serviço (OS) integrado ao VendaCerta, incluindo:
 1. **GET /os** - Lista de todas as OS com filtros
    - Filtros: status, prioridade, técnico, busca
    - Cards de resumo estatístico
-   - Permissões: admin, supervisor_manutencao, administrativo, tecnico
+   - Permissões: admin, gerente_manutencao, supervisor_manutencao, administrativo, tecnico, auxiliar
 
 2. **GET/POST /os/nova** - Criar nova OS
    - Apenas administrativo e admin
@@ -73,7 +73,7 @@ Sistema completo de Ordens de Serviço (OS) integrado ao VendaCerta, incluindo:
    - Valores
 
 4. **GET/POST /os/<id>/aprovar** - Aprovar/Reprovar OS
-   - Apenas supervisor_manutencao e admin
+   - Apenas admin, gerente_manutencao e supervisor_manutencao
    - Atribuir técnico na aprovação
    - Registrar motivo de reprovação
 
@@ -129,23 +129,35 @@ Sistema completo de Ordens de Serviço (OS) integrado ao VendaCerta, incluindo:
 - Controle de permissões por cargo
 
 ### 👥 Sistema de Usuários
-**3 novos cargos adicionados:**
+**Novos cargos focados em manutenção adicionados:**
 
-1. **supervisor_manutencao**
+1. **gerente_manutencao**
+   - Visão geral de todas as OS e indicadores
+   - Pode aprovar/reprovar e editar qualquer OS da empresa
+   - Gerencia supervisores e técnicos de manutenção
+
+2. **supervisor_manutencao**
    - Aprova/reprova OS
    - Atribui técnicos
    - Visualiza todas as OS
 
-2. **administrativo**
+3. **administrativo**
    - Cria novas OS
    - Faz triagem de chamados
    - Visualiza todas as OS
 
-3. **tecnico**
+4. **tecnico**
    - Visualiza apenas suas OS
    - Atualiza andamento
    - Registra conclusão
    - Recebe avaliações
+
+5. **auxiliar**
+   - Visualiza lista e detalhes de OS da empresa
+   - Acessa o módulo de mensagens internas
+   - Apoia o time na comunicação e no acompanhamento das OS
+   - Não cria/edita/aprova/cancela OS
+   - Não possui acesso aos módulos de vendas, clientes ou estoque
 
 ---
 
@@ -273,6 +285,18 @@ python app.py
 - Visualizar estatísticas globais
 - Avaliar OS em nome do cliente
 
+### ✅ Para Gerente de Manutenção:
+- Visualizar todas as OS da empresa
+- Editar qualquer OS de manutenção
+- Aprovar/reprovar OS
+- Acompanhar métricas e indicadores de manutenção
+
+### ✅ Para Auxiliar:
+- Visualizar lista e detalhes de OS da empresa
+- Acessar o módulo de mensagens internas
+- Apoiar o fluxo de atendimento (sem alterar dados críticos)
+- Sem permissão para criar/editar/aprovar/cancelar OS
+
 ### ✅ Sistema de Avaliação:
 - Cliente avalia de 1 a 5 estrelas
 - Atualiza média do técnico automaticamente
@@ -323,7 +347,7 @@ python app.py
 - Controle granular por cargo
 - Métodos `pode_aprovar()` e `pode_editar()` no modelo
 - Técnicos só veem suas próprias OS
-- Administrativo e Supervisor veem todas
+- Administrativo, Supervisor, Gerente de Manutenção e Auxiliar veem todas as OS da empresa
 
 ### Segurança:
 - Validação de empresa_id em todas as queries
@@ -350,7 +374,7 @@ python app.py
 - [x] Forms criados (7 novos)
 - [x] Rotas implementadas (6 rotas)
 - [x] Templates criados (5 arquivos)
-- [x] Sistema de usuários atualizado (3 novos cargos)
+- [x] Sistema de usuários atualizado (5 novos cargos para manutenção/apoio)
 - [x] Menu de navegação atualizado
 - [x] Banco de dados migrado
 - [x] Script de teste criado

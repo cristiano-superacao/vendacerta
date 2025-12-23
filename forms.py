@@ -77,9 +77,11 @@ class UsuarioForm(FlaskForm):
     ])
     cargo = SelectField('Cargo', choices=[
         ('usuario', 'Usuário'),
+        ('auxiliar', 'Auxiliar'),
         ('vendedor', 'Vendedor'),
         ('supervisor', 'Supervisor de Vendas'),
         ('supervisor_manutencao', 'Supervisor de Manutenção'),
+        ('gerente_manutencao', 'Gerente de Manutenção'),
         ('gerente', 'Gerente'),
         ('administrativo', 'Administrativo'),
         ('tecnico', 'Técnico'),

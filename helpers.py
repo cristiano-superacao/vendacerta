@@ -240,9 +240,9 @@ def pode_importar(current_user, tipo_importacao="geral"):
     Returns:
         Boolean indicando se pode importar
     """
-    # Admin, Supervisor (incluindo supervisor_manutencao), RH e Gerente podem importar
+    # Admin, Supervisores (incluindo supervisor_manutencao) e Gerentes (incluindo gerente_manutencao), além de RH, podem importar
     # Conforme especificação: Vendedor, Técnico, Administrativo, Financeiro e Usuário NÃO podem importar
-    if current_user.cargo in ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"]:
+    if current_user.cargo in ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente", "gerente_manutencao"]:
         return True
     
     # Verificar permissão específica de importação de clientes (campo granular)
@@ -263,8 +263,8 @@ def pode_exportar(current_user, tipo_exportacao="geral"):
     Returns:
         Boolean indicando se pode exportar
     """
-    # Admin, Supervisor (incluindo supervisor_manutencao), RH e Gerente podem exportar tudo
-    if current_user.cargo in ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"]:
+    # Admin, Supervisores (incluindo supervisor_manutencao) e Gerentes (incluindo gerente_manutencao), além de RH, podem exportar tudo
+    if current_user.cargo in ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente", "gerente_manutencao"]:
         return True
     
     # Vendedor NÃO pode exportar lista de clientes (conforme especificação)
