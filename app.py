@@ -5712,9 +5712,9 @@ def editar_cliente(id):
         form.formas_pagamento.data = cliente.get_formas_pagamento_list()
         form.vendedor_id.data = cliente.vendedor_id
 
-        # Preencher supervisor
-        if cliente.vendedor and cliente.vendedor.supervisor:
-            form.supervisor_nome.data = cliente.vendedor.supervisor.nome
+        # Preencher supervisor (relacionamento correto supervisor_obj)
+        if cliente.vendedor and getattr(cliente.vendedor, "supervisor_obj", None):
+            form.supervisor_nome.data = cliente.vendedor.supervisor_obj.nome
 
     if form.validate_on_submit():
         try:
