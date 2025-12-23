@@ -106,6 +106,10 @@ graph TD
     A --> ADM[📊 Administrativo]
     A --> FIN[💰 Financeiro]
     A --> RH[👥 RH]
+  A --> GM[🛠️ Gerente Manutenção]
+  GM --> SM[🛠️ Supervisor Manutenção]
+  SM --> TEC[🔧 Técnico Manutenção]
+  SM --> AUX[🧰 Auxiliar]
     
     style SA fill:#ff6b6b,stroke:#c92a2a,color:#fff
     style A fill:#4c6ef5,stroke:#364fc7,color:#fff
@@ -115,11 +119,17 @@ graph TD
     style T fill:#22b8cf,stroke:#0b7285,color:#fff
 ```
 
-**10 Cargos** com **24 permissões granulares**:
+**Cargos Principais** com **permissões granulares por módulo**:
 - `pode_gerenciar_empresas`, `pode_gerenciar_usuarios`, `pode_gerenciar_vendedores`
 - `pode_gerenciar_metas`, `pode_ver_relatorios`, `pode_exportar_clientes`
 - `pode_gerenciar_estoque`, `pode_criar_os`, `pode_aprovar_os`
 - ... e mais 15 permissões
+
+Resumo da hierarquia de manutenção e apoio:
+- **Gerente de Manutenção (`gerente_manutencao`)**: visão estratégica, pode aprovar/editar qualquer OS e gerenciar supervisores/técnicos
+- **Supervisor de Manutenção (`supervisor_manutencao`)**: aprova/reprova OS, atribui técnicos e acompanha todas as OS
+- **Técnico (`tecnico`)**: visualiza e atualiza apenas as OS atribuídas a ele
+- **Auxiliar (`auxiliar`)**: acesso de apoio (visualização de OS e mensagens internas), sem poderes de criação/edição/aprovação
 
 ### 📊 Dashboard Inteligente por Cargo
 

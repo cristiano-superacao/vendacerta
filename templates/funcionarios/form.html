@@ -195,7 +195,7 @@
                                             {% if admins_disponiveis %}
                                                 {% for admin in admins_disponiveis %}
                                                     <option value="{{ admin.id }}"
-                                                        {% if funcionario and funcionario.cargo == 'gerente' and funcionario.gerente_id == admin.id %}selected{% endif %}>
+                                                        {% if funcionario and funcionario.admin_id == admin.id %}selected{% endif %}>
                                                         👑 {{ admin.nome }} (Admin)
                                                     </option>
                                                 {% endfor %}
@@ -222,7 +222,7 @@
                                             {% if gerentes_disponiveis %}
                                                 {% for gerente in gerentes_disponiveis %}
                                                     <option value="{{ gerente.id }}"
-                                                        {% if funcionario and funcionario.cargo == 'supervisor' and funcionario.gerente_id == gerente.id %}selected{% endif %}>
+                                                        {% if funcionario and funcionario.gerente_id == gerente.id %}selected{% endif %}>
                                                         🎯 {{ gerente.nome }} (Gerente)
                                                     </option>
                                                 {% endfor %}
