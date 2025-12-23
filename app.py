@@ -4654,7 +4654,8 @@ def criar_funcionario():
         )
         supervisores_disponiveis = (
             Usuario.query.filter(
-                Usuario.cargo == "supervisor", Usuario.ativo.is_(True)
+                Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
+                Usuario.ativo.is_(True),
             )
             .order_by(Usuario.nome)
             .all()
@@ -4681,7 +4682,7 @@ def criar_funcionario():
         supervisores_disponiveis = (
             Usuario.query.filter(
                 Usuario.empresa_id == current_user.empresa_id,
-                Usuario.cargo == "supervisor",
+                Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
                 Usuario.ativo.is_(True),
             )
             .order_by(Usuario.nome)
@@ -4913,7 +4914,10 @@ def criar_funcionario():
                     )
 
                 supervisor_responsavel = Usuario.query.get(supervisor_id_val)
-                if not supervisor_responsavel or supervisor_responsavel.cargo != "supervisor":
+                if not supervisor_responsavel or supervisor_responsavel.cargo not in [
+                    "supervisor",
+                    "supervisor_manutencao",
+                ]:
                     flash(
                         "⚠️ Supervisor responsável não encontrado ou inválido.",
                         "warning",
@@ -4999,7 +5003,8 @@ def editar_funcionario(id):
         )
         supervisores_disponiveis = (
             Usuario.query.filter(
-                Usuario.cargo == "supervisor", Usuario.ativo.is_(True)
+                Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
+                Usuario.ativo.is_(True),
             )
             .order_by(Usuario.nome)
             .all()
@@ -5026,7 +5031,7 @@ def editar_funcionario(id):
         supervisores_disponiveis = (
             Usuario.query.filter(
                 Usuario.empresa_id == current_user.empresa_id,
-                Usuario.cargo == "supervisor",
+                Usuario.cargo.in_(["supervisor", "supervisor_manutencao"]),
                 Usuario.ativo.is_(True),
             )
             .order_by(Usuario.nome)
@@ -5248,7 +5253,10 @@ def editar_funcionario(id):
                     )
 
                 supervisor_responsavel = Usuario.query.get(supervisor_id_val)
-                if not supervisor_responsavel or supervisor_responsavel.cargo != "supervisor":
+                if not supervisor_responsavel or supervisor_responsavel.cargo not in [
+                    "supervisor",
+                    "supervisor_manutencao",
+                ]:
                     flash(
                         "⚠️ Supervisor responsável não encontrado ou inválido.",
                         "warning",
