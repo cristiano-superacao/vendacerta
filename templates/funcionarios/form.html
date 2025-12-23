@@ -158,6 +158,9 @@
                                             <option value="comercial" {{ 'selected' if funcionario and funcionario.departamento == 'comercial' else '' }}>
                                                 💼 Comercial
                                             </option>
+                                            <option value="manutencao" {{ 'selected' if funcionario and funcionario.departamento == 'manutencao' else '' }}>
+                                                🛠️ Manutenção
+                                            </option>
                                             <option value="ti" {{ 'selected' if funcionario and funcionario.departamento == 'ti' else '' }}>
                                                 💻 TI (Tecnologia da Informação)
                                             </option>
@@ -514,10 +517,10 @@ document.getElementById('cargo').addEventListener('change', function() {
         departamento.value = 'rh';
     } else if (cargo === 'financeiro') {
         departamento.value = 'financeiro';
-    } else if (cargo === 'gerente' || cargo === 'vendedor' || cargo === 'supervisor' || cargo === 'auxiliar') {
+    } else if (cargo === 'gerente' || cargo === 'vendedor' || cargo === 'supervisor') {
         departamento.value = 'comercial';
-    } else if (cargo === 'tecnico') {
-        departamento.value = 'ti';
+    } else if (cargo === 'gerente_manutencao' || cargo === 'supervisor_manutencao' || cargo === 'tecnico' || cargo === 'auxiliar') {
+        departamento.value = 'manutencao';
     } else if (cargo === 'admin') {
         departamento.value = 'administrativo';
     }
@@ -531,9 +534,9 @@ document.getElementById('cargo').addEventListener('change', function() {
     gerenteContainer.style.display = 'none';
     supervisorContainer.style.display = 'none';
 
-    if (cargo === 'gerente') {
+    if (cargo === 'gerente' || cargo === 'gerente_manutencao') {
         adminContainer.style.display = 'block';
-    } else if (cargo === 'supervisor') {
+    } else if (cargo === 'supervisor' || cargo === 'supervisor_manutencao') {
         gerenteContainer.style.display = 'block';
     } else if (cargo === 'vendedor' || cargo === 'tecnico' || cargo === 'usuario' || cargo === 'auxiliar') {
         supervisorContainer.style.display = 'block';
