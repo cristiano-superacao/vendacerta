@@ -283,15 +283,58 @@ def get_cargos_permitidos_importacao(tipo_importacao="geral"):
     Returns:
         Tupla com lista de cargos permitidos
     """
-    # Conforme especificação: Apenas Admin, Gerente, Supervisor e RH podem importar
+    # Conforme especificação: Apenas Admin, Gerente (inclui gerente_manutencao),
+    # Supervisor (inclui supervisor_manutencao) e RH podem importar
     # Vendedor, Técnico, Administrativo, Financeiro e Usuário NÃO podem importar
     cargos_por_tipo = {
-        "clientes": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "vendedores": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "supervisores": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "metas": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "produtos": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "geral": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"]
+        "clientes": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "vendedores": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "supervisores": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "metas": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "produtos": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "geral": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
     }
     
     return tuple(cargos_por_tipo.get(tipo_importacao, ["admin"]))
@@ -308,13 +351,49 @@ def get_cargos_permitidos_exportacao(tipo_exportacao="geral"):
         Tupla com lista de cargos permitidos
     """
     # Conforme especificação: Vendedor NÃO pode exportar lista de clientes
-    # Apenas Admin, Gerente, Supervisor e RH podem exportar dados
+    # Apenas Admin, Gerente (inclui gerente_manutencao), Supervisor (inclui
+    # supervisor_manutencao) e RH podem exportar dados
     cargos_por_tipo = {
-        "clientes": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "vendedores": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "metas": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "produtos": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"],
-        "geral": ["admin", "supervisor", "supervisor_manutencao", "rh", "gerente"]
+        "clientes": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "vendedores": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "metas": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "produtos": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
+        "geral": [
+            "admin",
+            "supervisor",
+            "supervisor_manutencao",
+            "rh",
+            "gerente",
+            "gerente_manutencao",
+        ],
     }
     
     return tuple(cargos_por_tipo.get(tipo_exportacao, ["admin"]))
