@@ -93,10 +93,6 @@
     </div>
 
     {% if metas %}
-    {% set total_meta = metas|sum(attribute='valor_meta') %}
-    {% set total_receita = metas|sum(attribute='receita_alcancada') %}
-    {% set total_comissao = metas|sum(attribute='comissao_total') %}
-
     <!-- Cards de Estatísticas Modernizados -->
     <div class="row g-4 mb-4">
         <div class="col-xl-3 col-md-6">
@@ -291,6 +287,83 @@
         </div>
     </div>
 </div>
+{% if pagination and pagination.pages > 1 %}
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0 text-muted small">
+                    Mostrando {{ pagination.per_page * (pagination.page - 1) + 1 }}
+                    até {{ [pagination.per_page * pagination.page, pagination.total] | min }}
+                    de {{ pagination.total }} metas
+                </p>
+            </div>
+            <div class="col-md-6">
+                <nav>
+                    <ul class="pagination pagination-sm justify-content-end mb-0">
+                        {# Primeira página #}
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=1, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=pagination.prev_num, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                        </li>
+                        {% endif %}
+
+                        {# Páginas numeradas #}
+                        {% for page_num in range(1, pagination.pages + 1) %}
+                            {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_metas', page=page_num, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {# Última página #}
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=pagination.next_num, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=pagination.pages, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% else %}
 <!-- Estado Vazio Modernizado -->
 <div class="text-center py-5">

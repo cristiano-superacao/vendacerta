@@ -8368,6 +8368,10 @@ def lista_metas():
     mes = request.args.get("mes", datetime.now().month, type=int)
     ano = request.args.get("ano", datetime.now().year, type=int)
     ordenar = request.args.get("ordenar", "vendas", type=str)
+    page = request.args.get("page", 1, type=int)
+
+    # Quantidade de registros por página para manter a tela leve
+    per_page = 20
 
     # Filtrar metas por empresa (exceto super admin)
     if current_user.is_super_admin:
@@ -8382,11 +8386,11 @@ def lista_metas():
     # Aplicar ordenação
     if ordenar == "vendas":
         # Ordenar por receita alcançada (maior primeiro)
-        metas = query.order_by(Meta.receita_alcancada.desc()).all()
+        metas_ordenadas = query.order_by(Meta.receita_alcancada.desc()).all()
     elif ordenar == "manutencao":
         # Ordenar por percentual de alcance (maior primeiro)
         metas_todas = query.all()
-        metas = sorted(
+        metas_ordenadas = sorted(
             metas_todas,
             key=lambda m: (
                 (m.receita_alcancada / m.valor_meta * 100)
@@ -8396,12 +8400,37 @@ def lista_metas():
             reverse=True,
         )
     else:
-        metas = query.all()
+        metas_ordenadas = query.all()
 
-    # Calcular totais
-    total_meta = sum(m.valor_meta for m in metas)
-    total_receita = sum(m.receita_alcancada for m in metas)
-    total_comissao = sum(m.comissao_total for m in metas)
+    # Calcular totais globais (todas as metas do período)
+    total_meta = sum(m.valor_meta for m in metas_ordenadas)
+    total_receita = sum(m.receita_alcancada for m in metas_ordenadas)
+    total_comissao = sum(m.comissao_total for m in metas_ordenadas)
+
+    # Paginação em memória (lista já está ordenada)
+    total_registros = len(metas_ordenadas)
+    total_paginas = (total_registros + per_page - 1) // per_page if total_registros else 1
+
+    # Garantir que a página esteja dentro dos limites
+    if page < 1:
+        page = 1
+    if page > total_paginas:
+        page = total_paginas
+
+    start = (page - 1) * per_page
+    end = start + per_page
+    metas = metas_ordenadas[start:end]
+
+    pagination = {
+        "page": page,
+        "per_page": per_page,
+        "total": total_registros,
+        "pages": total_paginas,
+        "has_prev": page > 1,
+        "has_next": page < total_paginas,
+        "prev_num": page - 1,
+        "next_num": page + 1 if page < total_paginas else None,
+    }
 
     return render_template(
         "metas/lista.html",
@@ -8412,6 +8441,7 @@ def lista_metas():
         total_meta=total_meta,
         total_receita=total_receita,
         total_comissao=total_comissao,
+        pagination=pagination,
     )
 
 @app.route("/metas/nova", methods=["GET", "POST"])
