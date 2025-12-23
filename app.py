@@ -9398,8 +9398,8 @@ def importar_produtos():
             )
             return redirect(url_for("lista_produtos"))
 
-    # Ler arquivo Excel
-    wb = openpyxl.load_workbook(arquivo)
+        # Ler arquivo Excel
+        wb = openpyxl.load_workbook(arquivo)
         ws = wb.active
 
         produtos_criados = []
