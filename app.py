@@ -1430,20 +1430,131 @@ def importar_supervisores():
 
     if request.method == "POST":
         try:
-            # Garantir bibliotecas de Excel disponíveis
-            if not EXCEL_AVAILABLE and not ensure_excel_available():
-                flash("Erro: Bibliotecas Excel não instaladas.", "danger")
-                return redirect(request.url)
-
             # Validar arquivo Excel
             arquivo, erro = validar_arquivo_excel(request)
             if erro:
                 flash(erro, "danger")
                 return redirect(request.url)
 
-            # TODO: Implementar processamento detalhado (mantido para versão completa)
-            flash("Importação de supervisores em atualização. Tente novamente em breve.", "warning")
-            return redirect(url_for("lista_supervisores"))
+            # Garantir bibliotecas de Excel disponíveis
+            if not EXCEL_AVAILABLE and not ensure_excel_available():
+                flash("Erro: Bibliotecas Excel não instaladas.", "danger")
+                return redirect(request.url)
+
+            # Ler Excel em DataFrame
+            df = pd.read_excel(arquivo)
+
+            # Normalizar nomes das colunas
+            df.columns = df.columns.str.strip().str.lower()
+
+            # Mapear possíveis nomes de colunas para o padrão
+            colunas_map = {
+                "nome": ["nome", "nome completo", "supervisor", "nome supervisor"],
+                "email": ["email", "e-mail", "e mail"],
+                "empresa_cnpj": ["empresa cnpj", "empresa_cnpj", "cnpj empresa"],
+            }
+
+            for col_padrao, variantes in colunas_map.items():
+                for col in list(df.columns):
+                    if col in variantes:
+                        df.rename(columns={col: col_padrao}, inplace=True)
+                        break
+
+            # Validar colunas obrigatórias
+            colunas_obrigatorias = ["nome", "email"]
+            if current_user.is_super_admin:
+                colunas_obrigatorias.append("empresa_cnpj")
+
+            colunas_faltando = [
+                col for col in colunas_obrigatorias if col not in df.columns
+            ]
+
+            if colunas_faltando:
+                colunas_exibir = [c.capitalize() for c in colunas_faltando]
+                msg = f'Colunas obrigatórias faltando: {", ".join(colunas_exibir)}'
+                flash(msg, "danger")
+                return redirect(request.url)
+
+            erros = []
+            sucesso = 0
+
+            for idx, row in df.iterrows():
+                try:
+                    # Determinar empresa do supervisor
+                    if current_user.is_super_admin:
+                        empresa_cnpj = str(row.get("empresa_cnpj", "")).strip()
+                        if not empresa_cnpj:
+                            erros.append(
+                                f"Linha {idx + 2}: Coluna 'Empresa CNPJ' obrigatória para Super Admin."
+                            )
+                            continue
+
+                        empresa = Empresa.query.filter_by(cnpj=empresa_cnpj).first()
+                        if not empresa:
+                            erros.append(
+                                f"Linha {idx + 2}: Empresa CNPJ {empresa_cnpj} não encontrada."
+                            )
+                            continue
+                        empresa_id = empresa.id
+                    else:
+                        empresa_id = current_user.empresa_id
+
+                    nome = str(row.get("nome", "")).strip()
+                    email = str(row.get("email", "")).strip()
+
+                    if not nome or not email:
+                        erros.append(
+                            f"Linha {idx + 2}: Nome e Email são obrigatórios."
+                        )
+                        continue
+
+                    if not validar_email(email):
+                        erros.append(
+                            f"Linha {idx + 2}: Email {email} inválido."
+                        )
+                        continue
+
+                    # Verificar se email já existe
+                    usuario_existente = Usuario.query.filter_by(email=email).first()
+                    if usuario_existente:
+                        erros.append(
+                            f"Linha {idx + 2}: Email {email} já cadastrado no sistema."
+                        )
+                        continue
+
+                    # Criar supervisor como usuário do sistema
+                    supervisor = Usuario(
+                        nome=nome,
+                        email=email,
+                        cargo="supervisor",
+                        empresa_id=empresa_id,
+                        ativo=True,
+                    )
+                    supervisor.set_senha("supervisor123")
+
+                    db.session.add(supervisor)
+                    sucesso += 1
+
+                except Exception as e:
+                    erros.append(f"Linha {idx + 2}: {str(e)}")
+
+            if erros:
+                db.session.rollback()
+                msg_erro = "<br>".join(erros[:10])
+                if len(erros) > 10:
+                    msg_erro += f"<br>... e mais {len(erros) - 10} erros"
+                flash(f"Erros encontrados:<br>{msg_erro}", "warning")
+                return render_template("supervisores/importar.html")
+            elif sucesso > 0:
+                db.session.commit()
+                flash(f"{sucesso} supervisor(es) importado(s) com sucesso!", "success")
+                return redirect(url_for("lista_supervisores"))
+            else:
+                flash(
+                    "Nenhum supervisor foi importado. Verifique a planilha.",
+                    "warning",
+                )
+                return redirect(request.url)
         except Exception as e:
             db.session.rollback()
             flash(f"Erro ao processar arquivo: {str(e)}", "danger")
