@@ -966,13 +966,13 @@ def login():
             login_user(usuario)
             flash(f"Bem-vindo(a), {usuario.nome}!", "success")
 
-            # Redirecionar para a página solicitada ou dashboard
+            # Redirecionar para a página solicitada ou dashboard adequado
             next_page = request.args.get("next")
             if next_page:
                 return redirect(next_page)
             else:
-                # Se for vendedor, redirecionar para dashboard mobile
-                if hasattr(usuario, 'vendedores') and usuario.vendedores:
+                # Se for vendedor com vínculo de vendedor, redirecionar para dashboard mobile do vendedor
+                if usuario.cargo == "vendedor" and usuario.vendedor_id:
                     return redirect(url_for("vendedor_dashboard"))
                 else:
                     return redirect(url_for("dashboard"))

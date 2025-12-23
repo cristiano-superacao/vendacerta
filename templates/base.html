@@ -346,6 +346,15 @@
                 </a>
             </li>
 
+            {% if current_user.cargo == 'vendedor' and current_user.vendedor_id %}
+            <li>
+                <a href="{{ url_for('vendedor_dashboard') }}" class="{% if request.endpoint == 'vendedor_dashboard' %}active{% endif %}">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span>Meu Desempenho</span>
+                </a>
+            </li>
+            {% endif %}
+
             {% if current_user.cargo == 'supervisor' %}
             <li>
                 <a href="{{ url_for('supervisor_dashboard') }}" class="{% if request.endpoint == 'supervisor_dashboard' %}active{% endif %}">
