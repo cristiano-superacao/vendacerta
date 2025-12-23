@@ -3690,30 +3690,62 @@ def vendedor_dashboard():
 @login_required
 def lista_vendedores():
     """Lista todos os vendedores"""
-    # Filtrar por empresa se não for super admin
+    page = request.args.get("page", 1, type=int)
+
+    # Quantidade de registros por página (lista operacional, costuma ser menor que clientes)
+    per_page = 20
+
+    # Construir query base respeitando permissões
     if current_user.is_super_admin:
-        vendedores = Vendedor.query.filter_by(ativo=True).all()
+        base_query = Vendedor.query.filter_by(ativo=True)
     elif current_user.cargo == "supervisor":
         # Supervisor vê apenas seus vendedores
-        vendedores = Vendedor.query.filter_by(
+        base_query = Vendedor.query.filter_by(
             supervisor_id=current_user.id, ativo=True
-        ).all()
+        )
     elif current_user.cargo == "vendedor" and current_user.vendedor_id:
-        # Vendedor vê apenas ele mesmo e vendedores da mesma equipe
+        # Vendedor vê apenas ele mesmo e vendedores da mesma equipe (ou só ele, se sem equipe)
         vendedor_atual = Vendedor.query.get(current_user.vendedor_id)
         if vendedor_atual and vendedor_atual.equipe_id:
-            vendedores = Vendedor.query.filter_by(
+            base_query = Vendedor.query.filter_by(
                 equipe_id=vendedor_atual.equipe_id, ativo=True
-            ).all()
+            )
         else:
-            # Se não tem equipe, vê apenas a si mesmo
-            vendedores = [vendedor_atual] if vendedor_atual else []
+            base_query = Vendedor.query.filter_by(
+                id=current_user.vendedor_id, ativo=True
+            )
     else:
-        vendedores = Vendedor.query.filter_by(
+        base_query = Vendedor.query.filter_by(
             empresa_id=current_user.empresa_id, ativo=True
-        ).all()
+        )
 
-    return render_template("vendedores/lista.html", vendedores=vendedores)
+    # Estatísticas globais (baseadas no conjunto filtrado)
+    total_vendedores = base_query.count()
+    total_com_supervisor = base_query.filter(
+        Vendedor.supervisor_id.isnot(None)
+    ).count()
+    total_em_equipes = base_query.filter(
+        Vendedor.equipe_id.isnot(None)
+    ).count()
+
+    stats = {
+        "total": total_vendedores,
+        "com_supervisor": total_com_supervisor,
+        "em_equipes": total_em_equipes,
+    }
+
+    # Paginação ordenada por nome
+    pagination = base_query.order_by(Vendedor.nome).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    vendedores = pagination.items
+
+    return render_template(
+        "vendedores/lista.html",
+        vendedores=vendedores,
+        pagination=pagination,
+        stats=stats,
+    )
 
 @app.route("/vendedores/novo", methods=["GET", "POST"])
 @login_required
