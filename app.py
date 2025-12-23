@@ -5404,8 +5404,8 @@ def lista_clientes():
     # Parâmetros de paginação
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get(
-        "per_page", 50, type=int
-    )  # 50 clientes por página
+        "per_page", 10, type=int
+    )  # 10 clientes por página (melhor desempenho e leitura)
 
     # Obter filtros da query string
     status_filtro = request.args.get("status", "todos")
