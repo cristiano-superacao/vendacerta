@@ -289,6 +289,160 @@
                             </div>
                         </div>
 
+                        <!-- Seção Clientes -->
+                        <hr class="my-4">
+                        <h6 class="mb-3">
+                            <i class="bi bi-person-lines-fill me-2"></i>
+                            Módulo de Clientes
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_acessar_clientes"
+                                                name="pode_acessar_clientes"
+                                                {{ 'checked' if usuario.pode_acessar_clientes else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_acessar_clientes">
+                                                <i class="bi bi-people-fill me-2 text-primary"></i>
+                                                <strong>Acessar Clientes</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite visualizar a lista de clientes vinculados
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_criar_clientes"
+                                                name="pode_criar_clientes"
+                                                {{ 'checked' if usuario.pode_criar_clientes else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_criar_clientes">
+                                                <i class="bi bi-person-plus-fill me-2 text-success"></i>
+                                                <strong>Cadastrar Clientes</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite cadastrar novos clientes para sua carteira
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_editar_clientes"
+                                                name="pode_editar_clientes"
+                                                {{ 'checked' if usuario.pode_editar_clientes else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_editar_clientes">
+                                                <i class="bi bi-pencil-square me-2 text-warning"></i>
+                                                <strong>Editar Clientes</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite atualizar dados dos clientes existentes
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_importar_clientes"
+                                                name="pode_importar_clientes"
+                                                {{ 'checked' if usuario.pode_importar_clientes else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_importar_clientes">
+                                                <i class="bi bi-cloud-upload me-2 text-info"></i>
+                                                <strong>Importar Clientes</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite importar clientes em lote via planilha Excel
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seção Estoque -->
+                        <hr class="my-4">
+                        <h6 class="mb-3">
+                            <i class="bi bi-box-seam me-2"></i>
+                            Módulo de Estoque
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_acessar_estoque"
+                                                name="pode_acessar_estoque"
+                                                {{ 'checked' if usuario.pode_acessar_estoque else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_acessar_estoque">
+                                                <i class="bi bi-boxes me-2 text-primary"></i>
+                                                <strong>Acessar Estoque</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite visualizar saldo e status de produtos
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="pode_ver_custos"
+                                                name="pode_ver_custos"
+                                                {{ 'checked' if usuario.pode_ver_custos else '' }}
+                                            >
+                                            <label class="form-check-label" for="pode_ver_custos">
+                                                <i class="bi bi-currency-dollar me-2 text-success"></i>
+                                                <strong>Ver Custos</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Permite visualizar o valor financeiro total do estoque
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Botões -->
                         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center mt-4 gap-2">
                             <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary btn-responsive">

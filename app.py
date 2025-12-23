@@ -4249,6 +4249,20 @@ def gerenciar_permissoes_vendedor(id):
             "pode_aprovar_comissoes" in request.form
         )
 
+        # Permissões de Clientes
+        usuario.pode_acessar_clientes = "pode_acessar_clientes" in request.form
+        usuario.pode_criar_clientes = "pode_criar_clientes" in request.form
+        usuario.pode_editar_clientes = "pode_editar_clientes" in request.form
+        usuario.pode_excluir_clientes = "pode_excluir_clientes" in request.form
+        usuario.pode_importar_clientes = "pode_importar_clientes" in request.form
+
+        # Permissões de Estoque
+        usuario.pode_acessar_estoque = "pode_acessar_estoque" in request.form
+        usuario.pode_gerenciar_produtos = "pode_gerenciar_produtos" in request.form
+        usuario.pode_movimentar_estoque = "pode_movimentar_estoque" in request.form
+        usuario.pode_ver_custos = "pode_ver_custos" in request.form
+        usuario.pode_ajustar_estoque = "pode_ajustar_estoque" in request.form
+
         db.session.commit()
         flash(f"Permissões de {vendedor.nome} atualizadas com sucesso!", "success")
         return redirect(url_for("lista_vendedores"))
