@@ -147,7 +147,7 @@
                                                     <li><h6 class="dropdown-header"><i class="bi bi-person-gear me-2"></i>Gerenciar Login</h6></li>
 
                                                     <!-- Criar/Editar/Resetar Login -->
-                                                    {% set usuario_login = vendedor.usuario_login|first if vendedor.usuario_login else None %}
+                                                    {% set usuario_login = vendedor.usuario_login %}
                                                     {% if usuario_login %}
                                                         <li>
                                                             <a class="dropdown-item"

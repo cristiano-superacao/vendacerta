@@ -2,6 +2,44 @@
 
 {% block title %}Criar Login - {{ vendedor.nome }}{% endblock %}
 
+{% block extra_css %}
+.card-login-vendedor .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.card-login-vendedor .card-header h5 {
+    font-weight: 600;
+}
+
+.card-login-vendedor .alert {
+    margin-bottom: 1.25rem;
+}
+
+.card-login-vendedor .form-label {
+    font-size: 0.95rem;
+}
+
+.card-login-vendedor .form-text {
+    font-size: 0.8rem;
+}
+
+@media (max-width: 576px) {
+    .card-login-vendedor .card-header h5 {
+        font-size: 1rem;
+    }
+
+    .card-login-vendedor .alert {
+        font-size: 0.9rem;
+    }
+
+    .card-login-vendedor .btn-responsive {
+        width: 100%;
+    }
+}
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <div class="row">
@@ -16,7 +54,7 @@
             </nav>
 
             <!-- Card de Criar Login -->
-            <div class="card shadow-sm">
+            <div class="card shadow-sm card-login-vendedor">
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-person-lock fs-4 me-2"></i>
@@ -52,6 +90,7 @@
                                     value="{{ vendedor.email }}"
                                     required
                                     placeholder="email@empresa.com"
+                                    autocomplete="email"
                                 >
                                 <div class="form-text">
                                     <i class="bi bi-info-circle me-1"></i>
@@ -77,12 +116,13 @@
                                 <div class="input-group">
                                     <input
                                         type="password"
-                                        class="form-control"
+                                        class="form-control form-control-lg"
                                         id="senha"
                                         name="senha"
                                         required
                                         minlength="6"
                                         placeholder="Mínimo 6 caracteres"
+                                        autocomplete="new-password"
                                     >
                                     <button class="btn btn-outline-secondary"
                                             type="button"
@@ -105,12 +145,13 @@
                                 <div class="input-group">
                                     <input
                                         type="password"
-                                        class="form-control"
+                                        class="form-control form-control-lg"
                                         id="confirmar_senha"
                                         name="confirmar_senha"
                                         required
                                         minlength="6"
                                         placeholder="Digite novamente"
+                                        autocomplete="new-password"
                                     >
                                     <button class="btn btn-outline-secondary"
                                             type="button"
@@ -144,12 +185,12 @@
                         </div>
 
                         <!-- Botões -->
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center mt-4 gap-2">
+                            <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary btn-responsive">
                                 <i class="bi bi-arrow-left me-1"></i>
                                 Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary btn-responsive">
                                 <i class="bi bi-check-circle me-1"></i>
                                 Criar Login
                             </button>
