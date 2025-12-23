@@ -5894,18 +5894,109 @@ def registrar_compra(id):
                 )
                 return redirect(url_for("ver_cliente", id=cliente.id))
 
+            # Mapear itens selecionados a partir dos campos produto_<id>
+            itens_venda = []
+            valor_total_itens = 0.0
+
+            for key, value in request.form.items():
+                if not key.startswith("produto_"):
+                    continue
+
+                try:
+                    produto_id = int(key.split("_", 1)[1])
+                except (ValueError, IndexError):
+                    continue
+
+                try:
+                    qtd = float((value or "0").replace(",", "."))
+                except ValueError:
+                    qtd = 0
+
+                if qtd <= 0:
+                    continue
+
+                produto = (
+                    Produto.query.filter_by(
+                        id=produto_id,
+                        empresa_id=cliente.empresa_id,
+                        ativo=True,
+                    )
+                    .with_for_update()
+                    .first()
+                )
+
+                if not produto:
+                    continue
+
+                estoque_disponivel = float(produto.estoque_atual or 0)
+                if estoque_disponivel <= 0:
+                    continue
+
+                quantidade_utilizada = min(qtd, estoque_disponivel)
+                if quantidade_utilizada <= 0:
+                    continue
+
+                preco_unitario = float(produto.preco_venda or 0)
+                subtotal = quantidade_utilizada * preco_unitario
+                valor_total_itens += subtotal
+
+                itens_venda.append(
+                    {
+                        "produto": produto,
+                        "quantidade": quantidade_utilizada,
+                        "preco_unitario": preco_unitario,
+                        "subtotal": subtotal,
+                    }
+                )
+
+            # Define o valor da compra: se houver itens, usa o total calculado,
+            # caso contrário mantém o valor informado manualmente
+            valor_compra = float(form.valor.data or 0)
+            if valor_total_itens > 0:
+                valor_compra = valor_total_itens
+
             # Criar compra
             compra = CompraCliente(
                 cliente_id=cliente.id,
                 vendedor_id=cliente.vendedor_id,
                 empresa_id=cliente.empresa_id,
-                valor=form.valor.data,
+                valor=valor_compra,
                 forma_pagamento=form.forma_pagamento.data,
                 observacoes=form.observacoes.data,
                 data_compra=datetime.utcnow(),
             )
 
             db.session.add(compra)
+            db.session.flush()  # garante ID para relacionar nos movimentos de estoque
+
+            # Registrar movimentos de estoque para cada item da venda
+            for item in itens_venda:
+                produto = item["produto"]
+                quantidade = item["quantidade"]
+                preco_unitario = item["preco_unitario"]
+                subtotal = item["subtotal"]
+
+                # Atualizar estoque atual do produto
+                estoque_atual = float(produto.estoque_atual or 0)
+                novo_estoque = max(0.0, estoque_atual - quantidade)
+                produto.estoque_atual = novo_estoque
+
+                movimento = EstoqueMovimento(
+                    produto_id=produto.id,
+                    tipo="saida",
+                    motivo="venda",
+                    quantidade=quantidade,
+                    valor_unitario=preco_unitario,
+                    valor_total=subtotal,
+                    documento=f"Venda #{compra.id}",
+                    observacoes=form.observacoes.data,
+                    cliente_id=cliente.id,
+                    usuario_id=current_user.id,
+                    empresa_id=cliente.empresa_id,
+                )
+
+                db.session.add(movimento)
+
             db.session.commit()
 
             flash("Compra registrada com sucesso!", "success")
