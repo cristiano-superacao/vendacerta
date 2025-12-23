@@ -5882,6 +5882,9 @@ def registrar_compra(id):
         return redirect(url_for("lista_clientes"))
 
     form = CompraClienteForm()
+    # Garante que o campo cliente_id tenha uma opção válida para evitar erros
+    # de validação do WTForms ("Not a valid choice") durante o submit
+    form.cliente_id.choices = [(cliente.id, cliente.nome)]
     form.cliente_id.data = cliente.id
 
     if form.validate_on_submit():
