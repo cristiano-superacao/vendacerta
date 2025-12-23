@@ -9211,6 +9211,7 @@ def download_template_produtos():
 
     try:
         import io
+        import openpyxl
 
         # Criar workbook
         wb = Workbook()
@@ -9219,6 +9220,7 @@ def download_template_produtos():
 
         # Imports adicionais do openpyxl
         from openpyxl.styles import Border, Side
+        from openpyxl.utils import get_column_letter
 
         # Definir estilos
         header_fill = PatternFill(
@@ -9279,9 +9281,7 @@ def download_template_produtos():
             12,
         ]
         for col, width in enumerate(column_widths, start=1):
-            ws.column_dimensions[
-                openpyxl.utils.get_column_letter(col)
-            ].width = width
+            ws.column_dimensions[get_column_letter(col)].width = width
 
         # Adicionar linha de exemplo
         exemplo = [
