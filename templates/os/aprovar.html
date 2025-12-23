@@ -3,25 +3,27 @@
 {% block title %}Aprovar OS {{ os.numero_os }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('lista_ordens_servico') }}">Ordens de Serviço</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}">{{ os.numero_os }}</a></li>
-                    <li class="breadcrumb-item active">Aprovar</li>
-                </ol>
-            </nav>
-            <h2><i class="bi bi-check-circle-fill"></i> Avaliar Ordem de Serviço</h2>
-        </div>
+<div class="container-fluid px-4 py-3">
+    <!-- Cabeçalho padronizado -->
+    <div class="page-header-clean mb-4">
+        <p class="page-category">MANUTENÇÃO</p>
+        <h1 class="page-title-clean">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            Avaliar Ordem de Serviço
+        </h1>
+        <p class="page-subtitle-clean mb-0">
+            OS {{ os.numero_os }} · {{ os.titulo }}
+        </p>
+        <p class="page-subtitle-clean small text-muted mt-1">
+            Defina se esta ordem será aprovada e qual técnico ficará responsável ou registre o motivo da reprovação.
+        </p>
     </div>
 
-    <div class="row">
+    <div class="row g-4">
         <div class="col-lg-8">
             <!-- Informações da OS -->
             <div class="card mb-4 border-0 shadow-sm">
-                <div class="card-header bg-light">
+                <div class="card-header bg-primary-subtle text-primary border-bottom border-primary-subtle">
                     <h5 class="mb-0">OS {{ os.numero_os }} - {{ os.titulo }}</h5>
                 </div>
                 <div class="card-body">
@@ -53,8 +55,11 @@
 
             <!-- Formulário de Aprovação -->
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Decisão do Supervisor</h5>
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-person-check text-success"></i>
+                        <span>Decisão do Supervisor</span>
+                    </h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('aprovar_ordem_servico', id=os.id) }}" id="formAprovar">
@@ -105,12 +110,12 @@
                         <!-- Campo hidden para indicar aprovação -->
                         <input type="hidden" name="aprovar" id="inputAprovar" value="True">
 
-                        <div class="d-flex gap-2">
+                        <div class="d-flex flex-wrap gap-2 mt-2">
                             <button type="submit" class="btn btn-primary" id="btnSubmit">
                                 <i class="bi bi-check-lg"></i> <span id="textoBtn">Aprovar e Atribuir Técnico</span>
                             </button>
-                            <a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}" class="btn btn-secondary">
-                                <i class="bi bi-x-lg"></i> Cancelar
+                            <a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Voltar para detalhes da OS
                             </a>
                         </div>
                     </form>
@@ -119,9 +124,9 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="card bg-light">
+            <div class="card bg-light border-0 shadow-sm">
                 <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-info-circle-fill"></i> Orientações</h6>
+                    <h6 class="card-title mb-3"><i class="bi bi-info-circle-fill me-2"></i>Orientações</h6>
                     <hr>
                     <h6>Ao Aprovar:</h6>
                     <ul class="small">
@@ -138,7 +143,7 @@
                     </ul>
                     <hr>
                     <div class="alert alert-warning mb-0">
-                        <small><i class="bi bi-exclamation-triangle"></i> Esta ação não pode ser desfeita</small>
+                        <small><i class="bi bi-exclamation-triangle me-1"></i>Esta ação não pode ser desfeita</small>
                     </div>
                 </div>
             </div>

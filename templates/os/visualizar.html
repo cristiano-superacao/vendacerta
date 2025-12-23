@@ -3,39 +3,41 @@
 {% block title %}OS {{ os.numero_os }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('lista_ordens_servico') }}">Ordens de Serviço</a></li>
-                    <li class="breadcrumb-item active">{{ os.numero_os }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <h2><i class="bi bi-clipboard-data"></i> OS {{ os.numero_os }}</h2>
-            <p class="text-muted mb-0">{{ os.titulo }}</p>
-        </div>
-        <div class="col-md-6 text-end">
-            {% if current_user.cargo in ['admin', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
-            <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}" class="btn btn-success">
-                <i class="bi bi-check-lg"></i> Aprovar OS
-            </a>
-            {% endif %}
-            {% if os.pode_editar(current_user) %}
-            <a href="{{ url_for('atualizar_ordem_servico', id=os.id) }}" class="btn btn-warning">
-                <i class="bi bi-pencil-square"></i> Atualizar Andamento
-            </a>
-            {% endif %}
-            {% if os.status == 'concluida' and not os.avaliacao_cliente and current_user.cargo == 'admin' %}
-            <a href="{{ url_for('avaliar_ordem_servico', id=os.id) }}" class="btn btn-primary">
-                <i class="bi bi-star-fill"></i> Avaliar Atendimento
-            </a>
-            {% endif %}
+<div class="container-fluid px-4 py-3">
+    <!-- Cabeçalho padronizado -->
+    <div class="page-header-clean mb-3">
+        <p class="page-category">MANUTENÇÃO</p>
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <h1 class="page-title-clean mb-1">
+                    <i class="bi bi-clipboard-data me-2"></i>
+                    OS {{ os.numero_os }}
+                </h1>
+                <p class="page-subtitle-clean mb-1">{{ os.titulo }}</p>
+                <p class="page-subtitle-clean small text-muted mb-0">
+                    Acompanhe o status, histórico e detalhes completos desta ordem de serviço.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                {% if current_user.cargo in ['admin', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
+                <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}" class="btn btn-success">
+                    <i class="bi bi-check-lg"></i>
+                    <span>Aprovar OS</span>
+                </a>
+                {% endif %}
+                {% if os.pode_editar(current_user) %}
+                <a href="{{ url_for('atualizar_ordem_servico', id=os.id) }}" class="btn btn-warning">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>Atualizar Andamento</span>
+                </a>
+                {% endif %}
+                {% if os.status == 'concluida' and not os.avaliacao_cliente and current_user.cargo == 'admin' %}
+                <a href="{{ url_for('avaliar_ordem_servico', id=os.id) }}" class="btn btn-primary">
+                    <i class="bi bi-star-fill"></i>
+                    <span>Avaliar Atendimento</span>
+                </a>
+                {% endif %}
+            </div>
         </div>
     </div>
 
