@@ -385,6 +385,7 @@
                     <span>Clientes</span>
                 </a>
             </li>
+            {% if current_user.cargo != 'vendedor' %}
             <li>
                 <a href="{{ url_for('lista_vendedores') }}"
                    class="{% if 'vendedor' in request.endpoint and 'lista_vendedores' in request.endpoint %}active{% endif %}">
@@ -399,6 +400,7 @@
                     <span>Supervisores</span>
                 </a>
             </li>
+            {% endif %}
             {% if current_user.cargo in ['admin', 'gerente'] %}
             <li>
                 <a href="{{ url_for('lista_funcionarios') }}"
@@ -408,6 +410,7 @@
                 </a>
             </li>
             {% endif %}
+            {% if current_user.cargo != 'vendedor' %}
             <li>
                 <a href="{{ url_for('lista_equipes') }}"
                    class="{% if 'equipe' in request.endpoint %}active{% endif %}">
@@ -415,6 +418,7 @@
                     <span>Equipes</span>
                 </a>
             </li>
+            {% endif %}
 
             <!-- Seção Ordens de Serviço (Manutenção) -->
             {% if current_user.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao', 'administrativo', 'tecnico'] %}
@@ -432,8 +436,8 @@
             </li>
             {% endif %}
 
-            <!-- Seção Estoque -->
-            {% if current_user.pode_acessar_estoque or current_user.cargo == 'admin' %}
+            <!-- Seção Estoque (oculta no menu para vendedor, mas acessível via atalhos) -->
+            {% if (current_user.pode_acessar_estoque or current_user.cargo == 'admin') and current_user.cargo != 'vendedor' %}
             <li class="nav-divider"></li>
             <li class="nav-section-header">
                 <small class="text-white-70 fw-semibold">ESTOQUE</small>
@@ -470,6 +474,7 @@
                 <small class="text-white-70 fw-semibold">METAS E VENDAS</small>
             </li>
 
+            {% if current_user.cargo != 'vendedor' %}
             <li>
                 <a href="{{ url_for('lista_metas') }}"
                    class="{% if 'meta' in request.endpoint and 'lista_metas' in request.endpoint %}active{% endif %}">
@@ -484,6 +489,7 @@
                     <span>Configurar Metas Avançadas</span>
                 </a>
             </li>
+            {% endif %}
             <li>
                 <a href="{{ url_for('relatorio_metas_avancado') }}"
                    class="{% if 'relatorio_metas_avancado' in request.endpoint %}active{% endif %}">
