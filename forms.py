@@ -633,6 +633,7 @@ class EstoqueMovimentoForm(FlaskForm):
     cliente_id = SelectField('Cliente', coerce=int, validators=[Optional()])
     ordem_servico_id = SelectField('Ordem de Serviço', coerce=int, validators=[Optional()])
     observacoes = TextAreaField('Observações', validators=[Optional()])
+    submit = SubmitField('Registrar Movimentação')
 
 class TecnicoForm(FlaskForm):
     """Formulário para cadastro/edição de técnicos"""
