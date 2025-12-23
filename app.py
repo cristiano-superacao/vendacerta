@@ -2908,6 +2908,26 @@ def criar_backup():
 
         shutil.copy2(db_path, backup_path)
 
+        # Sincronizar com nuvem (se módulo opcional estiver disponível)
+        try:
+            from backup_nuvem import sincronizar_backup_nuvem
+
+            app.logger.info(
+                "[PROC] Iniciando sincronizacao com nuvem (backup manual)..."
+            )
+            sincronizar_backup_nuvem()
+            app.logger.info(
+                "[OK] Sincronizacao com nuvem concluida (backup manual)"
+            )
+        except ImportError:
+            app.logger.warning(
+                "[AVISO] Modulo backup_nuvem nao encontrado para backup manual"
+            )
+        except Exception as e:
+            app.logger.error(
+                f"Erro na sincronizacao de backup manual: {str(e)}"
+            )
+
         flash(f"Backup criado com sucesso: {backup_name}", "success")
     except Exception as e:
         flash(f"Erro ao criar backup: {str(e)}", "danger")
