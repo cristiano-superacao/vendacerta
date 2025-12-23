@@ -2,6 +2,35 @@
 
 {% block title %}Editar Login - {{ vendedor.nome }}{% endblock %}
 
+{% block extra_css %}
+.card-login-vendedor .card-header {
+    display: flex;
+    align-items: center;
+}
+
+.card-login-vendedor .card-header h5 {
+    font-weight: 600;
+}
+
+.card-login-vendedor .form-label {
+    font-size: 0.95rem;
+}
+
+.card-login-vendedor .form-text {
+    font-size: 0.8rem;
+}
+
+@media (max-width: 576px) {
+    .card-login-vendedor .card-header h5 {
+        font-size: 1rem;
+    }
+
+    .card-login-vendedor .btn-responsive {
+        width: 100%;
+    }
+}
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <div class="row">
@@ -18,7 +47,7 @@
             <!-- Card de Editar Login -->
             <div class="row justify-content-center">
                 <div class="col-lg-8 col-xl-6">
-                    <div class="card shadow-sm">
+                    <div class="card shadow-sm card-login-vendedor">
                         <div class="card-header bg-gradient-info text-white">
                             <h5 class="mb-0">
                                 <i class="bi bi-pencil-square me-2"></i>
@@ -56,13 +85,14 @@
                                             Nome Completo
                                             <span class="text-danger">*</span>
                                         </label>
-                                        <input type="text"
-                                               class="form-control form-control-lg"
-                                               id="nome"
-                                               name="nome"
-                                               value="{{ usuario.nome }}"
-                                               required
-                                               placeholder="Nome completo do usuário">
+                                             <input type="text"
+                                                 class="form-control form-control-lg"
+                                                 id="nome"
+                                                 name="nome"
+                                                 value="{{ usuario.nome }}"
+                                                 required
+                                                 placeholder="Nome completo do usuário"
+                                                 autocomplete="name">
                                         <div class="invalid-feedback">
                                             Por favor, informe o nome.
                                         </div>
@@ -75,13 +105,14 @@
                                             Email de Login
                                             <span class="text-danger">*</span>
                                         </label>
-                                        <input type="email"
-                                               class="form-control form-control-lg"
-                                               id="email"
-                                               name="email"
-                                               value="{{ usuario.email }}"
-                                               required
-                                               placeholder="email@empresa.com">
+                                             <input type="email"
+                                                 class="form-control form-control-lg"
+                                                 id="email"
+                                                 name="email"
+                                                 value="{{ usuario.email }}"
+                                                 required
+                                                 placeholder="email@empresa.com"
+                                                 autocomplete="email">
                                         <div class="form-text">
                                             <i class="bi bi-info-circle me-1"></i>
                                             Este será o email usado para fazer login no sistema
@@ -113,12 +144,13 @@
                                             Nova Senha
                                         </label>
                                         <div class="input-group">
-                                            <input type="password"
-                                                   class="form-control"
-                                                   id="nova_senha"
-                                                   name="nova_senha"
-                                                   minlength="6"
-                                                   placeholder="Mínimo 6 caracteres">
+                                              <input type="password"
+                                                  class="form-control form-control-lg"
+                                                  id="nova_senha"
+                                                  name="nova_senha"
+                                                  minlength="6"
+                                                  placeholder="Mínimo 6 caracteres"
+                                                  autocomplete="new-password">
                                             <button class="btn btn-outline-secondary"
                                                     type="button"
                                                     onclick="togglePassword('nova_senha', this)">
@@ -138,12 +170,13 @@
                                             Confirmar Nova Senha
                                         </label>
                                         <div class="input-group">
-                                            <input type="password"
-                                                   class="form-control"
-                                                   id="confirmar_senha"
-                                                   name="confirmar_senha"
-                                                   minlength="6"
-                                                   placeholder="Digite novamente">
+                                              <input type="password"
+                                                  class="form-control form-control-lg"
+                                                  id="confirmar_senha"
+                                                  name="confirmar_senha"
+                                                  minlength="6"
+                                                  placeholder="Digite novamente"
+                                                  autocomplete="new-password">
                                             <button class="btn btn-outline-secondary"
                                                     type="button"
                                                     onclick="togglePassword('confirmar_senha', this)">
@@ -157,13 +190,13 @@
 
                                     <!-- Botões de Ação -->
                                     <div class="col-12 mt-4">
-                                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                        <div class="d-flex flex-column flex-sm-row justify-content-between justify-content-sm-end align-items-stretch align-items-sm-center gap-2">
                                             <a href="{{ url_for('lista_vendedores') }}"
-                                               class="btn btn-outline-secondary px-4">
+                                               class="btn btn-outline-secondary px-4 btn-responsive">
                                                 <i class="bi bi-x-circle me-2"></i>
                                                 Cancelar
                                             </a>
-                                            <button type="submit" class="btn btn-info px-4">
+                                            <button type="submit" class="btn btn-info px-4 btn-responsive">
                                                 <i class="bi bi-check-circle me-2"></i>
                                                 Salvar Alterações
                                             </button>
