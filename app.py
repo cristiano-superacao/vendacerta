@@ -9371,7 +9371,21 @@ def importar_produtos():
         )
         return redirect(url_for("lista_produtos"))
 
+    # Verificar disponibilidade do Excel (pandas/openpyxl)
+    if not EXCEL_AVAILABLE and not ensure_excel_available():
+        error_msg = "❌ Erro: Funcionalidade de importação Excel indisponível."
+        if EXCEL_ERROR_MESSAGE:
+            # Log detalhado no backend; para o usuário mantemos mensagem amigável
+            print(f"📊 Erro Excel (importar_produtos): {EXCEL_ERROR_MESSAGE}")
+            flash(error_msg + " Contate o administrador.", "danger")
+        else:
+            flash(error_msg + " Contate o administrador.", "danger")
+
+        return redirect(url_for("lista_produtos"))
+
     try:
+        # Import local para garantir que 'openpyxl' esteja definido neste escopo
+        import openpyxl
 
         arquivo = request.files.get("arquivo")
         if not arquivo:
@@ -9384,8 +9398,8 @@ def importar_produtos():
             )
             return redirect(url_for("lista_produtos"))
 
-        # Ler arquivo Excel
-        wb = openpyxl.load_workbook(arquivo)
+    # Ler arquivo Excel
+    wb = openpyxl.load_workbook(arquivo)
         ws = wb.active
 
         produtos_criados = []
