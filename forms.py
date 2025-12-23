@@ -523,8 +523,12 @@ class CompraClienteForm(FlaskForm):
         DataRequired(message='Cliente é obrigatório')
     ])
 
+    # O valor final da compra passa a ser calculado automaticamente
+    # a partir dos produtos selecionados na venda.
+    # Mantemos o campo apenas para exibição/envio, sem obrigatoriedade
+    # de preenchimento manual.
     valor = FloatField('Valor da Compra (R$)', validators=[
-        DataRequired(message='Valor é obrigatório')
+        Optional()
     ])
 
     forma_pagamento = SelectField('Forma de Pagamento', choices=[

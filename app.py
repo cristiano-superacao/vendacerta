@@ -5971,11 +5971,21 @@ def registrar_compra(id):
                     }
                 )
 
-            # Define o valor da compra: se houver itens, usa o total calculado,
-            # caso contrário mantém o valor informado manualmente
-            valor_compra = float(form.valor.data or 0)
-            if valor_total_itens > 0:
-                valor_compra = valor_total_itens
+            # Se nenhum item foi selecionado, não é possível registrar a venda
+            if not itens_venda:
+                flash(
+                    "Selecione pelo menos um produto para registrar a venda.",
+                    "warning",
+                )
+                return render_template(
+                    "clientes/compra.html",
+                    form=form,
+                    cliente=cliente,
+                    produtos=produtos,
+                )
+
+            # Valor da compra passa a ser obrigatoriamente o total dos itens
+            valor_compra = valor_total_itens
 
             # Criar compra
             compra = CompraCliente(

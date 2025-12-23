@@ -36,14 +36,14 @@
                             <label class="form-label">{{ form.valor.label }} <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text">R$</span>
-                                {{ form.valor(class="form-control" + (" is-invalid" if form.valor.errors else ""), placeholder="0,00", id="valor_compra") }}
+                                {{ form.valor(class="form-control" + (" is-invalid" if form.valor.errors else ""), placeholder="0,00", id="valor_compra", readonly=True) }}
                                 {% if form.valor.errors %}
                                     <div class="invalid-feedback">
                                         {% for error in form.valor.errors %}{{ error }}{% endfor %}
                                     </div>
                                 {% endif %}
                             </div>
-                            <small class="text-muted">O total dos produtos selecionados preenche automaticamente este valor (você pode ajustar se precisar).</small>
+                            <small class="text-muted">O total dos produtos selecionados preenche automaticamente este valor.</small>
                         </div>
 
                         <div class="mb-3">
