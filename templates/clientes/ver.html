@@ -285,12 +285,19 @@
 
         <!-- Coluna Direita - Histórico -->
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm" id="historico-compras-print">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-clock-history me-2 text-primary"></i>Histórico de Compras
                     </h5>
-                    <span class="badge bg-primary fs-6">{{ compras|length }} registro{{ 's' if compras|length != 1 else '' }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary fs-6">{{ compras|length }} registro{{ 's' if compras|length != 1 else '' }}</span>
+                        {% if compras %}
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-print-none" id="btn-imprimir-historico">
+                            <i class="bi bi-printer me-1"></i>Imprimir
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     {% if compras %}
@@ -404,5 +411,42 @@
     .table tbody tr:hover {
         background-color: rgba(13, 110, 253, 0.05);
     }
+
+    /* Estilos de impressão para focar apenas no histórico de compras */
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        #historico-compras-print,
+        #historico-compras-print * {
+            visibility: visible;
+        }
+
+        #historico-compras-print {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            box-shadow: none !important;
+            border: none !important;
+        }
+
+        .sidebar,
+        .sidebar-toggle,
+        footer {
+            display: none !important;
+        }
+    }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btnImprimir = document.getElementById('btn-imprimir-historico');
+    if (!btnImprimir) return;
+
+    btnImprimir.addEventListener('click', function () {
+        window.print();
+    });
+});
+</script>
 {% endblock %}
