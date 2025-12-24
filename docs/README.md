@@ -1,32 +1,25 @@
 # 📚 ÍNDICE COMPLETO DE DOCUMENTAÇÃO - VENDA CERTA
 
 **Sistema de Gestão de Vendas, Metas e Comissões**  
-**Última atualização**: 17 de dezembro de 2025
+**Última atualização**: 23 de dezembro de 2025
 
 ---
 
 ## 🎯 COMEÇE AQUI!
 
 ### Para Usuários Iniciantes
-1. 📖 **[MANUAL COMPLETO DE MÓDULOS](MANUAL_COMPLETO_MODULOS.md)** ⭐ PRINCIPAL
-   - Manual detalhado de todos os 12 módulos
-   - Passo a passo de cada funcionalidade
-   - Exemplos práticos
-   - FAQ completo
-   - **Recomendado**: Leia primeiro!
+1. 📘 **Guia de início rápido**
+  - [docs/guias/COMECE_AQUI.md](../docs/guias/COMECE_AQUI.md) – instalação, execução e usuários padrão
 
-2. 🎯 **[GUIA VISUAL RÁPIDO](GUIA_VISUAL_RAPIDO.md)** ⭐ RÁPIDO
-   - Aprenda em 5 minutos
-   - Diagramas visuais
-   - Atalhos e dicas
-   - Fluxos de trabalho
-   - **Recomendado**: Para início rápido!
+2. 📚 **Manual resumido de módulos**
+  - [docs/MANUAL_RESUMO_MODULOS.md](MANUAL_RESUMO_MODULOS.md) – visão geral e passo a passo por módulo
 
-3. ✅ **[ANÁLISE FINAL DE ERROS](ANALISE_FINAL_ERROS.md)**
-   - Status do sistema
-   - Análise de todos os avisos
-   - Certificado de qualidade
-   - Explicação técnica dos "erros"
+3. 📖 **Manual completo de módulos**
+  - [docs/archive/MANUAL_COMPLETO_MODULOS.md](archive/MANUAL_COMPLETO_MODULOS.md) – guia detalhado 12 módulos
+
+4. 🎯 **Guias de uso por perfil**
+  - [docs/guias/MANUAL_USUARIO.md](../docs/guias/MANUAL_USUARIO.md) – foco em usuário final
+  - [docs/guias/GUIA_USO.md](../docs/guias/GUIA_USO.md) – visão completa de fluxos e telas
 
 ---
 
