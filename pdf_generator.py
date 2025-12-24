@@ -347,6 +347,8 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
         ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e0')),
         ('SPAN', (0, 0), (-1, 0)),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        # Valores numéricos alinhados à direita na linha de dados
+        ('ALIGN', (1, 2), (-1, 2), 'RIGHT'),
         ('FONTSIZE', (0, 2), (-1, 2), 7),
     ]))
 
@@ -385,9 +387,11 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
     projecao_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#10b981')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 8),
+        # Linha de dados numéricos alinhada à direita
+        ('ALIGN', (0, 1), (-1, 1), 'RIGHT'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTSIZE', (0, 1), (-1, 1), 7),
@@ -433,7 +437,8 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
             ('FONTSIZE', (0, 0), (-1, 0), 7),
             ('ALIGN', (0, 1), (0, -1), 'CENTER'),
             ('ALIGN', (1, 1), (1, -1), 'LEFT'),
-            ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+            # Colunas numéricas alinhadas à direita
+            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
@@ -483,7 +488,8 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
             ('FONTSIZE', (0, 0), (-1, 0), 7),
             ('ALIGN', (0, 1), (0, -1), 'CENTER'),
             ('ALIGN', (1, 1), (1, -1), 'LEFT'),
-            ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+            # Colunas numéricas alinhadas à direita
+            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
@@ -533,7 +539,8 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
             ('FONTSIZE', (0, 0), (-1, 0), 7),
             ('ALIGN', (0, 1), (0, -1), 'CENTER'),
             ('ALIGN', (1, 1), (2, -1), 'LEFT'),
-            ('ALIGN', (3, 1), (-1, -1), 'CENTER'),
+            # Colunas numéricas alinhadas à direita
+            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
@@ -558,10 +565,6 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
     elements.append(rodape)
 
     # Gerar PDF
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
-
     doc.build(elements)
     buffer.seek(0)
     return buffer
