@@ -3385,6 +3385,15 @@ def dashboard():
                 else 0
             )
 
+            # Comissão do supervisor baseada nas faixas de supervisor
+            taxa_sup = _obter_taxa_por_alcance(
+                "supervisor",
+                current_user.empresa_id if current_user.cargo != "super_admin" else None,
+                dados["percentual_alcance"],
+            )
+            dados["taxa_supervisor"] = taxa_sup
+            dados["comissao_supervisor"] = dados["receita_total"] * taxa_sup
+
         # Converter para listas ordenadas
         projecoes_por_equipe = sorted(
             projecoes_por_equipe.values(),
@@ -8883,6 +8892,14 @@ def exportar_pdf_dashboard():
             mes=mes_atual,
             dia_atual=hoje.day,
         )
+        # Comissão do supervisor baseada nas faixas de supervisor
+        taxa_sup = _obter_taxa_por_alcance(
+            "supervisor",
+            current_user.empresa_id if current_user.cargo != "super_admin" else None,
+            sup["percentual_alcance"],
+        )
+        sup["taxa_supervisor"] = taxa_sup
+        sup["comissao_supervisor"] = sup["receita_total"] * taxa_sup
         supervisores.append(sup)
     supervisores.sort(key=lambda x: x["percentual_alcance"], reverse=True)
 
@@ -9293,6 +9310,35 @@ def _recalcular_comissoes_mes_atual_empresa(empresa_id: int):
         app.logger.error(
             f"Erro ao recalcular comissões (empresa_id={empresa_id}): {e}"
         )
+
+# Utilitário: obter taxa de comissão por percentual de alcance a partir das faixas
+def _obter_taxa_por_alcance(tipo: str, empresa_id: int | None, percentual_alcance: float) -> float:
+    try:
+        modelo = FaixaComissaoSupervisor if tipo == "supervisor" else FaixaComissaoVendedor
+        query = modelo.query.filter_by(ativa=True)
+        faixas = []
+        if empresa_id:
+            faixas = query.filter_by(empresa_id=empresa_id).order_by(modelo.alcance_min).all()
+        if not faixas:
+            faixas = (
+                modelo.query.filter(
+                    modelo.empresa_id.is_(None),
+                    modelo.ativa.is_(True),
+                ).order_by(modelo.alcance_min).all()
+            )
+        if not faixas:
+            return 0.0
+        perc = percentual_alcance or 0.0
+        faixas_ordenadas = sorted(faixas, key=lambda f: (f.alcance_min or 0))
+        taxa = faixas_ordenadas[-1].taxa_comissao
+        for f in faixas_ordenadas:
+            if perc <= (f.alcance_max or perc):
+                taxa = f.taxa_comissao
+                break
+        return float(taxa or 0.0)
+    except Exception as e:
+        app.logger.error(f"Erro ao obter taxa por alcance ({tipo}): {e}")
+        return 0.0
 
 @app.route("/configuracoes/comissoes")
 @login_required
