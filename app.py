@@ -56,6 +56,7 @@ from models import (
     EstoqueMovimento,
     Tecnico,
     OrdemServico,
+    Configuracao,
 )
 from forms import (
     LoginForm,
@@ -9464,10 +9465,15 @@ def configuracoes_comissoes():
                 .all()
             )
 
+    # Flag de sincronização automática (por empresa; super_admin usa chave global)
+    empresa_contexto = None if current_user.cargo == "super_admin" else current_user.empresa_id
+    sincronizacao_automatica = _get_sync_flag(empresa_contexto)
+
     return render_template(
         "configuracoes/comissoes.html",
         faixas_vendedor=faixas_vendedor,
         faixas_supervisor=faixas_supervisor,
+        sincronizacao_automatica=sincronizacao_automatica,
     )
 
 @app.route("/configuracoes/comissoes/criar", methods=["GET", "POST"])
@@ -9486,10 +9492,13 @@ def criar_faixa_comissao():
             alcance_min = request.form.get("alcance_min", "0")
             alcance_max = request.form.get("alcance_max", "100")
             taxa_comissao = request.form.get("taxa_comissao", "1")
-            # Sincronização automática: sempre espelhar a faixa no outro tipo
-            # Mantemos o parâmetro do formulário apenas por compatibilidade,
-            # mas forçamos a sincronização para garantir interligação.
-            copiar_para_outro = True
+            # Sincronização automática: opcional por configuração
+            empresa_id_atual = (
+                current_user.empresa_id
+                if current_user.cargo != "super_admin"
+                else None
+            )
+            copiar_para_outro = _get_sync_flag(empresa_id_atual)
 
             # Conversão segura
             alcance_min = float(alcance_min) if alcance_min else 0.0
@@ -9513,11 +9522,7 @@ def criar_faixa_comissao():
                 flash("A taxa de comissão deve ser maior que zero.", "danger")
                 return redirect(url_for("criar_faixa_comissao"))
 
-            empresa_id_atual = (
-                current_user.empresa_id
-                if current_user.cargo != "super_admin"
-                else None
-            )
+            # empresa_id_atual já definido
 
             # Cria faixa do tipo selecionado
             if tipo == "vendedor":
@@ -9616,8 +9621,13 @@ def editar_faixa_comissao(tipo, id):
             alcance_min = request.form.get("alcance_min", "0")
             alcance_max = request.form.get("alcance_max", "100")
             taxa_comissao = request.form.get("taxa_comissao", "1")
-            # Sincronização automática: sempre espelhar a faixa no outro tipo
-            copiar_para_outro = True
+            # Sincronização automática: opcional por configuração
+            empresa_id_atual = (
+                current_user.empresa_id
+                if current_user.cargo != "super_admin"
+                else None
+            )
+            copiar_para_outro = _get_sync_flag(empresa_id_atual)
 
             # Conversão segura
             alcance_min = float(alcance_min) if alcance_min else 0.0
@@ -9654,11 +9664,6 @@ def editar_faixa_comissao(tipo, id):
 
             # Se solicitado, copia/atualiza para o outro tipo
             if copiar_para_outro:
-                empresa_id_atual = (
-                    current_user.empresa_id
-                    if current_user.cargo != "super_admin"
-                    else None
-                )
                 if tipo == "vendedor":
                     # Procura se já existe uma faixa supervisor correspondente
                     faixa_outro = FaixaComissaoSupervisor.query.filter_by(
@@ -9711,7 +9716,7 @@ def editar_faixa_comissao(tipo, id):
             return redirect(url_for("editar_faixa_comissao", tipo=tipo, id=id))
 
     return render_template(
-        "configuracoes/comissao_form.html", faixa=faixa, tipo=tipo
+        "configuracoes/comissao_form.html", faixa=faixa, tipo=tipo, sincronizacao_automatica=_get_sync_flag(None if current_user.cargo == "super_admin" else current_user.empresa_id)
     )
 
 @app.route(
@@ -9747,18 +9752,23 @@ def deletar_faixa_comissao(tipo, id):
         ordem_alvo = faixa.ordem
         db.session.delete(faixa)
 
-        # Sincronização automática de exclusão: remover faixa espelhada do outro tipo
-        if tipo == "vendedor":
-            faixa_espelho = FaixaComissaoSupervisor.query.filter_by(
-                empresa_id=empresa_id_alvo, ordem=ordem_alvo
-            ).first()
-        else:
-            faixa_espelho = FaixaComissaoVendedor.query.filter_by(
-                empresa_id=empresa_id_alvo, ordem=ordem_alvo
-            ).first()
+        # Sincronização automática de exclusão: remover faixa espelhada do outro tipo se habilitado
+        remover_espelho = _get_sync_flag(
+            None if current_user.cargo == "super_admin" else current_user.empresa_id
+        )
+        faixa_espelho = None
+        if remover_espelho:
+            if tipo == "vendedor":
+                faixa_espelho = FaixaComissaoSupervisor.query.filter_by(
+                    empresa_id=empresa_id_alvo, ordem=ordem_alvo
+                ).first()
+            else:
+                faixa_espelho = FaixaComissaoVendedor.query.filter_by(
+                    empresa_id=empresa_id_alvo, ordem=ordem_alvo
+                ).first()
 
-        if faixa_espelho:
-            db.session.delete(faixa_espelho)
+            if faixa_espelho:
+                db.session.delete(faixa_espelho)
 
         db.session.commit()
 
@@ -9810,6 +9820,53 @@ def api_faixas_comissoes():
             )
 
     return jsonify([faixa.to_dict() for faixa in faixas])
+
+# ===== Sincronização automática: helpers e rota =====
+
+def _sync_chave(empresa_id: int | None) -> str:
+    return (
+        "sincronizacao_faixas_comissao_global"
+        if empresa_id is None
+        else f"sincronizacao_faixas_comissao_empresa_{empresa_id}"
+    )
+
+def _get_sync_flag(empresa_id: int | None) -> bool:
+    try:
+        chave = _sync_chave(empresa_id)
+        cfg = Configuracao.query.filter_by(chave=chave).first()
+        if not cfg or not cfg.valor:
+            return True  # padrão: ativo
+        return str(cfg.valor).strip().lower() in ("1", "true", "on", "yes")
+    except Exception:
+        return True
+
+def _set_sync_flag(empresa_id: int | None, enabled: bool) -> None:
+    chave = _sync_chave(empresa_id)
+    cfg = Configuracao.query.filter_by(chave=chave).first()
+    if not cfg:
+        cfg = Configuracao(chave=chave)
+    cfg.valor = "true" if enabled else "false"
+    db.session.add(cfg)
+    db.session.commit()
+
+@app.route("/configuracoes/comissoes/sincronizacao", methods=["POST"])
+@login_required
+def configurar_sincronizacao_comissoes():
+    if current_user.cargo not in ["admin", "super_admin"]:
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("dashboard"))
+
+    empresa_contexto = None if current_user.cargo == "super_admin" else current_user.empresa_id
+    enabled = request.form.get("sincronizacao") == "on"
+    try:
+        _set_sync_flag(empresa_contexto, enabled)
+        if enabled:
+            flash("Sincronização automática ativada.", "success")
+        else:
+            flash("Sincronização automática desativada.", "warning")
+    except Exception as e:
+        flash(f"Erro ao salvar sincronização: {e}", "danger")
+    return redirect(url_for("configuracoes_comissoes"))
 
 # ===== COMANDOS CLI =====
 

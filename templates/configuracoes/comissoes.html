@@ -15,6 +15,26 @@
         </a>
     </div>
 
+    <!-- Controle de Sincronização -->
+    <div class="card bg-light mb-3">
+        <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <form method="POST" action="{{ url_for('configurar_sincronizacao_comissoes') }}" id="form-sync">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="sincronizacao" name="sincronizacao" {% if sincronizacao_automatica %}checked{% endif %} onchange="document.getElementById('form-sync').submit();">
+                        <label class="form-check-label" for="sincronizacao">
+                            <i class="bi bi-arrow-left-right"></i>
+                            <strong>Sincronização automática {{ 'ativa' if sincronizacao_automatica else 'desativada' }}</strong>
+                            <br>
+                            <small class="text-muted">Quando ativa, toda faixa criada/alterada é espelhada entre vendedores e supervisores.</small>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <span class="badge {{ 'bg-success' if sincronizacao_automatica else 'bg-secondary' }}">{{ 'Ativo' if sincronizacao_automatica else 'Desativado' }}</span>
+        </div>
+    </div>
+
     <!-- Navegação em Abas -->
     <ul class="nav nav-tabs nav-fill mb-4" id="tipoComissaoTabs" role="tablist">
         <li class="nav-item" role="presentation">
