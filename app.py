@@ -8546,6 +8546,26 @@ def lista_metas():
         "prev_num": page - 1,
         "next_num": page + 1 if page < total_paginas else None,
     }
+    # Faixas dinâmicas de comissão para exibição na legenda
+    if current_user.is_super_admin:
+        faixas_vendedor = (
+            FaixaComissaoVendedor.query.filter(
+                FaixaComissaoVendedor.empresa_id.is_(None)
+            ).order_by(FaixaComissaoVendedor.ordem).all()
+        )
+    else:
+        faixas_vendedor = (
+            FaixaComissaoVendedor.query.filter_by(
+                empresa_id=current_user.empresa_id
+            ).order_by(FaixaComissaoVendedor.ordem).all()
+        )
+        # fallback globais
+        if not faixas_vendedor:
+            faixas_vendedor = (
+                FaixaComissaoVendedor.query.filter(
+                    FaixaComissaoVendedor.empresa_id.is_(None)
+                ).order_by(FaixaComissaoVendedor.ordem).all()
+            )
 
     return render_template(
         "metas/lista.html",
@@ -8557,6 +8577,7 @@ def lista_metas():
         total_receita=total_receita,
         total_comissao=total_comissao,
         pagination=pagination,
+        faixas_vendedor=faixas_vendedor,
     )
 
 @app.route("/metas/nova", methods=["GET", "POST"])
