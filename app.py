@@ -3606,6 +3606,21 @@ def supervisor_dashboard():
         "ano": ano_atual,
     }
 
+    # Comissão específica do supervisor pelas faixas de supervisor
+    try:
+        taxa_sup = _obter_taxa_por_alcance(
+            "supervisor",
+            current_user.empresa_id if current_user.cargo != "super_admin" else None,
+            resumo_supervisor["percentual_alcance"],
+        )
+        resumo_supervisor["taxa_supervisor"] = taxa_sup
+        resumo_supervisor["comissao_supervisor"] = total_receita * taxa_sup
+        resumo_supervisor["comissao_supervisor_formatada"] = formatar_moeda(
+            resumo_supervisor["comissao_supervisor"]
+        )
+    except Exception as e:
+        app.logger.error(f"Erro ao calcular comissão do supervisor: {e}")
+
     return render_template(
         "supervisores/dashboard.html",
         vendedores_data=vendedores_data,

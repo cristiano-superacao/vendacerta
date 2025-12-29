@@ -102,6 +102,23 @@
             </div>
         </div>
     </div>
+
+    <!-- Card Comissão do Supervisor (interligada às faixas) -->
+    <div class="col-lg-3 col-md-6">
+        <div class="card stats-card-modern border-start border-4 border-info shadow-sm hover-lift">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="icon-modern bg-info bg-opacity-10 text-info">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <span class="badge bg-info bg-opacity-10 text-info">SUPERVISOR</span>
+                </div>
+                <h2 class="stats-value-modern mb-1">{{ resumo_supervisor.comissao_supervisor_formatada }}</h2>
+                <p class="stats-label-modern mb-0">Comissão do Supervisor</p>
+                <small class="text-muted">Taxa aplicada: {{ "{:.1f}".format((resumo_supervisor.taxa_supervisor or 0) * 100) }}%</small>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Card de Projeção Consolidada -->
