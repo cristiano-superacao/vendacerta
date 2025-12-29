@@ -96,18 +96,25 @@ class Config:
     # Desabilita rastreamento de modificações (economiza memória)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Configurações otimizadas para Railway PostgreSQL
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,           # Verifica conexão antes de usar
-        'pool_recycle': 280,             # Recicla conexões a cada 4:40min (antes do timeout de 5min)
-        'pool_size': 5,                  # Pool menor para Railway (otimizado)
-        'max_overflow': 10,              # Overflow reduzido
-        'pool_timeout': 30,              # Timeout para obter conexão do pool
-        'connect_args': {
-            'connect_timeout': 10,       # Timeout de conexão PostgreSQL
-            'options': '-c statement_timeout=30000'  # 30s timeout para queries
+    # Configurações do engine conforme o tipo de banco
+    if SQLALCHEMY_DATABASE_URI.startswith('sqlite'):
+        # Opções seguras para SQLite (evita connect_args inválido)
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
         }
-    }
+    else:
+        # Otimizações para PostgreSQL (Railway/produção)
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 280,
+            'pool_size': 5,
+            'max_overflow': 10,
+            'pool_timeout': 30,
+            'connect_args': {
+                'connect_timeout': 10,
+                'options': '-c statement_timeout=30000'
+            }
+        }
 
     # Configurações de sessão
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)

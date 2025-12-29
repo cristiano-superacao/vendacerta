@@ -205,22 +205,24 @@
                             </div>
                         </div>
 
-                        <!-- Opção de Copiar para Outro Tipo -->
+                        <!-- Sincronização Automática (informativo) -->
                         <div class="mb-4">
                             <div class="card bg-light">
-                                <div class="card-body">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="copiar_para_outro" name="copiar_para_outro">
-                                        <label class="form-check-label" for="copiar_para_outro">
-                                            <i class="bi bi-arrow-left-right"></i>
-                                            <strong>Sincronizar com {{ 'Supervisor' if (tipo == 'vendedor' or not tipo) else 'Vendedor' }}</strong>
-                                            <br>
-                                            <small class="text-muted">
-                                                Cria/atualiza automaticamente uma faixa idêntica para
-                                                {{ 'supervisores' if (tipo == 'vendedor' or not tipo) else 'vendedores' }}
-                                            </small>
-                                        </label>
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="copiar_para_outro" name="copiar_para_outro" checked disabled>
+                                            <label class="form-check-label" for="copiar_para_outro">
+                                                <i class="bi bi-arrow-left-right"></i>
+                                                <strong>Sincronização automática ativa</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    Toda faixa criada/alterada é espelhada para {{ 'supervisores' if (tipo == 'vendedor' or not tipo) else 'vendedores' }}.
+                                                </small>
+                                            </label>
+                                        </div>
                                     </div>
+                                    <span class="badge bg-success">Ativo</span>
                                 </div>
                             </div>
                         </div>

@@ -9271,6 +9271,29 @@ def detalhes_equipe(id):
 
 # ===== CONFIGURAÇÕES DE COMISSÃO =====
 
+# Utilitário: recalcular comissões das metas do mês atual da empresa
+def _recalcular_comissoes_mes_atual_empresa(empresa_id: int):
+    try:
+        if not empresa_id:
+            return
+        hoje = datetime.utcnow()
+        metas = (
+            Meta.query.join(Vendedor)
+            .filter(
+                Vendedor.empresa_id == empresa_id,
+                Meta.mes == hoje.month,
+                Meta.ano == hoje.year,
+            )
+            .all()
+        )
+        for m in metas:
+            m.calcular_comissao()
+        db.session.commit()
+    except Exception as e:
+        app.logger.error(
+            f"Erro ao recalcular comissões (empresa_id={empresa_id}): {e}"
+        )
+
 @app.route("/configuracoes/comissoes")
 @login_required
 def configuracoes_comissoes():
@@ -9353,7 +9376,10 @@ def criar_faixa_comissao():
             alcance_min = request.form.get("alcance_min", "0")
             alcance_max = request.form.get("alcance_max", "100")
             taxa_comissao = request.form.get("taxa_comissao", "1")
-            copiar_para_outro = request.form.get("copiar_para_outro") == "on"
+            # Sincronização automática: sempre espelhar a faixa no outro tipo
+            # Mantemos o parâmetro do formulário apenas por compatibilidade,
+            # mas forçamos a sincronização para garantir interligação.
+            copiar_para_outro = True
 
             # Conversão segura
             alcance_min = float(alcance_min) if alcance_min else 0.0
@@ -9425,6 +9451,9 @@ def criar_faixa_comissao():
                 outro_tipo = "supervisor" if tipo == "vendedor" else "vendedor"
                 msg += f" (copiada também para {outro_tipo})"
             flash(msg, "success")
+            # Recalcular comissões das metas do mês atual (empresa do usuário)
+            if current_user.cargo != "super_admin":
+                _recalcular_comissoes_mes_atual_empresa(current_user.empresa_id)
             return redirect(url_for("configuracoes_comissoes"))
 
         except ValueError as e:
@@ -9477,7 +9506,8 @@ def editar_faixa_comissao(tipo, id):
             alcance_min = request.form.get("alcance_min", "0")
             alcance_max = request.form.get("alcance_max", "100")
             taxa_comissao = request.form.get("taxa_comissao", "1")
-            copiar_para_outro = request.form.get("copiar_para_outro") == "on"
+            # Sincronização automática: sempre espelhar a faixa no outro tipo
+            copiar_para_outro = True
 
             # Conversão segura
             alcance_min = float(alcance_min) if alcance_min else 0.0
@@ -9552,6 +9582,9 @@ def editar_faixa_comissao(tipo, id):
                 outro_tipo = "supervisor" if tipo == "vendedor" else "vendedor"
                 msg += f" (sincronizada com {outro_tipo})"
             flash(msg, "success")
+            # Recalcular comissões das metas do mês atual (empresa do usuário)
+            if current_user.cargo != "super_admin":
+                _recalcular_comissoes_mes_atual_empresa(current_user.empresa_id)
             return redirect(url_for("configuracoes_comissoes"))
 
         except ValueError as e:
@@ -9599,13 +9632,36 @@ def deletar_faixa_comissao(tipo, id):
         return redirect(url_for("configuracoes_comissoes"))
 
     try:
+        # Excluir faixa atual
+        empresa_id_alvo = faixa.empresa_id
+        ordem_alvo = faixa.ordem
         db.session.delete(faixa)
+
+        # Sincronização automática de exclusão: remover faixa espelhada do outro tipo
+        if tipo == "vendedor":
+            faixa_espelho = FaixaComissaoSupervisor.query.filter_by(
+                empresa_id=empresa_id_alvo, ordem=ordem_alvo
+            ).first()
+        else:
+            faixa_espelho = FaixaComissaoVendedor.query.filter_by(
+                empresa_id=empresa_id_alvo, ordem=ordem_alvo
+            ).first()
+
+        if faixa_espelho:
+            db.session.delete(faixa_espelho)
+
         db.session.commit()
+
         tipo_nome = "vendedor" if tipo == "vendedor" else "supervisor"
+        msg_sinc = " (faixa espelhada também removida)" if faixa_espelho else ""
         flash(
-            f"Faixa de comissão de {tipo_nome} excluída com sucesso!",
+            f"Faixa de comissão de {tipo_nome} excluída com sucesso!{msg_sinc}",
             "success",
         )
+
+        # Recalcular comissões das metas do mês atual (empresa do usuário)
+        if current_user.cargo != "super_admin":
+            _recalcular_comissoes_mes_atual_empresa(current_user.empresa_id)
     except Exception as e:
         db.session.rollback()
         flash(f"Erro ao excluir faixa: {str(e)}", "danger")
