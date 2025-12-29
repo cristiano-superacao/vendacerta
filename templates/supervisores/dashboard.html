@@ -121,6 +121,35 @@
     </div>
 </div>
 
+<!-- Legenda de Faixas de Comissão do Supervisor (dinâmica) -->
+<div class="card mt-2 border-0 shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title mb-3"><i class="bi bi-info-circle"></i> Faixas de Comissão do Supervisor</h5>
+        <div class="row g-2">
+            {% if faixas_supervisor %}
+                {% for faixa in faixas_supervisor %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1 progress-sm" style="height: 20px;">
+                            <div class="progress-bar bg-{{ faixa.cor }} w-100 d-flex align-items-center justify-content-center">
+                                {% if faixa.alcance_max is none or faixa.alcance_max >= 1000 %}
+                                    <i class="bi bi-star-fill text-white me-1" style="font-size: 0.7rem;"></i> Acima de {{ '{:.0f}'.format(faixa.alcance_min) }}%
+                                {% else %}
+                                    <i class="bi bi-circle-fill text-white me-1" style="font-size: 0.7rem;"></i> {{ '{:.0f}'.format(faixa.alcance_min) }}-{{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="text-muted small fw-bold">{{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-muted small">Nenhuma faixa configurada. Configure em Configurações → Faixas de Comissão.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 <!-- Card de Projeção Consolidada -->
 <div class="card shadow-sm mb-4 border-0">
     <div class="card-header bg-gradient-primary text-white">

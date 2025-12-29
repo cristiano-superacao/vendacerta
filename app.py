@@ -3521,12 +3521,26 @@ def supervisor_dashboard():
     ).all()
 
     if not vendedores:
+        # Faixas dinâmicas para legenda do supervisor
+        faixas_supervisor = (
+            FaixaComissaoSupervisor.query.filter_by(
+                empresa_id=current_user.empresa_id
+            ).order_by(FaixaComissaoSupervisor.ordem).all()
+        )
+        if not faixas_supervisor:
+            faixas_supervisor = (
+                FaixaComissaoSupervisor.query.filter(
+                    FaixaComissaoSupervisor.empresa_id.is_(None)
+                ).order_by(FaixaComissaoSupervisor.ordem).all()
+            )
+
         return render_template(
             "supervisores/dashboard.html",
             vendedores_data=[],
             resumo_supervisor={},
             mes_atual=mes_atual,
             ano_atual=ano_atual,
+            faixas_supervisor=faixas_supervisor,
         )
 
     # Processar dados dos vendedores
@@ -3621,12 +3635,26 @@ def supervisor_dashboard():
     except Exception as e:
         app.logger.error(f"Erro ao calcular comissão do supervisor: {e}")
 
+    # Faixas dinâmicas para legenda do supervisor
+    faixas_supervisor = (
+        FaixaComissaoSupervisor.query.filter_by(
+            empresa_id=current_user.empresa_id
+        ).order_by(FaixaComissaoSupervisor.ordem).all()
+    )
+    if not faixas_supervisor:
+        faixas_supervisor = (
+            FaixaComissaoSupervisor.query.filter(
+                FaixaComissaoSupervisor.empresa_id.is_(None)
+            ).order_by(FaixaComissaoSupervisor.ordem).all()
+        )
+
     return render_template(
         "supervisores/dashboard.html",
         vendedores_data=vendedores_data,
         resumo_supervisor=resumo_supervisor,
         mes_atual=mes_atual,
         ano_atual=ano_atual,
+        faixas_supervisor=faixas_supervisor,
     )
 
 @app.route("/vendedor/dashboard")
