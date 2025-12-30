@@ -268,10 +268,12 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
     incluindo TODAS as informações
     """
     buffer = io.BytesIO()
+    # Usar margens fixas em pontos (aprox. 1.5 cm = 42 pt) para evitar
+    # dependência de constantes em alguns ambientes de execução
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
-        topMargin=1.5*cm, bottomMargin=1.5*cm,
-        leftMargin=1.5*cm, rightMargin=1.5*cm
+        topMargin=42, bottomMargin=42,
+        leftMargin=42, rightMargin=42
     )
     elements = []
     styles = getSampleStyleSheet()
@@ -353,7 +355,7 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
     ]))
 
     elements.append(resumo_table)
-    elements.append(Spacer(1, 0.4*cm))
+    elements.append(Spacer(1, 12))
 
     # ===== SEÇÃO 2: PROJEÇÃO DE VENDAS DA EQUIPE =====
     projecao_titulo = Paragraph(
@@ -565,6 +567,145 @@ def gerar_pdf_dashboard(resumo_global, vendedores, mes=None, ano=None, equipes=N
     elements.append(rodape)
 
     # Gerar PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+def gerar_pdf_metas_supervisor(supervisores_resumo, mes=None, ano=None):
+    """Gera PDF do Relatório de Metas Avançado na visão por Supervisor.
+
+    Espera uma lista de dicts com as chaves:
+    ["nome", "tipo_meta", "periodo", "meta_total", "realizado_total",
+     "percentual_alcance", "taxa_supervisor", "comissao_supervisor"].
+    """
+    buffer = io.BytesIO()
+    # Margens fixas em pontos (~1.5 cm)
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        topMargin=42, bottomMargin=42,
+        leftMargin=42, rightMargin=42
+    )
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Cabeçalho
+    title_style = ParagraphStyle(
+        'CustomTitle', parent=styles['Heading1'], fontSize=16,
+        textColor=colors.HexColor('#667eea'), spaceAfter=20,
+        alignment=TA_CENTER, fontName='Helvetica-Bold'
+    )
+
+    meses = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ]
+    periodo_texto = ""
+    if mes and ano:
+        try:
+            periodo_texto = f" - {meses[int(mes)-1]}/{ano}"
+        except Exception:
+            periodo_texto = f" - {mes}/{ano}"
+
+    elements.append(Paragraph(f"Relatório de Metas Avançado — Supervisores{periodo_texto}", title_style))
+    elements.append(Paragraph(
+        f"Emitido em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+        ParagraphStyle('Date', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER)
+    ))
+    elements.append(Spacer(1, 12))
+
+    # Resumo agregado
+    if supervisores_resumo:
+        meta_total = 0.0
+        realizado_total = 0.0
+        comissao_total = 0.0
+        for s in supervisores_resumo:
+            mt = float(s.get('meta_total') or 0)
+            rl = float(s.get('realizado_total') or 0)
+            comissao_valor = float(s.get('comissao_supervisor') or 0)
+            meta_total += mt
+            realizado_total += rl
+            comissao_total += comissao_valor
+
+        alcance = (realizado_total / meta_total * 100) if meta_total > 0 else 0
+        resumo_data = [
+            ['Resumo do Período', '', '', ''],
+            ['Supervisores', 'Meta Total', 'Realizado Total', 'Comissão Total'],
+            [
+                str(len(supervisores_resumo)),
+                formatar_moeda(meta_total),
+                f"{formatar_moeda(realizado_total)}\n({alcance:.1f}% da meta)",
+                formatar_moeda(comissao_total)
+            ]
+        ]
+        resumo_table = Table(resumo_data, colWidths=[113, 113, 113, 113])
+        resumo_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#e2e8f0')),
+            ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e0')),
+            ('SPAN', (0, 0), (-1, 0)),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(resumo_table)
+        elements.append(Spacer(1, 0.6*cm))
+
+    # Tabela por Supervisor
+    table_data = [['#', 'Supervisor', 'Tipo', 'Período', 'Meta', 'Realizado', 'Progresso', 'Comissão']]
+    for i, s in enumerate(supervisores_resumo or [], 1):
+        pos = '🥇' if i == 1 else '🥈' if i == 2 else '🥉' if i == 3 else f'{i}°'
+        tipo_label = 'Valor' if (s.get('tipo_meta') == 'valor') else 'Volume'
+        meta_str = (
+            formatar_moeda(float(s.get('meta_total') or 0)) if s.get('tipo_meta') == 'valor'
+            else str(int(s.get('meta_total') or 0)) + ' vendas'
+        )
+        realizado_str = (
+            formatar_moeda(float(s.get('realizado_total') or 0)) if s.get('tipo_meta') == 'valor'
+            else str(int(s.get('realizado_total') or 0)) + ' vendas'
+        )
+        progresso = f"{get_emoji_alcance(float(s.get('percentual_alcance') or 0))} {float(s.get('percentual_alcance') or 0):.1f}%"
+        comissao_str = formatar_moeda(float(s.get('comissao_supervisor') or 0))
+        table_data.append([
+            pos, s.get('nome') or '-', tipo_label, s.get('periodo') or '-',
+            meta_str, realizado_str, progresso, comissao_str
+        ])
+
+    detail_table = Table(
+        table_data,
+        colWidths=[43, 99, 57, 71, 71, 62, 62, 65]
+    )
+    detail_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4a5568')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+        ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+    ]))
+
+    for i in range(1, min(4, (len(supervisores_resumo or []) + 1))):
+        detail_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, i), (0, i), colors.HexColor('#fff5f5'))
+        ]))
+
+    elements.append(detail_table)
+
+    # Rodapé
+    elements.append(Spacer(1, 14))
+    elements.append(Paragraph(
+        "Sistema de Gestão de Metas e Comissões © 2025",
+        ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
+    ))
+
     doc.build(elements)
     buffer.seek(0)
     return buffer

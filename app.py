@@ -239,7 +239,7 @@ except ImportError:
 # Importar gerador de PDF (exceto durante inicialização do DB)
 if not INIT_DB_ONLY:
     try:
-        from pdf_generator import gerar_pdf_metas, gerar_pdf_dashboard
+        from pdf_generator import gerar_pdf_metas, gerar_pdf_dashboard, gerar_pdf_metas_supervisor
     except ImportError as e:
         print(f"Aviso: Erro ao importar pdf_generator: {e}")
 
@@ -249,12 +249,18 @@ if not INIT_DB_ONLY:
         def gerar_pdf_dashboard(*args, **kwargs):
             raise RuntimeError("PDF generator não disponível")
 
+        def gerar_pdf_metas_supervisor(*args, **kwargs):
+            raise RuntimeError("PDF generator não disponível")
+
 else:
     # Placeholders quando INIT_DB_ONLY está ativo
     def gerar_pdf_metas(*args, **kwargs):
         raise RuntimeError("PDF generator desabilitado")
 
     def gerar_pdf_dashboard(*args, **kwargs):
+        raise RuntimeError("PDF generator desabilitado")
+
+    def gerar_pdf_metas_supervisor(*args, **kwargs):
         raise RuntimeError("PDF generator desabilitado")
 
 # Inicialização do aplicativo Flask
@@ -10309,6 +10315,125 @@ def relatorio_metas_avancado():
         },
         supervisores_resumo=supervisores_resumo,
     )
+
+@app.route("/relatorios/metas-avancado/export")
+@login_required
+def exportar_pdf_metas_avancado():
+    """Exporta o Relatório de Metas Avançado em PDF nas visões Vendedor ou Supervisor."""
+    visao = request.args.get("visao", "vendedor")
+    vendedor_id = request.args.get("vendedor_id", type=int)
+    supervisor_id = request.args.get("supervisor_id", type=int)
+    tipo_meta = request.args.get("tipo_meta", "")
+    ano = request.args.get("ano", datetime.now().year, type=int)
+    mes = request.args.get("mes", datetime.now().month, type=int)
+
+    # Construir query semelhante à página
+    query = Meta.query
+
+    # Escopo por cargo
+    if current_user.cargo == "vendedor" and current_user.vendedor_id:
+        query = query.join(Vendedor).filter(Meta.vendedor_id == current_user.vendedor_id)
+    elif current_user.cargo == "supervisor":
+        vendedores_ids = [v.id for v in Vendedor.query.filter_by(supervisor_id=current_user.id, ativo=True).all()]
+        query = query.filter(Meta.vendedor_id.in_(vendedores_ids))
+    elif not current_user.is_super_admin:
+        query = query.join(Vendedor).filter(Vendedor.empresa_id == current_user.empresa_id)
+
+    # Filtros adicionais
+    if vendedor_id:
+        query = query.filter(Meta.vendedor_id == vendedor_id)
+    if supervisor_id:
+        query = query.join(Vendedor).filter(Vendedor.supervisor_id == supervisor_id)
+    if tipo_meta:
+        query = query.filter(Meta.tipo_meta == tipo_meta)
+    if ano:
+        query = query.filter(Meta.ano == ano)
+    if mes:
+        query = query.filter(Meta.mes == mes)
+
+    metas = query.order_by(Meta.ano.desc(), Meta.mes.desc()).all()
+
+    # Recalcular comissões quando necessário
+    for meta in metas:
+        if meta.comissao_total is None or meta.comissao_total == 0:
+            try:
+                meta.calcular_comissao()
+            except Exception:
+                pass
+
+    try:
+        if visao == "supervisor":
+            # Agregação por supervisor (mesmo cálculo da página)
+            grupos = {}
+            for m in metas:
+                sup_id = m.vendedor.supervisor_id if m.vendedor else None
+                sup_nome = m.vendedor.supervisor_nome if m.vendedor else "N/A"
+                if sup_id is None:
+                    continue
+                if sup_id not in grupos:
+                    grupos[sup_id] = {
+                        "supervisor_id": sup_id,
+                        "supervisor_nome": sup_nome,
+                        "tipo_meta": tipo_meta or m.tipo_meta,
+                        "mes": mes,
+                        "ano": ano,
+                        "meta_total": 0.0,
+                        "realizado_total": 0.0,
+                        "volume_meta_total": 0,
+                        "volume_realizado_total": 0,
+                        "comissao_total_vendedores": 0.0,
+                    }
+                if m.tipo_meta == "valor":
+                    grupos[sup_id]["meta_total"] += float(m.valor_meta or 0.0)
+                    grupos[sup_id]["realizado_total"] += float(m.receita_alcancada or 0.0)
+                else:
+                    grupos[sup_id]["volume_meta_total"] += int(m.volume_meta or 0)
+                    grupos[sup_id]["volume_realizado_total"] += int(m.volume_alcancado or 0)
+                grupos[sup_id]["comissao_total_vendedores"] += float(m.comissao_total or 0.0)
+
+            empresa_id_ctx = None if current_user.is_super_admin else current_user.empresa_id
+
+            supervisores_resumo = []
+            for g in grupos.values():
+                if (g["tipo_meta"] or "valor") == "valor":
+                    alcance = (g["realizado_total"] / g["meta_total"] * 100) if g["meta_total"] > 0 else 0
+                    taxa_sup = _obter_taxa_por_alcance("supervisor", empresa_id_ctx, alcance)
+                    comissao_sup = float(g["realizado_total"]) * float(taxa_sup)
+                else:
+                    alcance = (g["volume_realizado_total"] / g["volume_meta_total"] * 100) if g["volume_meta_total"] > 0 else 0
+                    taxa_sup = None
+                    comissao_sup = g["comissao_total_vendedores"]
+
+                supervisores_resumo.append({
+                    "id": g["supervisor_id"],
+                    "nome": g["supervisor_nome"],
+                    "tipo_meta": g["tipo_meta"],
+                    "periodo": f"{mes:02d}/{ano}" if (mes and ano) else "—",
+                    "meta_total": g["meta_total"] if (g["tipo_meta"] == "valor") else g["volume_meta_total"],
+                    "realizado_total": g["realizado_total"] if (g["tipo_meta"] == "valor") else g["volume_realizado_total"],
+                    "percentual_alcance": alcance,
+                    "taxa_supervisor": taxa_sup,
+                    "comissao_supervisor": comissao_sup,
+                })
+
+            supervisores_resumo.sort(key=lambda x: x["percentual_alcance"], reverse=True)
+
+            pdf_buffer = gerar_pdf_metas_supervisor(supervisores_resumo, mes, ano)
+            meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+            nome_periodo = f"_{meses[mes-1]}_{ano}" if (mes and ano and 1 <= mes <= 12) else ""
+            filename = f"Relatorio_Metas_Supervisores{nome_periodo}.pdf"
+        else:
+            # Visão Vendedor: usar gerador existente
+            pdf_buffer = gerar_pdf_metas(metas, mes, ano)
+            meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+            nome_periodo = f"_{meses[mes-1]}_{ano}" if (mes and ano and 1 <= mes <= 12) else ""
+            filename = f"Relatorio_Metas_Vendedores{nome_periodo}.pdf"
+
+        return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
+    except Exception as e:
+        app.logger.error(f"Erro ao exportar PDF de metas avançado: {e}", exc_info=True)
+        flash("Não foi possível gerar o PDF. Verifique os logs e tente novamente.", "danger")
+        return redirect(url_for("relatorio_metas_avancado", **request.args))
 
 @app.route("/api/metas/dados-grafico/<int:vendedor_id>")
 @login_required

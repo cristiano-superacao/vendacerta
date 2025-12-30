@@ -12,9 +12,17 @@
             </h2>
             <p class="text-muted mb-0">Análise detalhada de metas de valor e volume com balanceamento</p>
         </div>
-        <a href="{{ url_for('configurar_metas') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>Configurar Nova Meta
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('configurar_metas') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Configurar Nova Meta
+            </a>
+            <a
+                href="{{ url_for('exportar_pdf_metas_avancado', visao=filtros.visao, vendedor_id=filtros.vendedor_id, supervisor_id=filtros.supervisor_id, tipo_meta=filtros.tipo_meta, ano=filtros.ano, mes=filtros.mes) }}"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-filetype-pdf me-2"></i>Exportar PDF
+            </a>
+        </div>
     </div>
 
     <!-- Filtros -->
