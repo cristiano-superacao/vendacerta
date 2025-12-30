@@ -9590,7 +9590,10 @@ def criar_faixa_comissao():
             return redirect(url_for("criar_faixa_comissao"))
 
     return render_template(
-        "configuracoes/comissao_form.html", faixa=None, tipo=None
+        "configuracoes/comissao_form.html",
+        faixa=None,
+        tipo=None,
+        sincronizacao_automatica=_get_sync_flag(None if current_user.cargo == "super_admin" else current_user.empresa_id),
     )
 
 @app.route(
