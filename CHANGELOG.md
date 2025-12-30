@@ -1,5 +1,30 @@
 # 📝 Changelog - Sistema de Gestão de Metas e Comissões
 
+## [2.8.0] - 2025-12-30
+
+### 📈 Relatório de Metas Avançado com Visões Vendedor e Supervisor
+
+#### Novidades
+- Adicionada alternância de "Visão" (Vendedor | Supervisor) no Relatório de Metas Avançado
+- Visão Supervisor com agregação por supervisão incluindo:
+  - Colunas: Supervisor, Tipo, Período, Meta (R$), Realizado (R$)
+  - Progresso (% com barra responsiva), **Taxa (%)**, **Comissão (R$)**
+- Filtros dinâmicos por visão (vendedor/supervisor, mês, ano, tipo de meta)
+
+#### Dashboard
+- Seção "Projeções por Supervisão" agora exibe:
+  - **Taxa (%)** de comissão do supervisor
+  - **Comissão (R$)** estimada/real por período
+
+#### Documentação
+- Atualizado: docs/guias/MANUAL_USUARIO.md (dashboard e relatório avançado)
+- Atualizado: docs/guias/GUIA_USO.md (seção dedicada ao relatório avançado e dashboard)
+- Atualizado: docs/README.md (índice e data de atualização)
+
+#### Observações
+- Mantido layout responsivo (Bootstrap 5) em todas as novas seções
+- Lógica de taxa por supervisor utiliza as faixas configuradas para metas do tipo valor
+
 ## [2.7.1] - 2025-12-13
 
 ### 🎨 Modernização da Página de Gerenciamento de Empresas

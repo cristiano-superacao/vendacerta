@@ -121,6 +121,11 @@ Comissão: R$ 60.000 × 4% = R$ 2.400,00
   - Barras de progresso coloridas
   - Comissão individual
 
+- **Projeções por Supervisão (novo):**
+   - Colunas: Supervisor, Taxa (%), Comissão (R$)
+   - Exibe a taxa de comissão do supervisor e o valor estimado
+   - Totalmente responsivo (oculta colunas menos críticas no mobile)
+
 ### 👥 Vendedores
 - **Lista de Vendedores:**
   - Visualizar todos vendedores
@@ -299,3 +304,30 @@ Para dúvidas ou problemas:
 4. **Distribuição de Comissões**
    - Dashboard mostra total
    - Lista de metas mostra por status
+   
+## 📑 Relatório de Metas Avançado (Vendedor/Supervisor)
+
+### Alternando a Visão
+- Acesse: Menu → Relatórios → Metas Avançado
+- Use o seletor "Visão" para escolher entre:
+   - **Vendedor**: mostra ranking e detalhamento individual
+   - **Supervisor**: agrega por supervisão com taxa e comissão
+
+### Filtros Dinâmicos
+- Visão Vendedor: filtros por vendedor, mês, ano e tipo de meta
+- Visão Supervisor: filtros por supervisor, mês, ano e tipo de meta
+
+### Colunas em Visão Supervisor
+- Supervisor, Tipo, Período (Mês/Ano), Meta (R$), Realizado (R$)
+- Progresso (% com barra), **Taxa (%)**, **Comissão (R$)**
+
+### Regras de Cálculo
+- A **Taxa (%) do Supervisor** segue as faixas configuradas e aplica-se à base elegível (metas de tipo valor)
+- O **Progresso** conserva o esquema de cores: vermelho/amarelo/verde
+
+### Responsividade
+- Em telas menores, as colunas menos críticas são ocultadas; dados essenciais permanecem visíveis
+
+### Dicas Rápidas
+- Troque a visão para comparar performance agregada (Supervisor) vs individual (Vendedor)
+- Combine filtros de período e tipo de meta para análises pontuais

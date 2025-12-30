@@ -111,6 +111,12 @@ Mostra todos os vendedores ordenados por desempenho:
   - 💰 Pago
 - **Ações**: Visualizar, Editar, Excluir
 
+#### Projeções por Supervisão (novo)
+- **Supervisor**: nome do responsável pela equipe
+- **Taxa (%)**: percentual de comissão do supervisor aplicado sobre a base elegível
+- **Comissão (R$)**: valor estimado/real de comissão do supervisor no período
+- **Base**: calculada conforme regras de metas do tipo "valor"; para outros tipos, segue as regras vigentes do sistema
+
 ### 🔄 Filtrar por Período
 
 No topo do dashboard:
@@ -286,6 +292,26 @@ O sistema calcula automaticamente baseado no percentual de alcance:
    - Todas as metas do período
    - Detalhamento de comissões
    - Status de pagamentos
+
+### 📈 Relatório de Metas Avançado — Visões Vendedor e Supervisor
+
+No módulo de relatórios, o "Relatório de Metas Avançado" permite alternar a análise por Vendedor ou por Supervisor mantendo layout responsivo e profissional.
+
+1. Acesse: Menu → Relatórios → Metas Avançado
+2. Seletor "Visão": escolha entre **Vendedor** ou **Supervisor**
+3. Filtros dinâmicos:
+   - Visão Vendedor: filtros por vendedor, mês, ano, tipo de meta
+   - Visão Supervisor: filtros por supervisor, mês, ano, tipo de meta
+4. Tabelas exibidas:
+   - Visão Vendedor: ranking e detalhamento por vendedor
+   - Visão Supervisor: detalhamento por supervisão com colunas
+     - Supervisor, Tipo, Período, Meta (R$), Realizado (R$)
+     - Progresso (% com barra), **Taxa (%)** e **Comissão (R$)**
+5. Responsividade: tabelas colapsam colunas menos críticas em telas pequenas
+
+Observações:
+- A **Taxa (%) do Supervisor** é determinada pelas faixas de comissão configuradas e aplicada sobre a base elegível para metas do tipo valor
+- O **Progresso** usa cores padrão (vermelho/amarelo/verde) conforme o percentual de alcance
 
 ### 💡 Dica
 
@@ -517,7 +543,7 @@ Este sistema foi desenvolvido para facilitar a gestão de metas e comissões da 
 ## 📌 Informações do Sistema
 
 - **Versão:** 1.0
-- **Última Atualização:** Dezembro 2025
+- **Última Atualização:** Dezembro 2025 (inclui visão por Supervisor no relatório avançado e exibição de Taxa/Comissão no dashboard)
 - **Desenvolvedor:** Cristiano Santos
 - **Suporte:** (71) 99337-2960
 

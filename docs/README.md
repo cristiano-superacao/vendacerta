@@ -1,7 +1,7 @@
 # 📚 ÍNDICE COMPLETO DE DOCUMENTAÇÃO - VENDA CERTA
 
 **Sistema de Gestão de Vendas, Metas e Comissões**  
-**Última atualização**: 23 de dezembro de 2025
+**Última atualização**: 30 de dezembro de 2025
 
 ---
 
@@ -115,6 +115,10 @@
   - Comissões de supervisores
   - Cálculo automático
   - Relatórios
+
+- **Relatório de Metas Avançado (Visões Vendedor/Supervisor)**
+  - Alternância de visão, filtros dinâmicos, colunas com Taxa (%) e Comissão (R$)
+  - Ver guia: [docs/guias/GUIA_USO.md](../docs/guias/GUIA_USO.md#relatório-de-metas-avançado-vendedorsupervisor)
 
 ---
 
