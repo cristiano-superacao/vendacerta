@@ -237,7 +237,7 @@ graph TD
 | **Comissões** | 3 | 2 | FaixaComissao |
 | **Estoque** | 11 | 7 | Produto, EstoqueMovimento |
 | **Ordens de Serviço** | 9 | 6 | OrdemServico, Tecnico, Cliente |
-| **Relatórios** | 2 | 1 | Meta, Vendedor |
+| **Relatórios** | 2 | 1 | Meta, Vendedor, Usuario |
 | **API/Utilities** | 10 | 0 | Variados |
 | **TOTAL** | **119** | **64** | **16 models** |
 
@@ -326,6 +326,39 @@ GET  /api/vendedor/<id>/supervisor → JSON info supervisor
 GET  /health                    → Health check (Railway)
 GET  /ping                      → Ping endpoint
 ```
+
+---
+
+## 📈 Relatório de Metas Avançado (Vendedor/Supervisor)
+
+### Rota e Template
+- Página: `/relatorios/metas-avancado`
+- Template: `templates/relatorios/metas_avancado.html`
+
+### Parâmetros de Query
+- `visao`: `vendedor` (padrão) | `supervisor`
+- `supervisor_id`: filtra por supervisor (apenas quando `visao=supervisor`)
+- `vendedor_id`: filtra por vendedor (apenas quando `visao=vendedor`)
+- `tipo_meta`: `valor` | `volume`
+- `ano`: número (ex.: 2025)
+- `mes`: 1-12
+
+### Dados e Agregação
+- Visão `vendedor`: exibe metas individuais com progresso, faixa e **comissão**.
+- Visão `supervisor`: agrega metas dos vendedores do supervisor selecionado e calcula:
+    - `meta_total`, `realizado_total`, `percentual_alcance` (consolidado)
+    - `taxa_supervisor` e `comissao_supervisor` para metas de `valor` usando faixas configuradas
+    - Para metas de `volume`, a comissão do supervisor reflete a soma de comissões dos vendedores (conforme regra atual)
+
+### Lógica de Comissão (Supervisor)
+- Função utilitária: `_obter_taxa_por_alcance(tipo, empresa_id, percentual)`
+    - Busca a faixa aplicável (empresa ou global) com base no percentual de alcance
+    - Retorna `taxa_supervisor` usada no cálculo de `comissao_supervisor = realizado_total × taxa`
+
+### UI e Responsividade
+- Filtros com **toggle de visão** (Vendedor/Supervisor) via Bootstrap.
+- Tabela "Detalhamento por Supervisão" com colunas: Supervisor, Tipo, Período, Meta, Realizado, Progresso, Comissão.
+- Exibição de **Taxa (%)** junto à comissão quando `tipo_meta = valor`.
 
 ---
 

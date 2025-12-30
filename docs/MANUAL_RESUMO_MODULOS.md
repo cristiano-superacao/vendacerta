@@ -134,6 +134,28 @@ Uso típico:
 Acesso:
 - Menu **Relatórios** (ou seções específicas em cada módulo).
 
+### 📈 Relatório de Metas Avançado (Vendedor/Supervisor)
+
+**O que faz:** Permite alternar entre visão por **Vendedor** e por **Supervisor** mantendo layout responsivo e profissional.
+
+**Como usar:**
+- Abra: Relatórios → Metas Avançado.
+- No topo, use o seletor **Visão** para alternar entre Vendedor/Supervisor.
+- Quando em **Supervisor**:
+  - Filtro adicional de **Supervisor** fica disponível.
+  - Tabela "Detalhamento por Supervisão" mostra: Supervisor, Tipo (valor/volume), Período (mês/ano), Meta total, Realizado total, Progresso (%), **Comissão** e **Taxa (%)** (para metas de valor).
+- Quando em **Vendedor**:
+  - Mantém tabela original com progresso, comissão e gráficos.
+  - Ranking de meses aparece apenas nesta visão.
+
+**Interpretação de dados (Supervisor):**
+- Metas de `valor`: comissão do supervisor = realizado_total × taxa_supervisor (definida por faixas configuradas conforme percentual de alcance).
+- Metas de `volume`: comissão do supervisor reflete a soma das comissões dos vendedores.
+
+**Dicas de uso:**
+- Ajuste filtros de `tipo_meta`, `ano` e `mes` para análises específicas.
+- Use a diferenciação visual das barras de progresso para identificar rapidamente desempenho crítico/meta/boa/excelente.
+
 ---
 
 ## 9️⃣ Equipes

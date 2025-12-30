@@ -141,6 +141,12 @@ Resumo da hierarquia de manutenção e apoio:
 | **Vendedor** | Minhas metas, ranking pessoal, comissão |
 | **Técnico** | OS atribuídas, avaliações |
 
+
+#### Atualizações recentes
+
+- Projeções por Supervisão agora exibem **Taxa (%)** e **Comissão (R$)** por supervisor com layout responsivo.
+- Relatório de Metas Avançado com **duas visões**: por **Vendedor** e por **Supervisor**, filtros modernos e cálculo de **taxa/comissão do supervisor**.
+
 ### 📞 CRM com Importação Excel
 
 **3 Formatos Suportados**:

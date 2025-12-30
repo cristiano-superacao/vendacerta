@@ -581,6 +581,29 @@ const comissao = receita * faixa.taxa_comissao;
 
 ---
 
+## 📄 Parâmetros de Relatórios (Páginas HTML)
+
+Embora não sejam endpoints JSON, algumas páginas aceitam parâmetros de query para compor relatórios.
+
+### GET /relatorios/metas-avancado
+
+**Descrição**: Página de relatório com visão alternável entre vendedores e supervisores.
+
+**Parâmetros de Query**:
+
+| Parâmetro | Tipo | Obrigatório | Descrição | Exemplo |
+|-----------|------|-------------|-----------|---------|
+| `visao` | string | ❌ | `vendedor` (padrão) ou `supervisor` | `visao=supervisor` |
+| `supervisor_id` | integer | ❌ | Filtra por supervisor (quando `visao=supervisor`) | `supervisor_id=12` |
+| `vendedor_id` | integer | ❌ | Filtra por vendedor (quando `visao=vendedor`) | `vendedor_id=34` |
+| `tipo_meta` | string | ❌ | `valor` ou `volume` | `tipo_meta=valor` |
+| `ano` | integer | ❌ | Ano de referência | `ano=2025` |
+| `mes` | integer | ❌ | Mês (1-12) | `mes=12` |
+
+**Observações**:
+- Na visão `supervisor`, são exibidos consolidadores e a **taxa/comissão do supervisor** quando o tipo de meta é `valor`.
+- Na visão `vendedor`, permanecem os gráficos e o ranking mensal originais.
+
 ## 👥 API de Vendedores
 
 ### GET /api/vendedor/:id/supervisor

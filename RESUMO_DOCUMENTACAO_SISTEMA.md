@@ -27,6 +27,7 @@ Documentação focada no deploy e manutenção na plataforma Railway.
 *   **[RELATORIO_LIMPEZA.md](RELATORIO_LIMPEZA.md)**: Detalhes sobre a limpeza de código e otimizações realizadas.
 *   **[VERIFICACAO_COMPLETA.md](VERIFICACAO_COMPLETA.md)**: Relatório de integridade do sistema.
 *   **[SECURITY_FIX.md](SECURITY_FIX.md)**: Documentação de correções de segurança aplicadas.
+ *   **Relatório de Metas Avançado**: Agora com **duas visões** (Vendedor/Supervisor), filtros por cargo e exibição da **Taxa (%)** e **Comissão (R$)** do supervisor nas metas de valor. Ver detalhes em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) e guia de uso em [docs/MANUAL_RESUMO_MODULOS.md](docs/MANUAL_RESUMO_MODULOS.md).
 
 ## 📂 Estrutura de Pastas de Documentação
 *   **`docs/`**: Contém documentação técnica detalhada e guias específicos.
