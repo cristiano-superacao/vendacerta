@@ -9518,7 +9518,8 @@ def criar_faixa_comissao():
             )
 
             # Validações
-            if alcance_min >= alcance_max:
+            # Permitir faixa aberta quando alcance_max >= 1000 (representa "acima de")
+            if alcance_max < 1000 and alcance_min >= alcance_max:
                 flash(
                     "O alcance mínimo deve ser menor que o máximo.", "danger"
                 )
@@ -9650,7 +9651,8 @@ def editar_faixa_comissao(tipo, id):
             )
 
             # Validações
-            if alcance_min >= alcance_max:
+            # Permitir faixa aberta quando alcance_max >= 1000 (representa "acima de")
+            if alcance_max < 1000 and alcance_min >= alcance_max:
                 flash(
                     "O alcance mínimo deve ser menor que o máximo.", "danger"
                 )
