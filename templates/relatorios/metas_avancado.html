@@ -20,7 +20,27 @@
     <!-- Filtros -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <form method="get" class="row g-3">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Visão</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="visao" id="visaoVendedor" value="vendedor" {% if filtros.visao == 'supervisor' %}{% else %}checked{% endif %}>
+                        <label class="btn btn-outline-primary" for="visaoVendedor"><i class="bi bi-person-badge me-1"></i>Vendedor</label>
+                        <input type="radio" class="btn-check" name="visao" id="visaoSupervisor" value="supervisor" {% if filtros.visao == 'supervisor' %}checked{% endif %}>
+                        <label class="btn btn-outline-primary" for="visaoSupervisor"><i class="bi bi-person-workspace me-1"></i>Supervisor</label>
+                    </div>
+                </div>
+                {% if filtros.visao == 'supervisor' %}
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Supervisor</label>
+                    <select class="form-select" name="supervisor_id">
+                        <option value="">Todos</option>
+                        {% for s in supervisores %}
+                            <option value="{{ s.id }}" {% if filtros.supervisor_id == s.id %}selected{% endif %}>{{ s.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% else %}
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Vendedor</label>
                     <select class="form-select" name="vendedor_id">
@@ -32,6 +52,7 @@
                         {% endfor %}
                     </select>
                 </div>
+                {% endif %}
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Tipo de Meta</label>
                     <select class="form-select" name="tipo_meta">
@@ -133,7 +154,8 @@
         </div>
     </div>
 
-    <!-- Tabela de Metas -->
+    <!-- Tabela de Metas (Vendedor) -->
+    {% if filtros.visao != 'supervisor' %}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3">
             <h5 class="mb-0"><i class="bi bi-table me-2"></i>Detalhamento de Metas</h5>
@@ -225,9 +247,97 @@
             </div>
         </div>
     </div>
+    {% endif %}
+
+    <!-- Tabela por Supervisão -->
+    {% if filtros.visao == 'supervisor' %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0"><i class="bi bi-person-workspace me-2"></i>Detalhamento por Supervisão</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Supervisor</th>
+                            <th>Tipo</th>
+                            <th>Período</th>
+                            <th class="text-end">Meta</th>
+                            <th class="text-end">Realizado</th>
+                            <th class="text-center">Progresso</th>
+                            <th class="text-end">Comissão</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in supervisores_resumo %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle me-2 d-flex align-items-center justify-content-center">
+                                        <span class="text-primary fw-bold">{{ s.nome[0] }}</span>
+                                    </div>
+                                    <strong>{{ s.nome }}</strong>
+                                </div>
+                            </td>
+                            <td>
+                                {% if s.tipo_meta == 'valor' %}
+                                    <span class="badge bg-primary"><i class="bi bi-currency-dollar me-1"></i>Valor</span>
+                                {% else %}
+                                    <span class="badge bg-info"><i class="bi bi-box-seam me-1"></i>Volume</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ s.periodo }}</td>
+                            <td class="text-end">
+                                {% if s.tipo_meta == 'valor' %}
+                                    R$ {{ "%.2f"|format(s.meta_total) }}
+                                {% else %}
+                                    {{ s.meta_total }} vendas
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if s.tipo_meta == 'valor' %}
+                                    R$ {{ "%.2f"|format(s.realizado_total) }}
+                                {% else %}
+                                    {{ s.realizado_total }} vendas
+                                {% endif %}
+                            </td>
+                            <td class="text-center" style="min-width: 180px;">
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if s.percentual_alcance >= 100 %}bg-success{% elif s.percentual_alcance >= 75 %}bg-info{% elif s.percentual_alcance >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                         style="width: {{ [s.percentual_alcance, 100]|min }}%">
+                                        {{ "%.0f"|format(s.percentual_alcance) }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                {% if s.tipo_meta == 'valor' %}
+                                    <span class="badge bg-success">R$ {{ "%.2f"|format(s.comissao_supervisor or 0) }}</span>
+                                    {% if s.taxa_supervisor is not none %}
+                                    <small class="text-muted d-block">Taxa: {{ "%.1f"|format((s.taxa_supervisor or 0) * 100) }}%</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-success">R$ {{ "%.2f"|format(s.comissao_supervisor or 0) }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                                <p class="text-muted mt-3">Nenhum dado de supervisão com os filtros selecionados</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Ranking de Melhores/Piores Meses -->
-    {% if ranking_meses %}
+    {% if ranking_meses and filtros.visao != 'supervisor' %}
     <div class="row g-4">
         <div class="col-md-6">
             <div class="card border-0 shadow-sm">

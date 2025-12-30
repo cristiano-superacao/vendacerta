@@ -10119,7 +10119,9 @@ def relatorio_metas_avancado():
     from calculo_balanceamento import obter_ranking_meses
 
     # Filtros
+    visao = request.args.get("visao", "vendedor")  # 'vendedor' | 'supervisor'
     vendedor_id = request.args.get("vendedor_id", type=int)
+    supervisor_id = request.args.get("supervisor_id", type=int)
     tipo_meta = request.args.get("tipo_meta", "")
     ano = request.args.get("ano", datetime.now().year, type=int)
     mes = request.args.get("mes", type=int)
@@ -10148,6 +10150,9 @@ def relatorio_metas_avancado():
     # Aplicar filtros adicionais
     if vendedor_id:
         query = query.filter(Meta.vendedor_id == vendedor_id)
+    # Filtro por supervisor (quando fornecido ou quando visão é supervisor)
+    if supervisor_id:
+        query = query.join(Vendedor).filter(Vendedor.supervisor_id == supervisor_id)
     if tipo_meta:
         query = query.filter(Meta.tipo_meta == tipo_meta)
     if ano:
@@ -10163,7 +10168,7 @@ def relatorio_metas_avancado():
         if meta.comissao_total is None or meta.comissao_total == 0:
             meta.calcular_comissao()
 
-    # Estatísticas
+    # Estatísticas gerais (independente da visão)
     total_metas = len(metas)
     metas_atingidas = sum(1 for m in metas if m.percentual_alcance >= 100)
     taxa_sucesso = (
@@ -10187,10 +10192,89 @@ def relatorio_metas_avancado():
             empresa_id=current_user.empresa_id, ativo=True
         ).all()
 
-    # Ranking de meses (se um vendedor específico for selecionado)
+    # Buscar supervisores para filtro
+    from models import Usuario
+    if current_user.cargo == "supervisor":
+        supervisores = [Usuario.query.get(current_user.id)]
+    elif current_user.is_super_admin:
+        supervisores = Usuario.query.filter_by(cargo="supervisor", ativo=True).all()
+    else:
+        supervisores = Usuario.query.filter_by(
+            empresa_id=current_user.empresa_id, cargo="supervisor", ativo=True
+        ).all()
+
+    # Ranking de meses (somente na visão por vendedor e com vendedor selecionado)
     ranking = None
-    if vendedor_id:
+    if visao == "vendedor" and vendedor_id:
         ranking = obter_ranking_meses(vendedor_id, ano)
+
+    # Agregação por Supervisor quando solicitado
+    supervisores_resumo = []
+    if visao == "supervisor":
+        # Agrupar metas por supervisor
+        grupos = {}
+        for m in metas:
+            sup_id = m.vendedor.supervisor_id if m.vendedor else None
+            sup_nome = m.vendedor.supervisor_nome if m.vendedor else "N/A"
+            if sup_id is None:
+                # Ignora metas sem supervisor vinculado
+                continue
+            if sup_id not in grupos:
+                grupos[sup_id] = {
+                    "supervisor_id": sup_id,
+                    "supervisor_nome": sup_nome,
+                    "tipo_meta": tipo_meta or m.tipo_meta,
+                    "mes": mes,
+                    "ano": ano,
+                    "meta_total": 0.0,
+                    "realizado_total": 0.0,
+                    "volume_meta_total": 0,
+                    "volume_realizado_total": 0,
+                    "comissao_total_vendedores": 0.0,
+                }
+            if m.tipo_meta == "valor":
+                grupos[sup_id]["meta_total"] += float(m.valor_meta or 0.0)
+                grupos[sup_id]["realizado_total"] += float(m.receita_alcancada or 0.0)
+            else:
+                grupos[sup_id]["volume_meta_total"] += int(m.volume_meta or 0)
+                grupos[sup_id]["volume_realizado_total"] += int(m.volume_alcancado or 0)
+            grupos[sup_id]["comissao_total_vendedores"] += float(m.comissao_total or 0.0)
+
+        # Calcular percentual e comissão do supervisor pelas faixas
+        empresa_id_ctx = None if current_user.is_super_admin else current_user.empresa_id
+        for g in grupos.values():
+            if (g["tipo_meta"] or "valor") == "valor":
+                alcance = (
+                    (g["realizado_total"] / g["meta_total"] * 100)
+                    if g["meta_total"] > 0
+                    else 0
+                )
+                taxa_sup = _obter_taxa_por_alcance("supervisor", empresa_id_ctx, alcance)
+                comissao_sup = float(g["realizado_total"]) * float(taxa_sup)
+            else:
+                alcance = (
+                    (g["volume_realizado_total"] / g["volume_meta_total"] * 100)
+                    if g["volume_meta_total"] > 0
+                    else 0
+                )
+                # Para metas de volume, comissionar pela soma das comissões dos vendedores
+                taxa_sup = None
+                comissao_sup = g["comissao_total_vendedores"]
+
+            supervisores_resumo.append({
+                "id": g["supervisor_id"],
+                "nome": g["supervisor_nome"],
+                "tipo_meta": g["tipo_meta"],
+                "periodo": f"{mes:02d}/{ano}" if (mes and ano) else "—",
+                "meta_total": g["meta_total"] if (g["tipo_meta"] == "valor") else g["volume_meta_total"],
+                "realizado_total": g["realizado_total"] if (g["tipo_meta"] == "valor") else g["volume_realizado_total"],
+                "percentual_alcance": alcance,
+                "taxa_supervisor": taxa_sup,
+                "comissao_supervisor": comissao_sup,
+            })
+
+        # Ordenar por percentual
+        supervisores_resumo.sort(key=lambda x: x["percentual_alcance"], reverse=True)
 
     # Anos disponíveis
     anos_disponiveis = (
@@ -10206,6 +10290,7 @@ def relatorio_metas_avancado():
         "relatorios/metas_avancado.html",
         metas=metas,
         vendedores=vendedores,
+        supervisores=supervisores,
         estatisticas={
             "total_metas": total_metas,
             "metas_atingidas": metas_atingidas,
@@ -10215,11 +10300,14 @@ def relatorio_metas_avancado():
         ranking_meses=ranking,
         anos=anos_disponiveis,
         filtros={
+            "visao": visao,
             "vendedor_id": vendedor_id,
+            "supervisor_id": supervisor_id,
             "tipo_meta": tipo_meta,
             "ano": ano,
             "mes": mes,
         },
+        supervisores_resumo=supervisores_resumo,
     )
 
 @app.route("/api/metas/dados-grafico/<int:vendedor_id>")
