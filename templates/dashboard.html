@@ -255,6 +255,8 @@
                         <th class="text-end" style="width: 150px;">Alcance</th>
                         <th class="text-end d-none d-lg-table-cell">Projeção</th>
                         <th class="text-end">Média/Dia</th>
+                        <th class="text-end d-none d-lg-table-cell">Taxa</th>
+                        <th class="text-end">Comissão</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -314,6 +316,16 @@
                         <td class="text-end">
                             <span class="fw-semibold" style="color: #0ea5e9; font-size: 0.9375rem;">
                                 {{ supervisor.projecao.media_diaria_formatada if supervisor.projecao.media_diaria_formatada else 'R$ 0,00' }}
+                            </span>
+                        </td>
+                        <td class="text-end d-none d-lg-table-cell">
+                            <span class="badge bg-info bg-opacity-10 text-info">
+                                {{ "{:.1f}".format((supervisor.taxa_supervisor or 0) * 100) }}%
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-semibold text-purple">
+                                R$ {{ "{:,.2f}".format(supervisor.comissao_supervisor or 0.0).replace(',', 'X').replace('.', ',').replace('X', '.') }}
                             </span>
                         </td>
                     </tr>
