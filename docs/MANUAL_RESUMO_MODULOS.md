@@ -120,6 +120,24 @@ Uso típico:
 Uso típico:
 - Conferir valores de comissão antes de aprovação/pagamento.
 
+### 🔧 Comissões de Manutenção (Técnicos)
+
+**O que faz:** Calcula comissões para técnicos com base em faixas de alcance específicas do módulo Manutenção.
+
+**Como configurar:**
+- Menu → Configurações → **Comissões**.
+- Abas no topo: **Vendedores**, **Supervisores** e **Manutenção**.
+- Na aba **Manutenção**:
+  - Crie/edite faixas de alcance (% mínimo/máximo) e taxa de comissão.
+  - Visualize cartões das faixas com cores e percentuais.
+  - Use o formulário "Vincular Faixa aos Técnicos" para aplicar uma faixa a todos os técnicos da empresa atual.
+
+**Cálculo:**
+- Comissão Técnico = Receita Alcançada × Taxa da Faixa (conforme alcance).
+
+**Dica:**
+- Mantenha faixas bem nomeadas e com cores consistentes para leitura rápida nos dashboards.
+
 ---
 
 ## 8️⃣ Relatórios

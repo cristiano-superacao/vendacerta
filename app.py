@@ -49,6 +49,7 @@ from models import (
     FaixaComissao,
     FaixaComissaoVendedor,
     FaixaComissaoSupervisor,
+    FaixaComissaoManutencao,
     Mensagem,
     Cliente,
     CompraCliente,
@@ -9419,7 +9420,7 @@ def configuracoes_comissoes():
         flash("Acesso negado. Apenas administradores podem acessar.", "danger")
         return redirect(url_for("dashboard"))
 
-    # Busca faixas da empresa ou globais para VENDEDORES
+    # Busca faixas da empresa ou globais para VENDEDORES / SUPERVISORES / MANUTENÇÃO
     if current_user.cargo == "super_admin":
         faixas_vendedor = (
             FaixaComissaoVendedor.query.filter(
@@ -9433,6 +9434,13 @@ def configuracoes_comissoes():
                 FaixaComissaoSupervisor.empresa_id.is_(None)
             )
             .order_by(FaixaComissaoSupervisor.ordem)
+            .all()
+        )
+        faixas_manutencao = (
+            FaixaComissaoManutencao.query.filter(
+                FaixaComissaoManutencao.empresa_id.is_(None)
+            )
+            .order_by(FaixaComissaoManutencao.ordem)
             .all()
         )
     else:
@@ -9471,6 +9479,22 @@ def configuracoes_comissoes():
                 .all()
             )
 
+        faixas_manutencao = (
+            FaixaComissaoManutencao.query.filter_by(
+                empresa_id=current_user.empresa_id
+            )
+            .order_by(FaixaComissaoManutencao.ordem)
+            .all()
+        )
+        if not faixas_manutencao:
+            faixas_manutencao = (
+                FaixaComissaoManutencao.query.filter(
+                    FaixaComissaoManutencao.empresa_id.is_(None)
+                )
+                .order_by(FaixaComissaoManutencao.ordem)
+                .all()
+            )
+
     # Flag de sincronização automática (por empresa; super_admin usa chave global)
     empresa_contexto = None if current_user.cargo == "super_admin" else current_user.empresa_id
     sincronizacao_automatica = _get_sync_flag(empresa_contexto)
@@ -9479,6 +9503,7 @@ def configuracoes_comissoes():
         "configuracoes/comissoes.html",
         faixas_vendedor=faixas_vendedor,
         faixas_supervisor=faixas_supervisor,
+        faixas_manutencao=faixas_manutencao,
         sincronizacao_automatica=sincronizacao_automatica,
     )
 
@@ -9493,7 +9518,7 @@ def criar_faixa_comissao():
     if request.method == "POST":
         try:
             # Validação de dados
-            # 'vendedor' ou 'supervisor'
+            # 'vendedor' | 'supervisor' | 'manutencao'
             tipo = request.form.get("tipo", "vendedor")
             alcance_min = request.form.get("alcance_min", "0")
             alcance_max = request.form.get("alcance_max", "100")
@@ -9541,8 +9566,17 @@ def criar_faixa_comissao():
                     cor=cor,
                     ordem=ordem,
                 )
-            else:
+            elif tipo == "supervisor":
                 nova_faixa = FaixaComissaoSupervisor(
+                    empresa_id=empresa_id_atual,
+                    alcance_min=alcance_min,
+                    alcance_max=alcance_max,
+                    taxa_comissao=taxa,
+                    cor=cor,
+                    ordem=ordem,
+                )
+            else:
+                nova_faixa = FaixaComissaoManutencao(
                     empresa_id=empresa_id_atual,
                     alcance_min=alcance_min,
                     alcance_max=alcance_max,
@@ -9554,7 +9588,7 @@ def criar_faixa_comissao():
             db.session.add(nova_faixa)
 
             # Se solicitado, copia para o outro tipo
-            if copiar_para_outro:
+            if copiar_para_outro and tipo in ("vendedor", "supervisor"):
                 if tipo == "vendedor":
                     faixa_copiada = nova_faixa.copiar_para_supervisor(
                         empresa_id_atual
@@ -9567,9 +9601,9 @@ def criar_faixa_comissao():
 
             db.session.commit()
 
-            tipo_nome = "vendedor" if tipo == "vendedor" else "supervisor"
+            tipo_nome = "vendedor" if tipo == "vendedor" else ("supervisor" if tipo == "supervisor" else "manutenção")
             msg = f"Faixa de comissão para {tipo_nome} criada com sucesso!"
-            if copiar_para_outro:
+            if copiar_para_outro and tipo in ("vendedor", "supervisor"):
                 outro_tipo = "supervisor" if tipo == "vendedor" else "vendedor"
                 msg += f" (copiada também para {outro_tipo})"
             flash(msg, "success")
@@ -9613,6 +9647,8 @@ def editar_faixa_comissao(tipo, id):
         faixa = FaixaComissaoVendedor.query.get_or_404(id)
     elif tipo == "supervisor":
         faixa = FaixaComissaoSupervisor.query.get_or_404(id)
+    elif tipo == "manutencao":
+        faixa = FaixaComissaoManutencao.query.get_or_404(id)
     else:
         flash("Tipo inválido.", "danger")
         return redirect(url_for("configuracoes_comissoes"))
@@ -9673,8 +9709,8 @@ def editar_faixa_comissao(tipo, id):
             faixa.cor = cor
             faixa.ordem = ordem
 
-            # Se solicitado, copia/atualiza para o outro tipo
-            if copiar_para_outro:
+            # Se solicitado, copia/atualiza para o outro tipo (apenas vendedor/supervisor)
+            if copiar_para_outro and tipo in ("vendedor", "supervisor"):
                 if tipo == "vendedor":
                     # Procura se já existe uma faixa supervisor correspondente
                     faixa_outro = FaixaComissaoSupervisor.query.filter_by(
@@ -9704,7 +9740,7 @@ def editar_faixa_comissao(tipo, id):
             db.session.commit()
 
             msg = "Faixa de comissão atualizada com sucesso!"
-            if copiar_para_outro:
+            if copiar_para_outro and tipo in ("vendedor", "supervisor"):
                 outro_tipo = "supervisor" if tipo == "vendedor" else "vendedor"
                 msg += f" (sincronizada com {outro_tipo})"
             flash(msg, "success")
@@ -9745,6 +9781,8 @@ def deletar_faixa_comissao(tipo, id):
         faixa = FaixaComissaoVendedor.query.get_or_404(id)
     elif tipo == "supervisor":
         faixa = FaixaComissaoSupervisor.query.get_or_404(id)
+    elif tipo == "manutencao":
+        faixa = FaixaComissaoManutencao.query.get_or_404(id)
     else:
         flash("Tipo inválido.", "danger")
         return redirect(url_for("configuracoes_comissoes"))
@@ -9768,7 +9806,7 @@ def deletar_faixa_comissao(tipo, id):
             None if current_user.cargo == "super_admin" else current_user.empresa_id
         )
         faixa_espelho = None
-        if remover_espelho:
+        if remover_espelho and tipo in ("vendedor", "supervisor"):
             if tipo == "vendedor":
                 faixa_espelho = FaixaComissaoSupervisor.query.filter_by(
                     empresa_id=empresa_id_alvo, ordem=ordem_alvo
@@ -9783,7 +9821,7 @@ def deletar_faixa_comissao(tipo, id):
 
         db.session.commit()
 
-        tipo_nome = "vendedor" if tipo == "vendedor" else "supervisor"
+        tipo_nome = "vendedor" if tipo == "vendedor" else ("supervisor" if tipo == "supervisor" else "manutenção")
         msg_sinc = " (faixa espelhada também removida)" if faixa_espelho else ""
         flash(
             f"Faixa de comissão de {tipo_nome} excluída com sucesso!{msg_sinc}",
@@ -9799,6 +9837,45 @@ def deletar_faixa_comissao(tipo, id):
 
     return redirect(url_for("configuracoes_comissoes"))
 
+@app.route("/configuracoes/comissoes/manutencao/vincular", methods=["POST"])
+@login_required
+def vincular_faixa_manutencao_tecnicos():
+    """Vincula uma faixa de manutenção a todos os técnicos da empresa atual."""
+    if current_user.cargo not in ["admin", "super_admin"]:
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("dashboard"))
+
+    faixa_id = request.form.get("faixa_id")
+    if not faixa_id:
+        flash("Selecione uma faixa para vincular.", "warning")
+        return redirect(url_for("configuracoes_comissoes"))
+
+    try:
+        faixa = FaixaComissaoManutencao.query.get(int(faixa_id))
+        if not faixa:
+            flash("Faixa não encontrada.", "danger")
+            return redirect(url_for("configuracoes_comissoes"))
+
+        empresa_id_alvo = None if current_user.cargo == "super_admin" else current_user.empresa_id
+
+        # Filtra técnicos da empresa (ou todos, se super admin)
+        tecnicos_query = Tecnico.query
+        if empresa_id_alvo is not None:
+            tecnicos_query = tecnicos_query.filter_by(empresa_id=empresa_id_alvo)
+        tecnicos = tecnicos_query.all()
+
+        for t in tecnicos:
+            t.faixa_manutencao_id = faixa.id
+
+        db.session.commit()
+        flash(f"Faixa de manutenção vinculada a {len(tecnicos)} técnicos.", "success")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Erro ao vincular faixa para técnicos: {e}")
+        flash("Erro ao vincular faixa. Tente novamente.", "danger")
+
+    return redirect(url_for("configuracoes_comissoes"))
+
 @app.route("/api/comissoes/faixas")
 @login_required
 def api_faixas_comissoes():
@@ -9807,6 +9884,8 @@ def api_faixas_comissoes():
 
     if tipo == "supervisor":
         modelo = FaixaComissaoSupervisor
+    elif tipo == "manutencao":
+        modelo = FaixaComissaoManutencao
     else:
         modelo = FaixaComissaoVendedor
 

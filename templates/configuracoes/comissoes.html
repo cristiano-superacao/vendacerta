@@ -36,21 +36,29 @@
     </div>
 
     <!-- Navegação em Abas -->
-    <ul class="nav nav-tabs nav-fill mb-4" id="tipoComissaoTabs" role="tablist">
+    <ul class="nav nav-tabs nav-fill mb-4" id="tipoComissaoTabs" role="tablist" aria-label="Tipos de faixas de comissão">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="vendedor-tab" data-bs-toggle="tab"
-                    data-bs-target="#vendedor-pane" type="button" role="tab">
-                <i class="bi bi-person-badge"></i>
+                    data-bs-target="#vendedor-pane" type="button" role="tab" aria-controls="vendedor-pane" aria-selected="true" aria-label="Aba de faixas de vendedores">
+                <i class="bi bi-person-badge" aria-hidden="true"></i>
                 <span class="d-none d-md-inline">Faixas de </span>Vendedores
                 <span class="badge bg-primary ms-2">{{ faixas_vendedor|length }}</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="supervisor-tab" data-bs-toggle="tab"
-                    data-bs-target="#supervisor-pane" type="button" role="tab">
-                <i class="bi bi-people"></i>
+                    data-bs-target="#supervisor-pane" type="button" role="tab" aria-controls="supervisor-pane" aria-selected="false" aria-label="Aba de faixas de supervisores">
+                <i class="bi bi-people" aria-hidden="true"></i>
                 <span class="d-none d-md-inline">Faixas de </span>Supervisores
                 <span class="badge bg-info ms-2">{{ faixas_supervisor|length }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="manutencao-tab" data-bs-toggle="tab"
+                    data-bs-target="#manutencao-pane" type="button" role="tab" aria-controls="manutencao-pane" aria-selected="false" aria-label="Aba de faixas de manutenção">
+                <i class="bi bi-tools" aria-hidden="true"></i>
+                <span class="d-none d-md-inline">Faixas de </span>Manutenção
+                <span class="badge bg-success ms-2">{{ faixas_manutencao|length }}</span>
             </button>
         </li>
     </ul>
@@ -70,13 +78,14 @@
                     {% if faixas_vendedor %}
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
+                            <caption class="visually-hidden">Faixas de Comissão para Vendedores</caption>
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 80px;">Ordem</th>
-                                    <th>Faixa de Alcance</th>
-                                    <th>Taxa de Comissão</th>
-                                    <th style="width: 150px;">Visualização</th>
-                                    <th style="width: 120px;">Ações</th>
+                                    <th scope="col" style="width: 80px;">Ordem</th>
+                                    <th scope="col">Faixa de Alcance</th>
+                                    <th scope="col">Taxa de Comissão</th>
+                                    <th scope="col" style="width: 150px;">Visualização</th>
+                                    <th scope="col" style="width: 120px;">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -105,7 +114,8 @@
                                     </td>
                                     <td class="align-middle">
                                         <div class="d-flex align-items-center gap-2">
-                                            <div class="legend-square bg-{{ faixa.cor }}"></div>
+                                            <div class="legend-square bg-{{ faixa.cor }}" aria-hidden="true"></div>
+                                            <span class="visually-hidden">Cor {{ faixa.cor }}</span>
                                             <span class="badge bg-{{ faixa.cor }} text-capitalize">
                                                 {{ faixa.cor }}
                                             </span>
@@ -115,13 +125,13 @@
                                         <div class="btn-group" role="group">
                                             <a href="{{ url_for('editar_faixa_comissao', tipo='vendedor', id=faixa.id) }}"
                                                class="btn btn-sm btn-outline-primary"
-                                               title="Editar">
+                                               title="Editar" aria-label="Editar faixa ordem {{ faixa.ordem }} (vendedores)">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger"
                                                     onclick="confirmarExclusao('vendedor', {{ faixa.id }}, '{{ faixa.alcance_min }}-{{ faixa.alcance_max }}%')"
-                                                    title="Excluir">
+                                                    title="Excluir" aria-label="Excluir faixa ordem {{ faixa.ordem }} (vendedores)">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -198,13 +208,14 @@
                     {% if faixas_supervisor %}
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
+                            <caption class="visualmente-hidden">Faixas de Comissão para Supervisores</caption>
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 80px;">Ordem</th>
-                                    <th>Faixa de Alcance</th>
-                                    <th>Taxa de Comissão</th>
-                                    <th style="width: 150px;">Visualização</th>
-                                    <th style="width: 120px;">Ações</th>
+                                    <th scope="col" style="width: 80px;">Ordem</th>
+                                    <th scope="col">Faixa de Alcance</th>
+                                    <th scope="col">Taxa de Comissão</th>
+                                    <th scope="col" style="width: 150px;">Visualização</th>
+                                    <th scope="col" style="width: 120px;">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -233,7 +244,8 @@
                                     </td>
                                     <td class="align-middle">
                                         <div class="d-flex align-items-center gap-2">
-                                            <div class="legend-square bg-{{ faixa.cor }}"></div>
+                                            <div class="legend-square bg-{{ faixa.cor }}" aria-hidden="true"></div>
+                                            <span class="visually-hidden">Cor {{ faixa.cor }}</span>
                                             <span class="badge bg-{{ faixa.cor }} text-capitalize">
                                                 {{ faixa.cor }}
                                             </span>
@@ -243,13 +255,13 @@
                                         <div class="btn-group" role="group">
                                             <a href="{{ url_for('editar_faixa_comissao', tipo='supervisor', id=faixa.id) }}"
                                                class="btn btn-sm btn-outline-primary"
-                                               title="Editar">
+                                               title="Editar" aria-label="Editar faixa ordem {{ faixa.ordem }} (supervisores)">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger"
                                                     onclick="confirmarExclusao('supervisor', {{ faixa.id }}, '{{ faixa.alcance_min }}-{{ faixa.alcance_max }}%')"
-                                                    title="Excluir">
+                                                    title="Excluir" aria-label="Excluir faixa ordem {{ faixa.ordem }} (supervisores)">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -287,7 +299,8 @@
                             <div class="card h-100 border-{{ faixa.cor }}">
                                 <div class="card-body">
                                     <div class="d-flex align-items-center mb-2">
-                                        <div class="legend-square bg-{{ faixa.cor }} me-2"></div>
+                                        <div class="legend-square bg-{{ faixa.cor }} me-2" aria-hidden="true"></div>
+                                        <span class="visually-hidden">Cor {{ faixa.cor }}</span>
                                         <h6 class="mb-0">Faixa {{ faixa.ordem }}</h6>
                                     </div>
                                     <h4 class="mb-2">
@@ -313,6 +326,162 @@
             </div>
             {% endif %}
         </div>
+        
+        <!-- ABA MANUTENÇÃO -->
+        <div class="tab-pane fade" id="manutencao-pane" role="tabpanel">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-manutencao">
+                    <h5 class="mb-0 text-white">
+                        <i class="bi bi-calculator"></i> Faixas de Comissão - Manutenção (Técnicos)
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if faixas_manutencao %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <caption class="visually-hidden">Faixas de Comissão para Manutenção (Técnicos)</caption>
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" style="width: 80px;">Ordem</th>
+                                    <th scope="col">Faixa de Alcance</th>
+                                    <th scope="col">Taxa de Comissão</th>
+                                    <th scope="col" style="width: 150px;">Visualização</th>
+                                    <th scope="col" style="width: 120px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for faixa in faixas_manutencao %}
+                                <tr>
+                                    <td class="align-middle">
+                                        <span class="badge bg-secondary fs-6">{{ faixa.ordem }}</span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <strong class="fs-5">
+                                            {{ '{:.0f}'.format(faixa.alcance_min) }}% -
+                                            {% if faixa.alcance_max >= 1000 %}
+                                                Acima de {{ '{:.0f}'.format(faixa.alcance_min) }}%
+                                            {% else %}
+                                                {{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fs-4 fw-bold text-success">
+                                                {{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%
+                                            </span>
+                                            <small class="text-muted">de comissão</small>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="legend-square bg-{{ faixa.cor }}" aria-hidden="true"></div>
+                                            <span class="visually-hidden">Cor {{ faixa.cor }}</span>
+                                            <span class="badge bg-{{ faixa.cor }} text-capitalize">
+                                                {{ faixa.cor }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('editar_faixa_comissao', tipo='manutencao', id=faixa.id) }}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Editar" aria-label="Editar faixa ordem {{ faixa.ordem }} (manutenção)">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="confirmarExclusao('manutencao', {{ faixa.id }}, '{{ faixa.alcance_min }}-{{ faixa.alcance_max }}%')"
+                                                    title="Excluir" aria-label="Excluir faixa ordem {{ faixa.ordem }} (manutenção)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mt-3">Nenhuma faixa configurada para manutenção</h4>
+                        <p class="text-muted">Crie sua primeira faixa de comissão para técnicos</p>
+                        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-success mt-2">
+                            <i class="bi bi-plus-circle"></i> Criar Primeira Faixa
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Preview Visual Manutenção -->
+            {% if faixas_manutencao %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-eye"></i> Visualização das Faixas - Manutenção
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for faixa in faixas_manutencao %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 border-{{ faixa.cor }}">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="legend-square bg-{{ faixa.cor }} me-2" aria-hidden="true"></div>
+                                        <span class="visually-hidden">Cor {{ faixa.cor }}</span>
+                                        <h6 class="mb-0">Faixa {{ faixa.ordem }}</h6>
+                                    </div>
+                                    <h4 class="mb-2">
+                                        {{ '{:.0f}'.format(faixa.alcance_min) }}% -
+                                        {% if faixa.alcance_max >= 1000 %}
+                                            Acima
+                                        {% else %}
+                                            {{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                        {% endif %}
+                                    </h4>
+                                    <div class="d-flex align-items-baseline">
+                                        <h3 class="text-{{ faixa.cor }} mb-0">
+                                            {{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%
+                                        </h3>
+                                        <small class="text-muted ms-2">de comissão</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Vincular Faixa a todos os Técnicos -->
+            {% if faixas_manutencao %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-link-45deg"></i> Vincular Faixa aos Técnicos</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('vincular_faixa_manutencao_tecnicos') }}" class="row g-3 align-items-end" aria-label="Formulário para vincular faixa aos técnicos">
+                        <div class="col-md-8">
+                            <label class="form-label" for="faixa_id_select">Selecione a Faixa</label>
+                            <select class="form-select" id="faixa_id_select" name="faixa_id" required aria-label="Selecionar faixa de manutenção">
+                                {% for faixa in faixas_manutencao %}
+                                    <option value="{{ faixa.id }}">Ordem {{ faixa.ordem }} — {{ '{:.0f}'.format(faixa.alcance_min) }}% a {% if faixa.alcance_max >= 1000 %}Acima{% else %}{{ '{:.0f}'.format(faixa.alcance_max) }}%{% endif %} — {{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-grid">
+                            <button type="submit" class="btn btn-success" aria-label="Confirmar vinculação da faixa selecionada para todos os técnicos"><i class="bi bi-check-circle"></i> Vincular a todos os Técnicos</button>
+                        </div>
+                    </form>
+                    <small class="text-muted d-block mt-2">Aplica a faixa selecionada a todos os técnicos da empresa atual.</small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Informações e Exemplos (comum para ambos) -->
@@ -333,14 +502,15 @@
             <h6 class="fw-bold mt-4">Exemplo Prático:</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered">
+                    <caption class="visually-hidden">Exemplo prático de cálculo de comissão</caption>
                     <thead class="table-light">
                         <tr>
-                            <th>Meta</th>
-                            <th>Receita</th>
-                            <th>Alcance</th>
-                            <th>Faixa</th>
-                            <th>Cálculo</th>
-                            <th>Comissão</th>
+                            <th scope="col">Meta</th>
+                            <th scope="col">Receita</th>
+                            <th scope="col">Alcance</th>
+                            <th scope="col">Faixa</th>
+                            <th scope="col">Cálculo</th>
+                            <th scope="col">Comissão</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -382,27 +552,27 @@
 </div>
 
 <!-- Modal de Confirmação de Exclusão -->
-<div class="modal fade" id="modalExcluir" tabindex="-1">
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-describedby="modalExcluirDesc">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão
+                <h5 class="modal-title" id="modalExcluirLabel">
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Confirmar Exclusão
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" id="modalExcluirDesc">
                 <p>Tem certeza que deseja excluir a faixa <strong id="faixaNome"></strong>?</p>
                 <p class="text-danger mb-0">
-                    <i class="bi bi-exclamation-circle"></i>
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
                     Esta ação não pode ser desfeita!
                 </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <form id="formExcluir" method="POST" style="display: inline;">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash"></i> Excluir
+                    <button type="submit" class="btn btn-danger" aria-label="Confirmar exclusão da faixa selecionada">
+                        <i class="bi bi-trash" aria-hidden="true"></i> Excluir
                     </button>
                 </form>
             </div>
@@ -426,6 +596,10 @@
     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
 }
 
+.bg-gradient-manutencao {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
 .nav-tabs .nav-link {
     font-weight: 500;
     color: #6c757d;
@@ -443,6 +617,30 @@
     background-color: transparent;
     border-bottom-color: #667eea;
 }
+
+/* Acessibilidade: foco visível em tabs e botões */
+.nav-tabs .nav-link:focus-visible,
+.btn:focus-visible {
+    outline: 3px solid #495057;
+    outline-offset: 2px;
+}
+
+/* Respeitar preferência de reduzir movimento */
+@media (prefers-reduced-motion: reduce) {
+    .nav-tabs .nav-link,
+    .btn,
+    .modal,
+    .card,
+    .badge {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Ajuste de contraste para badges em fundos claros */
+.badge.bg-warning { color: #212529; }
+.badge.bg-info { color: #fff; }
+.badge.bg-success { color: #fff; }
 
 /* Cores das faixas */
 .bg-danger { background-color: #dc3545 !important; }

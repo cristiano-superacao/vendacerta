@@ -1,5 +1,7 @@
 param(
-    [switch]$SkipLogin
+    [switch]$SkipLogin,
+    [string]$Token,
+    [string]$ProjectId
 )
 
 Write-Host "=================================================="
@@ -25,13 +27,35 @@ if (-not $railway) {
 
 # 2) Login (se não pulado)
 if (-not $SkipLogin) {
-    Write-Host "Efetuando login no Railway (abrirá o navegador)..."
-    railway login
+    $envToken = $env:RAILWAY_TOKEN
+    if ([string]::IsNullOrWhiteSpace($Token) -and -not [string]::IsNullOrWhiteSpace($envToken)) {
+        $Token = $envToken
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($Token)) {
+        Write-Host "Efetuando login no Railway via token seguro..."
+        railway login --token "$Token"
+    }
+    else {
+        Write-Host "Efetuando login no Railway (abrirá o navegador)..."
+        railway login
+    }
 }
 
-# 3) Linkar projeto ao Railway (selecionar workspace/projeto no prompt)
-Write-Host "Linkando projeto atual ao Railway..."
-railway link
+# 3) Linkar projeto ao Railway
+$envProjectId = $env:RAILWAY_PROJECT_ID
+if ([string]::IsNullOrWhiteSpace($ProjectId) -and -not [string]::IsNullOrWhiteSpace($envProjectId)) {
+    $ProjectId = $envProjectId
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ProjectId)) {
+    Write-Host "Linkando projeto atual ao Railway (Project ID: $ProjectId)..."
+    railway link $ProjectId
+}
+else {
+    Write-Host "Linkando projeto atual ao Railway (seleção interativa)..."
+    railway link
+}
 
 # 4) Subir deploy
 Write-Host "Enviando deploy (railway up)..."

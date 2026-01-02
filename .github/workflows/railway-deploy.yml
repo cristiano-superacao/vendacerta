@@ -1,0 +1,50 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Railway Login (Token)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "RAILWAY_TOKEN não configurado como secret. Configure em Settings > Secrets and variables > Actions." && exit 1
+          fi
+          railway login --token "$RAILWAY_TOKEN"
+
+      - name: Link Railway Project
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "${{ secrets.RAILWAY_PROJECT_ID }}" ]; then
+            echo "RAILWAY_PROJECT_ID não configurado como secret. Configure em Settings > Secrets and variables > Actions." && exit 1
+          fi
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Deploy (railway up)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up
+
+      - name: Print Healthcheck Info
+        run: |
+          echo "Healthcheck configurado em /ping via railway.json"
