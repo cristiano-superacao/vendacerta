@@ -40,12 +40,12 @@
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-gradient-{{ tipo if tipo else 'vendedor' }}">
-                    <h5 class="mb-0 text-white">
-                        <i class="bi bi-sliders"></i> Configuração da Faixa
+                    <h5 class="mb-0 text-white" id="config-faixa-header">
+                        <i class="bi bi-sliders" aria-hidden="true"></i> Configuração da Faixa
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" id="formFaixa">
+                    <form method="POST" id="formFaixa" aria-labelledby="config-faixa-header">
                         <!-- Seleção de Tipo (apenas ao criar) -->
                         {% if not faixa %}
                         <div class="mb-4">
@@ -237,11 +237,11 @@
 
                         <!-- Botões de Ação -->
                         <div class="d-flex gap-2 justify-content-between mt-4 pt-3 border-top">
-                            <a href="{{ url_for('configuracoes_comissoes') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Cancelar
+                            <a href="{{ url_for('configuracoes_comissoes') }}" class="btn btn-outline-secondary" aria-label="Cancelar e voltar para configurações de comissão">
+                                <i class="bi bi-arrow-left" aria-hidden="true"></i> Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-check-circle"></i>
+                            <button type="submit" class="btn btn-primary btn-lg" aria-label="{{ 'Atualizar' if faixa else 'Criar' }} faixa de comissão">
+                                <i class="bi bi-check-circle" aria-hidden="true"></i>
                                 {{ 'Atualizar' if faixa else 'Criar' }} Faixa
                             </button>
                         </div>
