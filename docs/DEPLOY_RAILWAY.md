@@ -31,8 +31,9 @@ gh secret set RAILWAY_PROJECT_ID -b "SEU_PROJECT_ID_AQUI"
 - Etapas:
   - Instala `@railway/cli`.
   - Executa `railway link $RAILWAY_PROJECT_ID`.
+  - Atualiza o schema do banco executando `python atualizar_banco_railway.py` via `railway run`.
   - Executa `railway up`.
-  - Healthcheck configurado em `/ping` (ver `railway.json`).
+  - Verifica o Healthcheck em `/ping` com `curl` (5 tentativas com espera), podendo usar `vars.HEALTHCHECK_URL`.
 
 ## Acionar o deploy
 - Faça merge da branch `feature/comissoes-manutencao-acessibilidade` na `main`.
@@ -47,6 +48,13 @@ gh workflow run railway-deploy.yml
 - Logs:
 ```powershell
 railway logs
+```
+
+### Verificar schema de manutenção/técnicos
+Após o deploy, valide que a tabela `faixas_comissao_manutencao` e a coluna `tecnicos.faixa_manutencao_id` existem:
+
+```powershell
+railway run python scripts/verificar_schema_manutencao.py
 ```
 
 ## CLI sem navegador (opcional)
@@ -69,3 +77,4 @@ railway logs
 - O app já possui a rota `/ping` (healthcheck) em `app.py`.
 - Caso use variáveis sensíveis (ex.: `FLASK_SECRET_KEY`), configure no Railway → Variables.
 - O script `scripts/deploy_railway.ps1` aceita token via variável `RAILWAY_TOKEN` e `RAILWAY_PROJECT_ID`, ou modo interativo se não definidos.
+ - Você pode definir `HEALTHCHECK_URL` como variável do repositório em GitHub → Settings → Variables para personalizar o endpoint do healthcheck.

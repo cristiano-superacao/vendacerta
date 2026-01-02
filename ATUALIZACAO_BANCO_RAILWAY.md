@@ -42,6 +42,12 @@ Script integrado ao WSGI que executa automaticamente durante o deploy.
 - ✅ `idx_clientes_vendedor` - Join eficiente clientes-vendedores
 - ✅ `idx_metas_vendedor` - Join eficiente metas-vendedores
 
+### Módulo Manutenção / Técnicos
+- ✅ `faixas_comissao_manutencao` (TABELA) — criada automaticamente se não existir
+- ✅ `tecnicos.faixa_manutencao_id` (INTEGER) — coluna adicionada para vincular faixa aos técnicos
+- ✅ `idx_tecnicos_faixa_manutencao` (ÍNDICE) — acelera consultas por faixa
+- ✅ `fk_tecnicos_faixa_manutencao` (FK) — referência com `ON DELETE SET NULL` para exclusão segura de faixas
+
 ## 🚀 Deploy Automático
 
 O sistema está configurado para atualizar o banco automaticamente:

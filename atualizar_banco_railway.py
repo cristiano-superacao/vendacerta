@@ -106,6 +106,80 @@ def adicionar_coluna_se_nao_existe(conn, tabela, coluna, tipo, default=None):
         print(f"  [ERRO] Falha ao adicionar '{coluna}' em '{tabela}': {e}")
         return False
 
+def criar_tabela_se_nao_existe(conn, tabela, ddl_sql):
+    """Cria uma tabela com o DDL informado se ela não existir."""
+    try:
+        check_query = text(
+            """
+            SELECT 1 FROM information_schema.tables
+            WHERE table_name = :tabela
+            """
+        )
+        existe = conn.execute(check_query, {"tabela": tabela}).fetchone() is not None
+        if existe:
+            print(f"  [OK] Tabela '{tabela}' já existe")
+            return True
+
+        conn.execute(text(ddl_sql))
+        conn.commit()
+        print(f"  [+] Tabela '{tabela}' criada")
+        return True
+    except Exception as e:
+        print(f"  [ERRO] Falha ao criar tabela '{tabela}': {e}")
+        return False
+
+def criar_indice_se_nao_existe(conn, nome_idx, tabela, coluna):
+    """Cria índice se não existir."""
+    try:
+        sql = text(
+            f"""
+            CREATE INDEX IF NOT EXISTS {nome_idx}
+            ON {tabela} ({coluna})
+            """
+        )
+        conn.execute(sql)
+        conn.commit()
+        print(f"  [OK] Índice '{nome_idx}' criado/verificado")
+        return True
+    except Exception as e:
+        print(f"  [AVISO] Índice '{nome_idx}': {e}")
+        return False
+
+def criar_fk_se_nao_existe(conn, tabela, nome_fk, coluna, tabela_ref, coluna_ref, on_delete="SET NULL"):
+    """Cria constraint de chave estrangeira se não existir."""
+    try:
+        # Verificar existência pelo pg_constraint
+        check = text(
+            """
+            SELECT 1
+            FROM pg_constraint c
+            JOIN pg_class t ON t.oid = c.conrelid
+            WHERE t.relname = :tabela
+              AND c.conname = :nome_fk
+            """
+        )
+        existe = conn.execute(check, {"tabela": tabela, "nome_fk": nome_fk}).fetchone() is not None
+        if existe:
+            print(f"  [OK] FK '{nome_fk}' já existe em '{tabela}'")
+            return True
+
+        alter = text(
+            f"""
+            ALTER TABLE {tabela}
+            ADD CONSTRAINT {nome_fk}
+            FOREIGN KEY ({coluna})
+            REFERENCES {tabela_ref} ({coluna_ref})
+            ON DELETE {on_delete}
+            """
+        )
+        conn.execute(alter)
+        conn.commit()
+        print(f"  [+] FK '{nome_fk}' criada em '{tabela}' → '{tabela_ref}({coluna_ref})'")
+        return True
+    except Exception as e:
+        print(f"  [AVISO] Falha ao criar FK '{nome_fk}': {e}")
+        return False
+
 def atualizar_banco_railway():
     """Executa atualizacoes no banco Railway"""
     print("\n" + "="*80)
@@ -193,6 +267,49 @@ def atualizar_banco_railway():
                         print(f"  [OK] Indice '{nome_idx}' criado/verificado")
                     except Exception as e:
                         print(f"  [AVISO] Indice '{nome_idx}': {e}")
+
+            # ================================
+            # MÓDULO MANUTENÇÃO / TÉCNICOS
+            # ================================
+            print("\n" + "-"*80)
+            print("VERIFICAÇÃO DE TABELAS: manutenção/técnicos")
+            print("-"*80)
+
+            # 1) Tabela de faixas de comissão de manutenção
+            ddl_faixas_manutencao = """
+            CREATE TABLE IF NOT EXISTS faixas_comissao_manutencao (
+              id SERIAL PRIMARY KEY,
+              empresa_id INTEGER NULL,
+              alcance_min DOUBLE PRECISION NOT NULL DEFAULT 0,
+              alcance_max DOUBLE PRECISION NOT NULL,
+              taxa_comissao DOUBLE PRECISION NOT NULL,
+              cor VARCHAR(20) DEFAULT 'primary',
+              ordem INTEGER DEFAULT 0,
+              ativa BOOLEAN DEFAULT TRUE,
+              data_criacao TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+              data_atualizacao TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            )
+            """
+            criar_tabela_se_nao_existe(conn, 'faixas_comissao_manutencao', ddl_faixas_manutencao)
+
+            # 2) Adicionar coluna de vínculo em 'tecnicos'
+            if 'tecnicos' in tabelas:
+                print("\n" + "-"*80)
+                print("ATUALIZANDO TABELA: tecnicos")
+                print("-"*80)
+                adicionar_coluna_se_nao_existe(conn, 'tecnicos', 'faixa_manutencao_id', 'INTEGER')
+                criar_indice_se_nao_existe(conn, 'idx_tecnicos_faixa_manutencao', 'tecnicos', 'faixa_manutencao_id')
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='tecnicos',
+                    nome_fk='fk_tecnicos_faixa_manutencao',
+                    coluna='faixa_manutencao_id',
+                    tabela_ref='faixas_comissao_manutencao',
+                    coluna_ref='id',
+                    on_delete='SET NULL'
+                )
+            else:
+                print("[AVISO] Tabela 'tecnicos' não encontrada; criação depende de 'create_tables_railway.py'.")
             
             print("\n" + "="*80)
             print("[SUCESSO] Banco de dados atualizado com sucesso!")

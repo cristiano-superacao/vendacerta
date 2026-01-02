@@ -39,11 +39,35 @@ jobs:
           fi
           railway link ${{ secrets.RAILWAY_PROJECT_ID }}
 
+      - name: Atualizar Banco (faixas/técnicos)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "Executando atualização de schema no banco (manutenção/técnicos)..."
+          railway run python atualizar_banco_railway.py || {
+            echo "[AVISO] Falha ao atualizar banco via script. Prosseguindo com deploy.";
+          }
+
       - name: Deploy (railway up)
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           railway up
+
+      - name: Verificar Healthcheck (/ping)
+        run: |
+          URL="${{ vars.HEALTHCHECK_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://metacerta.up.railway.app/ping"
+          fi
+          echo "Verificando saúde em $URL"
+          for i in 1 2 3 4 5; do
+            if curl -fsS "$URL"; then
+              echo "Healthcheck OK"; exit 0;
+            fi
+            echo "Tentativa $i falhou, aguardando..."; sleep 10;
+          done
+          echo "Healthcheck falhou"; exit 1
 
       - name: Print Healthcheck Info
         run: |
