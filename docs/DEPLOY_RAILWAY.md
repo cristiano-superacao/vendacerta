@@ -53,8 +53,13 @@ railway logs
 Se preferir não usar Actions, é possível usar `RAILWAY_TOKEN` localmente:
 ```powershell
 $env:RAILWAY_TOKEN="SEU_TOKEN_AQUI"
+$env:RAILWAY_PROJECT_ID="SEU_PROJECT_ID_AQUI"
 cd C:\Users\Superação\Desktop\Sistema\vendacerta
-railway link RAILWAY_PROJECT_ID
+# Script PowerShell com suporte a token/ProjectId
+./scripts/deploy_railway.ps1
+
+# Ou manualmente
+railway link $env:RAILWAY_PROJECT_ID
 railway up
 railway logs
 ```
@@ -63,3 +68,4 @@ railway logs
 - O arquivo `railway.json` usa Nixpacks e define `healthcheckPath: "/ping"`.
 - O app já possui a rota `/ping` (healthcheck) em `app.py`.
 - Caso use variáveis sensíveis (ex.: `FLASK_SECRET_KEY`), configure no Railway → Variables.
+- O script `scripts/deploy_railway.ps1` aceita token via variável `RAILWAY_TOKEN` e `RAILWAY_PROJECT_ID`, ou modo interativo se não definidos.
