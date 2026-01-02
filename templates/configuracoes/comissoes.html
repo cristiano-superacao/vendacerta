@@ -552,27 +552,27 @@
 </div>
 
 <!-- Modal de Confirmação de Exclusão -->
-<div class="modal fade" id="modalExcluir" tabindex="-1">
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-describedby="modalExcluirDesc">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão
+                <h5 class="modal-title" id="modalExcluirLabel">
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Confirmar Exclusão
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" id="modalExcluirDesc">
                 <p>Tem certeza que deseja excluir a faixa <strong id="faixaNome"></strong>?</p>
                 <p class="text-danger mb-0">
-                    <i class="bi bi-exclamation-circle"></i>
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
                     Esta ação não pode ser desfeita!
                 </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <form id="formExcluir" method="POST" style="display: inline;">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash"></i> Excluir
+                    <button type="submit" class="btn btn-danger" aria-label="Confirmar exclusão da faixa selecionada">
+                        <i class="bi bi-trash" aria-hidden="true"></i> Excluir
                     </button>
                 </form>
             </div>
@@ -623,6 +623,18 @@
 .btn:focus-visible {
     outline: 3px solid #495057;
     outline-offset: 2px;
+}
+
+/* Respeitar preferência de reduzir movimento */
+@media (prefers-reduced-motion: reduce) {
+    .nav-tabs .nav-link,
+    .btn,
+    .modal,
+    .card,
+    .badge {
+        transition: none !important;
+        animation: none !important;
+    }
 }
 
 /* Ajuste de contraste para badges em fundos claros */
