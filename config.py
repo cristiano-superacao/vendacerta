@@ -76,11 +76,18 @@ class Config:
         else:
             print(f"[CONFIG] DATABASE_URL com formato inesperado: {database_url[:20]}...")
 
-    # Define URI final do SQLAlchemy (PostgreSQL obrigatório)
+    # Define URI final do SQLAlchemy
+    allow_sqlite_dev = os.environ.get('ALLOW_SQLITE_DEV', '0') == '1' or os.environ.get('FLASK_ENV') == 'testing'
     if not database_url:
-        raise RuntimeError("CONFIG: DATABASE_URL não definida e não foi possível construir via PG*. Configure o PostgreSQL.")
-    SQLALCHEMY_DATABASE_URI = database_url
-    print("[CONFIG] Sistema configurado para PostgreSQL (PRODUÇÃO)")
+        if allow_sqlite_dev:
+            # Fallback seguro para desenvolvimento/testes locais
+            SQLALCHEMY_DATABASE_URI = 'sqlite:///vendacerta_dev.db'
+            print("[CONFIG] Fallback SQLite habilitado para desenvolvimento/testes")
+        else:
+            raise RuntimeError("CONFIG: DATABASE_URL não definida e não foi possível construir via PG*. Configure o PostgreSQL.")
+    else:
+        SQLALCHEMY_DATABASE_URI = database_url
+        print("[CONFIG] Sistema configurado para PostgreSQL (PRODUÇÃO)")
 
     # Configuração de Múltiplos Bancos (Binds) para Modularização
     # Permite separar dados em bancos diferentes ou usar o mesmo banco (default)

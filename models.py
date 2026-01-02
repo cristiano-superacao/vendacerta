@@ -650,6 +650,50 @@ class FaixaComissaoSupervisor(db.Model):
         )
         return nova_faixa
 
+class FaixaComissaoManutencao(db.Model):
+    """Modelo para faixas de comissão específicas de MANUTENÇÃO (técnicos)"""
+    __tablename__ = 'faixas_comissao_manutencao'
+
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True)
+
+    # Faixa de alcance (percentual de cumprimento de OS/receita de manutenção)
+    alcance_min = db.Column(db.Float, nullable=False, default=0)
+    alcance_max = db.Column(db.Float, nullable=False)
+
+    # Taxa de comissão
+    taxa_comissao = db.Column(db.Float, nullable=False)
+
+    # Cor para visualização
+    cor = db.Column(db.String(20), default='primary')
+
+    # Ordem de exibição
+    ordem = db.Column(db.Integer, default=0)
+
+    # Status
+    ativa = db.Column(db.Boolean, default=True)
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relacionamento com empresa
+    empresa = db.relationship('Empresa', backref='faixas_comissao_manutencao')
+
+    def __repr__(self):
+        return f'<FaixaComissaoManutencao {self.alcance_min}-{self.alcance_max}% = {self.taxa_comissao*100}%>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'alcance_min': self.alcance_min,
+            'alcance_max': self.alcance_max,
+            'taxa_comissao': self.taxa_comissao,
+            'taxa_percentual': self.taxa_comissao * 100,
+            'cor': self.cor,
+            'ordem': self.ordem,
+            'ativa': self.ativa,
+            'tipo': 'manutencao'
+        }
+
 class Mensagem(db.Model):
     """Modelo para sistema de mensagens entre usuários"""
     __tablename__ = 'mensagens'
@@ -1208,6 +1252,10 @@ class Tecnico(db.Model):
     # Empresa
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True, index=True)
     empresa = db.relationship('Empresa', backref='tecnicos')
+
+    # Faixa de comissão de manutenção associada
+    faixa_manutencao_id = db.Column(db.Integer, db.ForeignKey('faixas_comissao_manutencao.id'), nullable=True, index=True)
+    faixa_manutencao = db.relationship('FaixaComissaoManutencao', backref='tecnicos_associados')
 
     # Status
     ativo = db.Column(db.Boolean, default=True)

@@ -277,12 +277,37 @@
             }
         }
 
+        /* Skip to Content – exibido somente ao focar via teclado */
+        .skip-to-content {
+            position: absolute;
+            left: -999px;
+            top: 0.5rem;
+            background: #0d6efd;
+            color: #fff;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.25rem;
+            z-index: 2000;
+            text-decoration: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .skip-to-content:focus {
+            left: 1rem;
+        }
+
+        /* Foco visível nos links do menu lateral */
+        .sidebar-nav a:focus-visible {
+            outline: 3px solid #ffd166;
+            outline-offset: 2px;
+        }
+
         {% block extra_css %}{% endblock %}
     </style>
 </head>
 <body>
+    <!-- Link de Acesso Rápido ao Conteúdo Principal -->
+    <a href="#conteudo-principal" class="skip-to-content">Pular para o conteúdo</a>
     <!-- Sidebar Toggle (Mobile) -->
-    <button class="sidebar-toggle" onclick="toggleSidebar()">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Abrir ou fechar menu lateral" aria-controls="sidebar" aria-expanded="false">
         <i class="bi bi-list"></i>
     </button>
 
@@ -546,7 +571,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main id="conteudo-principal" class="main-content" tabindex="-1">
         <!-- Mensagens Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -626,6 +651,11 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('show');
+            const toggleBtn = document.querySelector('.sidebar-toggle');
+            if (toggleBtn) {
+                const expanded = sidebar.classList.contains('show');
+                toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            }
         }
 
         // Fechar sidebar ao clicar fora (mobile)

@@ -53,20 +53,28 @@
                                 <i class="bi bi-person-check"></i> Tipo de Comissão
                             </label>
                             <div class="row g-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <input type="radio" class="btn-check" name="tipo" id="tipo-vendedor" value="vendedor" checked>
-                                    <label class="btn btn-outline-primary w-100 py-3" for="tipo-vendedor">
-                                        <i class="bi bi-person-badge fs-3 d-block mb-2"></i>
+                                    <label class="btn btn-outline-primary w-100 py-3" for="tipo-vendedor" aria-label="Selecionar faixa para vendedores">
+                                        <i class="bi bi-person-badge fs-3 d-block mb-2" aria-hidden="true"></i>
                                         <strong>Vendedor</strong>
                                         <small class="d-block text-muted">Comissão para vendedores individuais</small>
                                     </label>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <input type="radio" class="btn-check" name="tipo" id="tipo-supervisor" value="supervisor">
-                                    <label class="btn btn-outline-info w-100 py-3" for="tipo-supervisor">
-                                        <i class="bi bi-people fs-3 d-block mb-2"></i>
+                                    <label class="btn btn-outline-info w-100 py-3" for="tipo-supervisor" aria-label="Selecionar faixa para supervisores">
+                                        <i class="bi bi-people fs-3 d-block mb-2" aria-hidden="true"></i>
                                         <strong>Supervisor</strong>
                                         <small class="d-block text-muted">Comissão para supervisores de equipe</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="tipo" id="tipo-manutencao" value="manutencao">
+                                    <label class="btn btn-outline-success w-100 py-3" for="tipo-manutencao" aria-label="Selecionar faixa para manutenção">
+                                        <i class="bi bi-tools fs-3 d-block mb-2" aria-hidden="true"></i>
+                                        <strong>Manutenção</strong>
+                                        <small class="d-block text-muted">Comissão para técnicos de manutenção</small>
                                     </label>
                                 </div>
                             </div>
@@ -252,11 +260,12 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div id="preview" class="text-center p-3 border rounded">
+                    <div id="preview" class="text-center p-3 border rounded" role="region" aria-label="Pré-visualização da faixa" aria-live="polite">
                         <div class="mb-2">
                             <span class="badge bg-secondary" id="preview-ordem">Ordem: 0</span>
                         </div>
-                        <div class="legend-square mx-auto mb-2" id="preview-cor" style="width: 60px; height: 60px;"></div>
+                        <div class="legend-square mx-auto mb-2" id="preview-cor" style="width: 60px; height: 60px;" aria-hidden="true"></div>
+                        <span id="preview-cor-label" class="visually-hidden"></span>
                         <h5 class="mb-2" id="preview-faixa">0% - 50%</h5>
                         <h3 class="mb-0" id="preview-taxa">1.0%</h3>
                         <small class="text-muted">de comissão</small>
@@ -308,6 +317,16 @@
 
 .bg-gradient-supervisor {
     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.bg-gradient-manutencao {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+/* Acessibilidade: foco visível em botões selecionáveis */
+.btn:focus-visible {
+    outline: 3px solid #495057;
+    outline-offset: 2px;
 }
 
 #preview {
@@ -372,6 +391,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (corSelecionada) {
             const cor = corSelecionada.value;
             preview.cor.className = 'legend-square mx-auto mb-2 bg-' + cor;
+            const corLabel = document.getElementById('preview-cor-label');
+            if (corLabel) {
+                corLabel.textContent = 'Cor selecionada: ' + cor;
+            }
         }
     }
 
@@ -394,9 +417,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.value === 'vendedor') {
                 syncLabel.querySelector('strong').innerHTML = '<i class="bi bi-arrow-left-right"></i> Sincronização automática';
                 syncDesc.textContent = 'Quando ativa, esta faixa é espelhada para supervisores.';
-            } else {
+            } else if (this.value === 'supervisor') {
                 syncLabel.querySelector('strong').innerHTML = '<i class="bi bi-arrow-left-right"></i> Sincronização automática';
                 syncDesc.textContent = 'Quando ativa, esta faixa é espelhada para vendedores.';
+            } else {
+                syncLabel.querySelector('strong').innerHTML = '<i class="bi bi-arrow-left-right"></i> Sincronização automática (não aplicável)';
+                syncDesc.textContent = 'Faixas de manutenção são específicas dos técnicos e não espelham para outros tipos.';
             }
         });
     });
