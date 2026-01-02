@@ -204,6 +204,88 @@ def fix_database():
                     else:
                         print(f"✓ Coluna {column_name} já existe em clientes")
 
+            # ==========================
+            # 3) CORREÇÃO MÓDULO MANUTENÇÃO/TÉCNICOS
+            # ==========================
+            print("\n📊 Corrigindo módulo Manutenção/Técnicos...")
+            
+            # 3.1) Criar tabela faixas_comissao_manutencao se não existir
+            if 'faixas_comissao_manutencao' not in inspector.get_table_names():
+                print("➕ Criando tabela faixas_comissao_manutencao...")
+                try:
+                    create_table_sql = """
+                    CREATE TABLE faixas_comissao_manutencao (
+                      id SERIAL PRIMARY KEY,
+                      empresa_id INTEGER NULL,
+                      alcance_min DOUBLE PRECISION NOT NULL DEFAULT 0,
+                      alcance_max DOUBLE PRECISION NOT NULL,
+                      taxa_comissao DOUBLE PRECISION NOT NULL,
+                      cor VARCHAR(20) DEFAULT 'primary',
+                      ordem INTEGER DEFAULT 0,
+                      ativa BOOLEAN DEFAULT TRUE,
+                      data_criacao TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                      data_atualizacao TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+                    )
+                    """
+                    conn.execute(text(create_table_sql))
+                    conn.commit()
+                    print("   ✅ Tabela faixas_comissao_manutencao criada!")
+                except Exception as e:
+                    print(f"   ❌ Erro ao criar tabela faixas_comissao_manutencao: {str(e)}")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+            else:
+                print("✓ Tabela faixas_comissao_manutencao já existe")
+            
+            # 3.2) Adicionar coluna faixa_manutencao_id em tecnicos
+            if 'tecnicos' in inspector.get_table_names():
+                tecnico_columns = [col['name'] for col in inspector.get_columns('tecnicos')]
+                
+                if 'faixa_manutencao_id' not in tecnico_columns:
+                    print("➕ Adicionando coluna tecnicos.faixa_manutencao_id...")
+                    try:
+                        add_col_sql = "ALTER TABLE tecnicos ADD COLUMN faixa_manutencao_id INTEGER"
+                        conn.execute(text(add_col_sql))
+                        conn.commit()
+                        print("   ✅ Coluna faixa_manutencao_id adicionada em tecnicos!")
+                        
+                        # Criar índice
+                        try:
+                            idx_sql = "CREATE INDEX IF NOT EXISTS idx_tecnicos_faixa_manutencao ON tecnicos(faixa_manutencao_id)"
+                            conn.execute(text(idx_sql))
+                            conn.commit()
+                            print("   ✅ Índice idx_tecnicos_faixa_manutencao criado!")
+                        except Exception as e:
+                            print(f"   ⚠️ Aviso ao criar índice: {str(e)}")
+                        
+                        # Criar FK com ON DELETE SET NULL
+                        try:
+                            fk_sql = """
+                            ALTER TABLE tecnicos
+                            ADD CONSTRAINT fk_tecnicos_faixa_manutencao
+                            FOREIGN KEY (faixa_manutencao_id)
+                            REFERENCES faixas_comissao_manutencao (id)
+                            ON DELETE SET NULL
+                            """
+                            conn.execute(text(fk_sql))
+                            conn.commit()
+                            print("   ✅ FK fk_tecnicos_faixa_manutencao criada com ON DELETE SET NULL!")
+                        except Exception as e:
+                            print(f"   ⚠️ Aviso ao criar FK: {str(e)}")
+                        
+                    except Exception as e:
+                        print(f"   ❌ Erro ao adicionar coluna faixa_manutencao_id: {str(e)}")
+                        try:
+                            conn.rollback()
+                        except Exception:
+                            pass
+                else:
+                    print("✓ Coluna faixa_manutencao_id já existe em tecnicos")
+            else:
+                print("⚠️ Tabela tecnicos não existe ainda")
+
             # Verificar colunas finais
             inspector = inspect(engine)
             final_user_columns = [col['name'] for col in inspector.get_columns('usuarios')]
@@ -212,6 +294,10 @@ def fix_database():
             if 'clientes' in inspector.get_table_names():
                 final_cliente_columns = [col['name'] for col in inspector.get_columns('clientes')]
                 print(f"📊 Colunas finais em clientes: {', '.join(final_cliente_columns)}")
+            
+            if 'tecnicos' in inspector.get_table_names():
+                final_tecnico_columns = [col['name'] for col in inspector.get_columns('tecnicos')]
+                print(f"📊 Colunas finais em tecnicos: {', '.join(final_tecnico_columns)}")
 
             print("\n✅ Migração concluída com sucesso!")
             print("🚀 O sistema pode ser reiniciado agora")
