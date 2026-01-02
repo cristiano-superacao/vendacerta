@@ -70,8 +70,8 @@
 │  │  👥 Equipes (5 rotas)                                     │     │
 │  │     /equipes, /nova, /detalhes                            │     │
 │  │                                                            │     │
-│  │  💰 Comissões (3 rotas)                                   │     │
-│  │     /configuracoes/comissoes, /criar                      │     │
+│  │  💰 Comissões (3+ rotas)                                  │     │
+│  │     /configuracoes/comissoes, /criar, /vincular-tecnicos  │     │
 │  │                                                            │     │
 │  │  📦 Estoque (11 rotas)                                    │     │
 │  │     /estoque, /produtos, /movimentacoes, /importar        │     │
@@ -199,6 +199,10 @@
 │  │                                                            │     │
 │  │  💰 FaixaComissaoSupervisor - Comissões supervisor        │     │
 │  │     • usuario_id, faixa_comissao_id                        │     │
+│  │                                                            │     │
+│  │  💰 FaixaComissaoManutencao - Comissões técnicos          │     │
+│  │     • id, ordem, alcance_min/max, taxa_comissao, cor       │     │
+│  │     • empresa_id, relacionamento com Técnico               │     │
 │  │                                                            │     │
 │  │  💬 Mensagem                 - Sistema mensagens           │     │
 │  │     • id, remetente_id, destinatario_id                    │     │

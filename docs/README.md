@@ -1,7 +1,7 @@
 # 📚 ÍNDICE COMPLETO DE DOCUMENTAÇÃO - VENDA CERTA
 
 **Sistema de Gestão de Vendas, Metas e Comissões**  
-**Última atualização**: 30 de dezembro de 2025
+**Última atualização**: 2 de janeiro de 2026
 
 ---
 
@@ -33,6 +33,11 @@
   - Configurações necessárias
   - Variáveis de ambiente
   - Troubleshooting
+
+- **[Deploy automático (GitHub Actions)](DEPLOY_RAILWAY.md)**
+  - Configurar `RAILWAY_TOKEN` e `RAILWAY_PROJECT_ID` como secrets
+  - Workflow `.github/workflows/railway-deploy.yml`
+  - Healthcheck `/ping` e validação pós-deploy
 
 - **[CORREÇÃO DEPLOY RAILWAY](../CORRECAO_DEPLOY_RAILWAY.md)**
   - Correções aplicadas
@@ -119,6 +124,11 @@
 - **Relatório de Metas Avançado (Visões Vendedor/Supervisor)**
   - Alternância de visão, filtros dinâmicos, colunas com Taxa (%) e Comissão (R$)
   - Ver guia: [docs/guias/GUIA_USO.md](../docs/guias/GUIA_USO.md#relatório-de-metas-avançado-vendedorsupervisor)
+
+- **[Guia Comissão Manutenção (Técnicos)](GUIA_COMISSAO_MANUTENCAO.md)**
+  - Configurar faixas específicas de Manutenção
+  - Vincular faixa a todos os Técnicos
+  - Cálculo e boas práticas
 
 ---
 
