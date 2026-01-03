@@ -298,28 +298,40 @@
                                     {% if current_user.cargo in ['admin', 'super_admin'] %}
                                     <!-- Dropdown de ações administrativas -->
                                     <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-outline-danger dropdown-toggle" 
+                                        <button type="button" class="btn btn-outline-secondary btn-admin-dropdown dropdown-toggle" 
                                                 data-bs-toggle="dropdown" aria-expanded="false" 
                                                 title="Ações Administrativas" aria-label="Menu de ações para {{ cliente.nome }}">
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
+                                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-admin shadow-lg">
                                             <li>
-                                                <h6 class="dropdown-header">Ações Administrativas</h6>
+                                                <h6 class="dropdown-header d-flex align-items-center">
+                                                    <i class="bi bi-shield-lock me-2 text-primary"></i>
+                                                    <span>Ações Administrativas</span>
+                                                </h6>
                                             </li>
+                                            <li><hr class="dropdown-divider my-2"></li>
                                             <li>
-                                                <button type="button" class="dropdown-item text-warning" 
+                                                <button type="button" class="dropdown-item dropdown-item-warning d-flex align-items-center py-2" 
                                                         onclick="confirmarInativacao({{ cliente.id }}, '{{ cliente.nome|e }}')"
                                                         aria-label="Inativar {{ cliente.nome }}">
-                                                    <i class="bi bi-slash-circle me-2"></i>Inativar Cliente
+                                                    <i class="bi bi-slash-circle me-3 fs-5"></i>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="fw-semibold">Inativar Cliente</span>
+                                                        <small class="text-muted" style="font-size: 0.75rem;">Ação reversível</small>
+                                                    </div>
                                                 </button>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
+                                            <li><hr class="dropdown-divider my-2"></li>
                                             <li>
-                                                <button type="button" class="dropdown-item text-danger" 
+                                                <button type="button" class="dropdown-item dropdown-item-danger d-flex align-items-center py-2" 
                                                         onclick="confirmarExclusao({{ cliente.id }}, '{{ cliente.nome|e }}')"
                                                         aria-label="Excluir permanentemente {{ cliente.nome }}">
-                                                    <i class="bi bi-trash me-2"></i>Excluir Permanentemente
+                                                    <i class="bi bi-trash me-3 fs-5"></i>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="fw-semibold">Excluir Permanentemente</span>
+                                                        <small class="text-muted" style="font-size: 0.75rem;">Ação irreversível</small>
+                                                    </div>
                                                 </button>
                                             </li>
                                         </ul>
@@ -557,5 +569,193 @@ function confirmarExclusao(clienteId, clienteNome) {
     modal.show();
 }
 </script>
+
+<style>
+/* ===== Dropdown Administrativo Aprimorado ===== */
+.btn-admin-dropdown {
+    border-color: #dee2e6;
+    color: #6c757d;
+    transition: all 0.2s ease;
+}
+
+.btn-admin-dropdown:hover,
+.btn-admin-dropdown:focus {
+    background-color: #f8f9fa;
+    border-color: #6c757d;
+    color: #495057;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-admin-dropdown:active {
+    transform: translateY(0);
+}
+
+/* Menu Dropdown Profissional */
+.dropdown-menu-admin {
+    min-width: 280px;
+    border: none;
+    border-radius: 12px;
+    padding: 0.5rem 0;
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-menu-admin .dropdown-header {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #495057;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.dropdown-menu-admin .dropdown-divider {
+    margin: 0.5rem 0;
+    border-color: #e9ecef;
+}
+
+/* Itens do Dropdown com Estilo Premium */
+.dropdown-menu-admin .dropdown-item {
+    padding: 0.75rem 1.25rem;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+}
+
+.dropdown-item-warning {
+    color: #856404;
+}
+
+.dropdown-item-warning:hover,
+.dropdown-item-warning:focus {
+    background: linear-gradient(to right, #fff3cd 0%, #ffffff 100%);
+    border-left-color: #ffc107;
+    color: #856404;
+    padding-left: 1.5rem;
+}
+
+.dropdown-item-warning i {
+    color: #ffc107;
+}
+
+.dropdown-item-danger {
+    color: #721c24;
+}
+
+.dropdown-item-danger:hover,
+.dropdown-item-danger:focus {
+    background: linear-gradient(to right, #f8d7da 0%, #ffffff 100%);
+    border-left-color: #dc3545;
+    color: #721c24;
+    padding-left: 1.5rem;
+}
+
+.dropdown-item-danger i {
+    color: #dc3545;
+}
+
+/* Melhorias na Tabela de Clientes */
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Botões de Ação com Hover Suave */
+.btn-group-sm .btn {
+    transition: all 0.2s ease;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-success:hover {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+/* Badges de Status Melhorados */
+.badge {
+    padding: 0.5rem 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    border-radius: 8px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .dropdown-menu-admin {
+        min-width: 260px;
+    }
+    
+    .dropdown-menu-admin .dropdown-item {
+        padding: 0.65rem 1rem;
+    }
+    
+    .btn-group-sm .btn {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.65rem;
+    }
+}
+
+/* Acessibilidade - Foco Visível */
+.btn-admin-dropdown:focus-visible,
+.dropdown-item:focus-visible {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+/* Smooth Scrolling na Tabela */
+.table-responsive {
+    scroll-behavior: smooth;
+}
+
+/* Melhor Espaçamento Visual */
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card-body {
+    padding: 0;
+}
+
+/* Status Badge com Animação Suave */
+.badge {
+    transition: all 0.2s ease;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+</style>
 
 {% endblock %}
