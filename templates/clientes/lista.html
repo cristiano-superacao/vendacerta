@@ -711,9 +711,15 @@ function confirmarExclusao(clienteId, clienteNome) {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-/* Botões de Ação com Hover Suave */
+/* Botões de Ação com Visibilidade Aprimorada */
 .btn-group-sm .btn {
     transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn i {
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
 .btn-group-sm .btn:hover {
@@ -721,20 +727,89 @@ function confirmarExclusao(clienteId, clienteNome) {
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
+/* Botão Ver Detalhes - Azul com ícone destacado */
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+    border-width: 1.5px;
+}
+
+.btn-outline-primary i {
+    color: #0d6efd;
+}
+
 .btn-outline-primary:hover {
     background-color: #0d6efd;
     border-color: #0d6efd;
+    color: #ffffff;
+}
+
+.btn-outline-primary:hover i {
+    color: #ffffff;
+}
+
+/* Botão Registrar Compra - Verde com ícone destacado */
+.btn-outline-success {
+    color: #198754;
+    border-color: #198754;
+    border-width: 1.5px;
+}
+
+.btn-outline-success i {
+    color: #198754;
 }
 
 .btn-outline-success:hover {
     background-color: #198754;
     border-color: #198754;
+    color: #ffffff;
+}
+
+.btn-outline-success:hover i {
+    color: #ffffff;
+}
+
+/* Botão Editar - Amarelo com ícone destacado */
+.btn-outline-warning {
+    color: #dc8a00;
+    border-color: #ffc107;
+    border-width: 1.5px;
+}
+
+.btn-outline-warning i {
+    color: #dc8a00;
 }
 
 .btn-outline-warning:hover {
     background-color: #ffc107;
     border-color: #ffc107;
     color: #000;
+}
+
+.btn-outline-warning:hover i {
+    color: #000;
+}
+
+/* Botão Menu Admin - Cinza com ícone destacado */
+.btn-outline-secondary {
+    color: #495057;
+    border-color: #6c757d;
+    border-width: 1.5px;
+}
+
+.btn-outline-secondary i {
+    color: #495057;
+    font-weight: 600;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #ffffff;
+}
+
+.btn-outline-secondary:hover i {
+    color: #ffffff;
 }
 
 /* Badges de Status Melhorados */
