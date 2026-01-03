@@ -18,8 +18,8 @@ from flask import (
     jsonify,
     send_file,
     send_from_directory,
-    Markup,
 )
+from markupsafe import Markup
 from flask_login import (
     LoginManager,
     login_user,
