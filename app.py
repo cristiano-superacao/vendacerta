@@ -6057,8 +6057,28 @@ def deletar_cliente(id):
 
     try:
         nome_cliente = cliente.nome
-        # Excluir compras associadas primeiro
+        
+        # Verificar se há ordens de serviço em andamento
+        from models import OrdemServico
+        ordens_ativas = OrdemServico.query.filter_by(cliente_id=cliente.id).filter(
+            OrdemServico.status.in_(['aguardando_aprovacao', 'aprovada', 'em_andamento', 'aguardando_peca'])
+        ).count()
+        
+        if ordens_ativas > 0:
+            flash(
+                f"Não é possível excluir o cliente '{nome_cliente}'. "
+                f"Existem {ordens_ativas} ordem(ns) de serviço ativa(s) vinculada(s). "
+                f"Finalize ou cancele as ordens antes de excluir o cliente, ou use 'Inativar' para preservar o histórico.",
+                "warning"
+            )
+            return redirect(url_for("lista_clientes"))
+        
+        # Excluir ordens de serviço concluídas/canceladas (cascade manual)
+        OrdemServico.query.filter_by(cliente_id=cliente.id).delete()
+        
+        # Excluir compras associadas
         CompraCliente.query.filter_by(cliente_id=cliente.id).delete()
+        
         # Excluir cliente
         db.session.delete(cliente)
         db.session.commit()
