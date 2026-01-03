@@ -287,4 +287,96 @@
 </div>
 {% endif %}
 
+<style>
+/* Botões de Ação com Visibilidade Aprimorada */
+.btn-group-sm .btn {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn i {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Botão Definir Senha - Azul com ícone destacado */
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+    border-width: 1.5px;
+}
+
+.btn-outline-primary i {
+    color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #ffffff;
+}
+
+.btn-outline-primary:hover i {
+    color: #ffffff;
+}
+
+/* Botão Editar - Amarelo com ícone destacado */
+.btn-outline-warning {
+    color: #dc8a00;
+    border-color: #ffc107;
+    border-width: 1.5px;
+}
+
+.btn-outline-warning i {
+    color: #dc8a00;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.btn-outline-warning:hover i {
+    color: #000;
+}
+
+/* Botão Desativar - Vermelho com ícone destacado */
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    border-width: 1.5px;
+}
+
+.btn-outline-danger i {
+    color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #ffffff;
+}
+
+.btn-outline-danger:hover i {
+    color: #ffffff;
+}
+
+/* Hover na linha da tabela */
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+</style>
+
 {% endblock %}
