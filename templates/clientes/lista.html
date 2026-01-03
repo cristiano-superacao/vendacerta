@@ -499,29 +499,58 @@
                 <div class="alert alert-danger mb-3">
                     <strong id="nomeClienteExcluir"></strong>
                 </div>
+                
+                <!-- Regras de Exclusão -->
+                <div class="card bg-warning bg-opacity-10 border-warning mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title text-warning">
+                            <i class="bi bi-shield-exclamation me-2"></i>Regras de Exclusão Permanente
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-1"></i>
+                                <strong>Clientes com vendas NÃO podem ser excluídos</strong>
+                                <br>
+                                <span class="text-muted">Por auditoria financeira, apenas inativação é permitida</span>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle text-danger me-1"></i>
+                                <strong>Clientes com ordens de serviço NÃO podem ser excluídos</strong>
+                                <br>
+                                <span class="text-muted">Para preservar histórico de manutenção</span>
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle text-success me-1"></i>
+                                <strong>Apenas clientes sem movimentação podem ser excluídos</strong>
+                                <br>
+                                <span class="text-muted">Clientes cadastrados sem vendas ou O.S.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
                 <div class="card bg-light border-danger mb-3">
                     <div class="card-body">
                         <h6 class="card-title text-danger">
-                            <i class="bi bi-trash me-2"></i>Dados que serão excluídos:
+                            <i class="bi bi-trash me-2"></i>O que será excluído (se permitido):
                         </h6>
                         <ul class="mb-0 small">
                             <li>Todas as informações cadastrais do cliente</li>
-                            <li>Histórico completo de compras e transações</li>
-                            <li><strong>Ordens de serviço concluídas/canceladas</strong></li>
-                            <li>Todos os dados financeiros relacionados</li>
+                            <li>Endereço e dados de contato</li>
                             <li>Esta operação NÃO pode ser desfeita</li>
                         </ul>
                     </div>
                 </div>
-                <div class="alert alert-info border-0 mb-3">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    <strong>Nota:</strong> Se houver ordens de serviço ativas (em andamento, aguardando aprovação, etc.), 
-                    a exclusão será bloqueada. Finalize ou cancele as ordens primeiro.
+                
+                <div class="alert alert-success border-0 mb-3">
+                    <i class="bi bi-lightbulb-fill me-2"></i>
+                    <strong>Recomendação:</strong> Na maioria dos casos, use <strong>"Inativar Cliente"</strong> 
+                    ao invés de excluir. Isso preserva o histórico, permite auditoria e possibilita reativação futura.
                 </div>
                 <p class="text-danger small mb-0">
                     <i class="bi bi-info-circle me-1"></i>
-                    <strong>Recomendação:</strong> Considere usar a opção "Inativar" ao invés de excluir, 
-                    para preservar o histórico e permitir reativação futura.
+                    <strong>Importante:</strong> Se o cliente tiver qualquer movimentação (vendas ou O.S.), 
+                    o sistema bloqueará automaticamente a exclusão e você será orientado a usar a inativação.
                 </p>
             </div>
             <div class="modal-footer">
@@ -530,7 +559,7 @@
                 </button>
                 <form id="formExcluirCliente" method="POST" style="display: inline;">
                     <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i>Confirmar Exclusão Permanente
+                        <i class="bi bi-trash me-1"></i>Confirmar Exclusão
                     </button>
                 </form>
             </div>

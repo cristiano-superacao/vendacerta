@@ -6042,7 +6042,12 @@ def inativar_cliente(id):
 @app.route("/clientes/<int:id>/deletar", methods=["POST"])
 @login_required
 def deletar_cliente(id):
-    """Excluir cliente permanentemente - Apenas Admin"""
+    """Excluir cliente permanentemente - Apenas Admin
+    
+    Regras de negócio:
+    - Clientes com vendas/compras NÃO podem ser excluídos (apenas inativados)
+    - Clientes sem histórico podem ser excluídos permanentemente
+    """
     # Verificar se é admin ou super_admin
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado. Apenas administradores podem excluir clientes.", "danger")
@@ -6058,35 +6063,48 @@ def deletar_cliente(id):
     try:
         nome_cliente = cliente.nome
         
-        # Verificar se há ordens de serviço em andamento
-        from models import OrdemServico
-        ordens_ativas = OrdemServico.query.filter_by(cliente_id=cliente.id).filter(
-            OrdemServico.status.in_(['aguardando_aprovacao', 'aprovada', 'em_andamento', 'aguardando_peca'])
-        ).count()
+        # REGRA 1: Verificar se há vendas/compras registradas
+        total_compras = CompraCliente.query.filter_by(cliente_id=cliente.id).count()
         
-        if ordens_ativas > 0:
+        if total_compras > 0:
             flash(
-                f"Não é possível excluir o cliente '{nome_cliente}'. "
-                f"Existem {ordens_ativas} ordem(ns) de serviço ativa(s) vinculada(s). "
-                f"Finalize ou cancele as ordens antes de excluir o cliente, ou use 'Inativar' para preservar o histórico.",
+                f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
+                f"Este cliente possui {total_compras} venda(s) registrada(s) no sistema. "
+                f"<br><br>"
+                f"<strong>📋 Por questões de auditoria e histórico financeiro, clientes com vendas só podem ser INATIVADOS.</strong>"
+                f"<br><br>"
+                f"Use a opção <strong>'Inativar Cliente'</strong> no menu de ações administrativas.",
                 "warning"
             )
             return redirect(url_for("lista_clientes"))
         
-        # Excluir ordens de serviço concluídas/canceladas (cascade manual)
-        OrdemServico.query.filter_by(cliente_id=cliente.id).delete()
+        # REGRA 2: Verificar se há ordens de serviço (qualquer status)
+        from models import OrdemServico
+        total_ordens = OrdemServico.query.filter_by(cliente_id=cliente.id).count()
         
-        # Excluir compras associadas
-        CompraCliente.query.filter_by(cliente_id=cliente.id).delete()
+        if total_ordens > 0:
+            flash(
+                f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
+                f"Este cliente possui {total_ordens} ordem(ns) de serviço registrada(s). "
+                f"<br><br>"
+                f"<strong>Use a opção 'Inativar Cliente'</strong> para preservar o histórico de manutenção.",
+                "warning"
+            )
+            return redirect(url_for("lista_clientes"))
         
-        # Excluir cliente
+        # Se chegou aqui, o cliente não tem vendas nem ordens de serviço
+        # Pode ser excluído permanentemente
         db.session.delete(cliente)
         db.session.commit()
 
-        flash(f"Cliente '{nome_cliente}' excluído permanentemente com sucesso!", "success")
+        flash(
+            f"✅ Cliente '{nome_cliente}' excluído permanentemente com sucesso! "
+            f"<br><small class='text-muted'>O cliente não possuía vendas ou ordens de serviço registradas.</small>",
+            "success"
+        )
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao excluir cliente: {str(e)}", "danger")
+        flash(f"❌ Erro ao excluir cliente: {str(e)}", "danger")
 
     return redirect(url_for("lista_clientes"))
 
