@@ -1,7 +1,7 @@
 # 📚 ÍNDICE COMPLETO DE DOCUMENTAÇÃO - VENDA CERTA
 
 **Sistema de Gestão de Vendas, Metas e Comissões**  
-**Última atualização**: 2 de janeiro de 2026
+**Última atualização**: 3 de janeiro de 2026
 
 ---
 
@@ -24,6 +24,24 @@
 ---
 
 ## 📋 POR TEMA
+
+### 🎨 UI/UX e Design
+
+#### Padrões de Interface
+- **[UI PATTERNS](UI_PATTERNS.md)** ⭐ **NOVO!**
+  - Princípios de design (responsividade, acessibilidade, consistência)
+  - Header Clean Pattern para páginas de listagem
+  - Cards de estatísticas com variações de cores
+  - Tabelas responsivas profissionais
+  - Button Groups com hierarquia de ações
+  - Dropdown administrativo (admin-only)
+  - Modais de confirmação (Warning e Danger)
+  - JavaScript Patterns com JSDoc
+  - Badges e Status padronizados
+  - Classes de responsividade e Grid adaptativo
+  - Controle de acesso (template e backend)
+  - Checklist de implementação
+  - Melhores práticas (performance, SEO, manutenibilidade)
 
 ### 🚀 Deploy e Configuração
 
