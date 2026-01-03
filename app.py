@@ -18,6 +18,7 @@ from flask import (
     jsonify,
     send_file,
     send_from_directory,
+    Markup,
 )
 from flask_login import (
     LoginManager,
@@ -6068,12 +6069,14 @@ def deletar_cliente(id):
         
         if total_compras > 0:
             flash(
-                f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
-                f"Este cliente possui {total_compras} venda(s) registrada(s) no sistema. "
-                f"<br><br>"
-                f"<strong>📋 Por questões de auditoria e histórico financeiro, clientes com vendas só podem ser INATIVADOS.</strong>"
-                f"<br><br>"
-                f"Use a opção <strong>'Inativar Cliente'</strong> no menu de ações administrativas.",
+                Markup(
+                    f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
+                    f"Este cliente possui {total_compras} venda(s) registrada(s) no sistema. "
+                    f"<br><br>"
+                    f"<strong>📋 Por questões de auditoria e histórico financeiro, clientes com vendas só podem ser INATIVADOS.</strong>"
+                    f"<br><br>"
+                    f"Use a opção <strong>'Inativar Cliente'</strong> no menu de ações administrativas."
+                ),
                 "warning"
             )
             return redirect(url_for("lista_clientes"))
@@ -6084,10 +6087,12 @@ def deletar_cliente(id):
         
         if total_ordens > 0:
             flash(
-                f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
-                f"Este cliente possui {total_ordens} ordem(ns) de serviço registrada(s). "
-                f"<br><br>"
-                f"<strong>Use a opção 'Inativar Cliente'</strong> para preservar o histórico de manutenção.",
+                Markup(
+                    f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
+                    f"Este cliente possui {total_ordens} ordem(ns) de serviço registrada(s). "
+                    f"<br><br>"
+                    f"<strong>Use a opção 'Inativar Cliente'</strong> para preservar o histórico de manutenção."
+                ),
                 "warning"
             )
             return redirect(url_for("lista_clientes"))
@@ -6098,8 +6103,10 @@ def deletar_cliente(id):
         db.session.commit()
 
         flash(
-            f"✅ Cliente '{nome_cliente}' excluído permanentemente com sucesso! "
-            f"<br><small class='text-muted'>O cliente não possuía vendas ou ordens de serviço registradas.</small>",
+            Markup(
+                f"✅ Cliente '{nome_cliente}' excluído permanentemente com sucesso! "
+                f"<br><small class='text-muted'>O cliente não possuía vendas ou ordens de serviço registradas.</small>"
+            ),
             "success"
         )
     except Exception as e:
