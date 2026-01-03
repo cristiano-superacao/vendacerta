@@ -279,19 +279,52 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <div class="btn-group btn-group-sm">
+                                <div class="btn-group btn-group-sm" role="group">
                                     <a href="{{ url_for('ver_cliente', id=cliente.id) }}"
-                                       class="btn btn-outline-primary" title="Ver Detalhes">
+                                       class="btn btn-outline-primary" title="Ver Detalhes" aria-label="Ver detalhes de {{ cliente.nome }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     <a href="{{ url_for('registrar_compra', id=cliente.id) }}"
-                                       class="btn btn-outline-success" title="Registrar Compra">
+                                       class="btn btn-outline-success" title="Registrar Compra" aria-label="Registrar compra para {{ cliente.nome }}">
                                         <i class="bi bi-cart-plus"></i>
                                     </a>
+                                    {% if current_user.pode_editar_clientes %}
                                     <a href="{{ url_for('editar_cliente', id=cliente.id) }}"
-                                       class="btn btn-outline-warning" title="Editar">
+                                       class="btn btn-outline-warning" title="Editar" aria-label="Editar {{ cliente.nome }}">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    {% endif %}
+                                    
+                                    {% if current_user.cargo in ['admin', 'super_admin'] %}
+                                    <!-- Dropdown de ações administrativas -->
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-danger dropdown-toggle" 
+                                                data-bs-toggle="dropdown" aria-expanded="false" 
+                                                title="Ações Administrativas" aria-label="Menu de ações para {{ cliente.nome }}">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <h6 class="dropdown-header">Ações Administrativas</h6>
+                                            </li>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-warning" 
+                                                        onclick="confirmarInativacao({{ cliente.id }}, '{{ cliente.nome|e }}')"
+                                                        aria-label="Inativar {{ cliente.nome }}">
+                                                    <i class="bi bi-slash-circle me-2"></i>Inativar Cliente
+                                                </button>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger" 
+                                                        onclick="confirmarExclusao({{ cliente.id }}, '{{ cliente.nome|e }}')"
+                                                        aria-label="Excluir permanentemente {{ cliente.nome }}">
+                                                    <i class="bi bi-trash me-2"></i>Excluir Permanentemente
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -395,4 +428,134 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Confirmação de Inativação de Cliente -->
+<div class="modal fade" id="modalInativarCliente" tabindex="-1" aria-labelledby="modalInativarClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalInativarClienteLabel">
+                    <i class="bi bi-slash-circle me-2"></i>Inativar Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    <i class="bi bi-info-circle text-warning me-2"></i>
+                    Você está prestes a inativar o cliente:
+                </p>
+                <div class="alert alert-warning mb-3">
+                    <strong id="nomeClienteInativar"></strong>
+                </div>
+                <p class="text-muted small">
+                    <i class="bi bi-shield-check me-1"></i>
+                    O cliente será marcado como inativo e não aparecerá nas listagens principais, 
+                    mas seus dados e histórico de compras serão preservados. 
+                    Esta ação pode ser revertida posteriormente.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </button>
+                <form id="formInativarCliente" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-slash-circle me-1"></i>Confirmar Inativação
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmação de Exclusão Permanente de Cliente -->
+<div class="modal fade" id="modalExcluirCliente" tabindex="-1" aria-labelledby="modalExcluirClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalExcluirClienteLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Excluir Cliente Permanentemente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger mb-3">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>ATENÇÃO: Esta ação é IRREVERSÍVEL!</strong>
+                </div>
+                <p class="mb-3">Você está prestes a excluir permanentemente o cliente:</p>
+                <div class="alert alert-danger mb-3">
+                    <strong id="nomeClienteExcluir"></strong>
+                </div>
+                <div class="card bg-light border-danger mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title text-danger">
+                            <i class="bi bi-trash me-2"></i>Dados que serão excluídos:
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li>Todas as informações cadastrais do cliente</li>
+                            <li>Histórico completo de compras e transações</li>
+                            <li>Todos os dados financeiros relacionados</li>
+                            <li>Esta operação NÃO pode ser desfeita</li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="text-danger small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Recomendação:</strong> Considere usar a opção "Inativar" ao invés de excluir, 
+                    para preservar o histórico e permitir reativação futura.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </button>
+                <form id="formExcluirCliente" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Confirmar Exclusão Permanente
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Exibe modal de confirmação de inativação de cliente
+ * @param {number} clienteId - ID do cliente a ser inativado
+ * @param {string} clienteNome - Nome do cliente para exibição
+ */
+function confirmarInativacao(clienteId, clienteNome) {
+    // Atualiza o nome do cliente no modal
+    document.getElementById('nomeClienteInativar').textContent = clienteNome;
+    
+    // Define a ação do formulário para a rota de inativação
+    const form = document.getElementById('formInativarCliente');
+    form.action = `/clientes/${clienteId}/inativar`;
+    
+    // Exibe o modal
+    const modal = new bootstrap.Modal(document.getElementById('modalInativarCliente'));
+    modal.show();
+}
+
+/**
+ * Exibe modal de confirmação de exclusão permanente de cliente
+ * @param {number} clienteId - ID do cliente a ser excluído
+ * @param {string} clienteNome - Nome do cliente para exibição
+ */
+function confirmarExclusao(clienteId, clienteNome) {
+    // Atualiza o nome do cliente no modal
+    document.getElementById('nomeClienteExcluir').textContent = clienteNome;
+    
+    // Define a ação do formulário para a rota de exclusão
+    const form = document.getElementById('formExcluirCliente');
+    form.action = `/clientes/${clienteId}/deletar`;
+    
+    // Exibe o modal
+    const modal = new bootstrap.Modal(document.getElementById('modalExcluirCliente'));
+    modal.show();
+}
+</script>
+
 {% endblock %}

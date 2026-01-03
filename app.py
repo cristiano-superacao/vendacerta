@@ -6012,25 +6012,61 @@ def editar_cliente(id):
         cliente=cliente,
     )
 
-@app.route("/clientes/<int:id>/deletar", methods=["POST"])
+@app.route("/clientes/<int:id>/inativar", methods=["POST"])
 @login_required
-def deletar_cliente(id):
-    """Desativar cliente (soft delete)"""
+def inativar_cliente(id):
+    """Inativar cliente (soft delete) - Apenas Admin"""
+    # Verificar se é admin ou super_admin
+    if current_user.cargo not in ["admin", "super_admin"]:
+        flash("Acesso negado. Apenas administradores podem inativar clientes.", "danger")
+        return redirect(url_for("lista_clientes"))
+    
     cliente = Cliente.query.get_or_404(id)
 
-    # Verificar permissão
-    if not verificar_acesso_cliente(cliente):
-        flash("Você não tem permissão para deletar este cliente.", "danger")
+    # Super admin pode inativar qualquer cliente, admin só da sua empresa
+    if not current_user.is_super_admin and cliente.empresa_id != current_user.empresa_id:
+        flash("Você não tem permissão para inativar este cliente.", "danger")
         return redirect(url_for("lista_clientes"))
 
     try:
         cliente.ativo = False
         db.session.commit()
 
-        flash("Cliente removido com sucesso!", "success")
+        flash(f"Cliente '{cliente.nome}' inativado com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao remover cliente: {str(e)}", "danger")
+        flash(f"Erro ao inativar cliente: {str(e)}", "danger")
+
+    return redirect(url_for("lista_clientes"))
+
+@app.route("/clientes/<int:id>/deletar", methods=["POST"])
+@login_required
+def deletar_cliente(id):
+    """Excluir cliente permanentemente - Apenas Admin"""
+    # Verificar se é admin ou super_admin
+    if current_user.cargo not in ["admin", "super_admin"]:
+        flash("Acesso negado. Apenas administradores podem excluir clientes.", "danger")
+        return redirect(url_for("lista_clientes"))
+    
+    cliente = Cliente.query.get_or_404(id)
+
+    # Super admin pode excluir qualquer cliente, admin só da sua empresa
+    if not current_user.is_super_admin and cliente.empresa_id != current_user.empresa_id:
+        flash("Você não tem permissão para excluir este cliente.", "danger")
+        return redirect(url_for("lista_clientes"))
+
+    try:
+        nome_cliente = cliente.nome
+        # Excluir compras associadas primeiro
+        CompraCliente.query.filter_by(cliente_id=cliente.id).delete()
+        # Excluir cliente
+        db.session.delete(cliente)
+        db.session.commit()
+
+        flash(f"Cliente '{nome_cliente}' excluído permanentemente com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao excluir cliente: {str(e)}", "danger")
 
     return redirect(url_for("lista_clientes"))
 
