@@ -60,10 +60,53 @@ VALIDACAO_TECNICA*.md
 !VALIDACAO_FINAL.md
 RESUMO_EXECUTIVO*.md
 !RESUMO_ORGANIZACAO.md
+RELATORIO_*.md
+CHECKLIST_*.html
+COMPARATIVO_*.md
+DOCUMENTACAO_TECNICA.html
+FIX_*.md
+LIMPEZA_*.md
+SECURITY_*.md
+SUMARIO_*.md
+VERIFICACAO_*.md
+resultado_*.txt
 
 # Scripts de limpeza
 limpar_documentacao.ps1
 limpar_documentacao.bat
+
+# Arquivos de teste e validacao
+teste_*.py
+test_*.py
+validar_*.py
+validate_*.py
+verificar_*.py
+verify_*.py
+check_*.py
+diagnostico_*.py
+
+# Scripts de migracao ja executados
+add_*_railway.py
+correcao_*_railway.py
+corrigir_*.py
+create_*_railway.py
+fix_*_railway.py
+migrate_*.py
+reset_*_railway.py
+setup_*.py
+init_db.py
+
+# Utilitarios de desenvolvimento
+listar_*.py
+quick_start.py
+install_local.py
+
+# Configs de outros servicos
+netlify.toml
+render.yaml
+.railway-deploy-trigger
+.env.production.example
+.env.railway.example
 
 # Arquivos de teste
 test_*.pdf

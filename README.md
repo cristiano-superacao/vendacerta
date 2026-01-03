@@ -12,7 +12,7 @@
 
 **Sistema completo de gestão comercial com CRM, metas, comissões automáticas e ordens de serviço**
 
-[🌐 Demo ao Vivo](https://vendacerta.up.railway.app) • [📚 Documentação](docs/) • [🚀 API REST](docs/API.md) • [🏗️ Arquitetura](docs/ARCHITECTURE.md)
+[🌐 Demo ao Vivo](https://vendacerta.up.railway.app) • [📚 Documentação](docs/) • [🚀 Deploy Automático](DEPLOY.md) • [🏗️ Arquitetura](docs/ARCHITECTURE.md)
 
 </div>
 
