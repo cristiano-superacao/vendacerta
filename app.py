@@ -7735,17 +7735,21 @@ def importar_clientes():
                                 cnpj = None # Inválido
 
                     # Verificar duplicidade e decidir se atualiza ou cria
-                    cliente_existente = None
+                    # Usar no_autoflush para evitar flush prematuro
+                    with db.session.no_autoflush:
+                        cliente_existente = None
 
-                    if cpf:
-                        cliente_existente = Cliente.query.filter_by(
-                            cpf=cpf, empresa_id=current_user.empresa_id
-                        ).first()
+                        # Buscar por CPF
+                        if cpf:
+                            cliente_existente = Cliente.query.filter_by(
+                                cpf=cpf, empresa_id=current_user.empresa_id
+                            ).first()
 
-                    if not cliente_existente and cnpj:
-                        cliente_existente = Cliente.query.filter_by(
-                            cnpj=cnpj, empresa_id=current_user.empresa_id
-                        ).first()
+                        # Se não encontrou por CPF, buscar por CNPJ
+                        if not cliente_existente and cnpj:
+                            cliente_existente = Cliente.query.filter_by(
+                                cnpj=cnpj, empresa_id=current_user.empresa_id
+                            ).first()
 
                     # Helper function para limpar e validar strings
                     def limpar_valor(valor):
@@ -8002,40 +8006,44 @@ def importar_clientes():
 
                         db.session.add(cliente)
                         importados += 1
+                    
+                    # Tentar fazer commit parcial para este cliente
+                    try:
+                        db.session.commit()
+                    except Exception as commit_error:
+                        from sqlalchemy.exc import IntegrityError
+                        db.session.rollback()
+                        
+                        # Identificar tipo de erro
+                        error_msg = str(commit_error)
+                        if isinstance(commit_error, IntegrityError):
+                            if 'cpf' in error_msg.lower():
+                                erros.append(f"Linha {index + 2}: CPF {cpf} já cadastrado")
+                            elif 'cnpj' in error_msg.lower():
+                                erros.append(f"Linha {index + 2}: CNPJ {cnpj} já cadastrado")
+                            elif 'codigo_cliente' in error_msg:
+                                erros.append(f"Linha {index + 2}: Código de cliente duplicado")
+                            else:
+                                erros.append(f"Linha {index + 2}: Registro duplicado - {nome}")
+                        else:
+                            erros.append(f"Linha {index + 2}: {error_msg[:100]}")
+                        
+                        # Reverter contadores se houve erro
+                        if importados > 0 and not cliente_existente:
+                            importados -= 1
+                        elif atualizados > 0 and cliente_existente:
+                            atualizados -= 1
 
                 except Exception as e:
+                    db.session.rollback()
                     error_msg = str(e)
-                    # Se for erro de duplicação de código, tentar gerar novo
-                    if 'codigo_cliente' in error_msg and 'duplicate' in error_msg.lower():
-                        try:
-                            import time
-                            time.sleep(0.1)
-                            # Tentar gerar novo código
-                            novo_codigo = Cliente.gerar_codigo_cliente(
-                                municipio_codigo if 'municipio_codigo' in locals() else 'SEM_CIDADE',
-                                current_user.empresa_id
-                            )
-                            if 'cliente' in locals() and hasattr(cliente, 'codigo_cliente'):
-                                cliente.codigo_cliente = novo_codigo
-                                db.session.add(cliente)
-                                # Não adicionar ao contador de erros, tentar novamente no commit
-                                continue
-                        except Exception:
-                            pass
-                    erros.append(f"Linha {index + 2}: {error_msg}")
-
-            # Commit com retry em caso de erro de duplicação
-            try:
-                db.session.commit()
-            except Exception as e:
-                from sqlalchemy.exc import IntegrityError
-                db.session.rollback()
-                
-                # Se for erro de código duplicado, informar o usuário
-                if isinstance(e, IntegrityError) and 'codigo_cliente' in str(e):
-                    erros.append("Erro de duplicação de código de cliente detectado. Por favor, tente importar novamente.")
-                else:
-                    erros.append(f"Erro ao salvar no banco: {str(e)}")
+                    # Mensagem mais específica para o usuário
+                    if 'cpf' in error_msg.lower() and 'duplicate' in error_msg.lower():
+                        erros.append(f"Linha {index + 2}: CPF já cadastrado para {nome}")
+                    elif 'cnpj' in error_msg.lower() and 'duplicate' in error_msg.lower():
+                        erros.append(f"Linha {index + 2}: CNPJ já cadastrado para {nome}")
+                    else:
+                        erros.append(f"Linha {index + 2}: {error_msg[:150]}")
 
             # Feedback
             total_processados = importados + atualizados
