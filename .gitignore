@@ -80,10 +80,11 @@ teste_*.py
 test_*.py
 validar_*.py
 validate_*.py
-verificar_*.py
 verify_*.py
-check_*.py
 diagnostico_*.py
+
+# Excecao: scripts de verificacao essenciais para producao
+!scripts/verificar_unicidade_por_empresa.py
 
 # Scripts de migracao ja executados
 add_*_railway.py
