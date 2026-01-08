@@ -736,7 +736,6 @@ def favicon():
         mimetype="image/vnd.microsoft.icon",
     )
 
-@app.route("/ping")
 @app.route("/health")
 def health_check():
     """Health check ultrarrápido sem tocar no banco para evitar timeouts."""

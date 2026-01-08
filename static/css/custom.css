@@ -1136,37 +1136,6 @@ body {
     }
 }
 
-/* ===== TABELA - ESTILOS GLOBAIS ===== */
-
-.table > tbody > tr {
-    transition: background-color 0.2s ease;
-}
-
-.table > tbody > tr:hover {
-    background-color: rgba(0, 123, 255, 0.03);
-}
-
-.table-light th {
-    background-color: #f8f9fa;
-    padding: 1rem 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.875rem;
-    letter-spacing: 0.5px;
-}
-
-.table td {
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-}
-
-/* ===== BADGES MODERNOS ===== */
-
-.badge {
-    font-weight: 500;
-    letter-spacing: 0.3px;
-}
-
 /* ===== CORES AUXILIARES ===== */
 
 .text-pink {
