@@ -586,7 +586,22 @@ def super_admin_required(f):
 
 # Decorator para verificar permissões específicas
 def permission_required(permission_name):
-    """Decorator para verificar se o usuário tem uma permissão específica"""
+    """Decorator para verificar se o usuário tem uma permissão específica.
+
+    Compatibilidade:
+    - Aceita nomes singulares usados em algumas rotas (ex.: 'pode_criar_cliente')
+      fazendo o mapeamento para os atributos reais no modelo (ex.: 'pode_criar_clientes').
+    - Considera também variação de cargo 'administrador' como equivalente a 'admin'.
+    """
+
+    # Mapeamento de aliases singular -> plural (modelo)
+    PERMISSION_ALIASES = {
+        "pode_criar_cliente": "pode_criar_clientes",
+        "pode_editar_cliente": "pode_editar_clientes",
+        "pode_excluir_cliente": "pode_excluir_clientes",
+    }
+
+    normalized_permission = PERMISSION_ALIASES.get(permission_name, permission_name)
 
     def decorator(f):
         @wraps(f)
@@ -600,12 +615,12 @@ def permission_required(permission_name):
             if current_user.is_super_admin:
                 return f(*args, **kwargs)
 
-            # Admin e Gerente sempre têm acesso (cargos com permissões totais)
-            if current_user.cargo in ["admin", "gerente"]:
+            # Admin/Administrador e Gerente sempre têm acesso (cargos com permissões totais)
+            if current_user.cargo in ["admin", "administrador", "gerente"]:
                 return f(*args, **kwargs)
 
             # Verificar se o atributo existe (compatibilidade com banco antigo)
-            if not hasattr(current_user, permission_name):
+            if not hasattr(current_user, normalized_permission):
                 # Se não tem o atributo, permitir acesso para cargos de gestão
                 if current_user.cargo in ["supervisor"]:
                     return f(*args, **kwargs)
@@ -617,7 +632,7 @@ def permission_required(permission_name):
                 return redirect(url_for("dashboard"))
 
             # Verificar se tem a permissão específica
-            has_perm = getattr(current_user, permission_name, False)
+            has_perm = getattr(current_user, normalized_permission, False)
             if not has_perm:
                 msg = "Você não tem permissão para acessar este recurso."
                 flash(msg, "danger")
