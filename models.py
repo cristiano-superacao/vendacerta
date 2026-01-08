@@ -771,6 +771,10 @@ class Cliente(db.Model):
         db.Index('idx_cliente_empresa_cidade', 'empresa_id', 'cidade'),
         db.Index('idx_cliente_vendedor_status', 'vendedor_id', 'ativo', 'data_cadastro'),
         db.Index('idx_cliente_cidade_ativo', 'cidade', 'ativo'),
+        # Unicidade por empresa
+        db.UniqueConstraint('empresa_id', 'cpf', name='uq_cliente_empresa_cpf'),
+        db.UniqueConstraint('empresa_id', 'cnpj', name='uq_cliente_empresa_cnpj'),
+        db.UniqueConstraint('empresa_id', 'codigo_cliente', name='uq_cliente_empresa_codigo'),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -779,11 +783,13 @@ class Cliente(db.Model):
     nome = db.Column(db.String(200), nullable=False, index=True)
     razao_social = db.Column(db.String(200))  # Para CNPJ
     sigla = db.Column(db.String(50))  # Sigla/Apelido
-    cpf = db.Column(db.String(14), unique=True, nullable=True, index=True)
-    cnpj = db.Column(db.String(18), unique=True, nullable=True, index=True)
+    # Removido unique global; unicidade é composta por empresa
+    cpf = db.Column(db.String(14), nullable=True, index=True)
+    cnpj = db.Column(db.String(18), nullable=True, index=True)
     inscricao_estadual = db.Column(db.String(20))  # IE
     codigo_bp = db.Column(db.String(50))  # Código BP/ERP
-    codigo_cliente = db.Column(db.String(9), unique=True, index=True)  # Código único: 0001-0001
+    # Removido unique global; unicidade é composta por empresa (ver __table_args__)
+    codigo_cliente = db.Column(db.String(9), index=True)  # Código: 0001-0001
 
     # Endereço
     logradouro = db.Column(db.String(255))  # Endereço completo
