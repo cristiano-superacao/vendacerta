@@ -1,0 +1,99 @@
+{# Macros de UI para reduzir duplicações sem alterar o HTML/CSS final. #}
+
+{% macro page_header_clean(category, icon_class, title, mb='mb-4') %}
+<div class="page-header-clean {{ mb }}">
+    <div class="header-content">
+        <p class="header-subtitle">{{ category }}</p>
+        <h1 class="header-title">
+            <i class="{{ icon_class }}"></i> {{ title }}
+        </h1>
+    </div>
+    <div class="header-actions">
+        {% if caller is defined %}
+            {{ caller() }}
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+
+{% macro page_header_prescrimed(category, title, subtitle, mb='mb-4') %}
+<div class="page-header-clean {{ mb }}">
+    <p class="page-category">{{ category }}</p>
+    <h1 class="page-title-clean">{{ title }}</h1>
+    <p class="page-subtitle-clean">{{ subtitle }}</p>
+
+    {% if caller is defined %}
+    <div class="d-flex gap-2 mt-3 flex-wrap">
+        {{ caller() }}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{% macro page_header_prescrimed_custom(category, mb='mb-4') %}
+<div class="page-header-clean {{ mb }}">
+    <p class="page-category">{{ category }}</p>
+    {% if caller is defined %}
+        {{ caller() }}
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{% macro stats_card_clean(color, icon_class, label, value, subtitle, subtitle_class='') %}
+<div class="stats-card-clean stats-card-{{ color }} h-100">
+    <div class="stats-icon-clean stats-icon-{{ color }}">
+        <i class="{{ icon_class }}"></i>
+    </div>
+    <p class="stats-label-clean">{{ label }}</p>
+    <h3 class="stats-value-clean">{{ value }}</h3>
+    <p class="stats-subtitle-clean{% if subtitle_class %} {{ subtitle_class }}{% endif %}">{{ subtitle }}</p>
+</div>
+{% endmacro %}
+
+
+{% macro stats_card_modern(border_left_color, badge_class, badge_text, icon_wrapper_class, icon_class, value, label_text='') %}
+<div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid {{ border_left_color }} !important;">
+    <div class="card-body position-relative">
+        <span class="badge {{ badge_class }} position-absolute top-0 end-0 m-3">{{ badge_text }}</span>
+        <div class="d-flex align-items-center mb-3">
+            <div class="icon-modern {{ icon_wrapper_class }}">
+                <i class="{{ icon_class }}"></i>
+            </div>
+        </div>
+        <h3 class="stats-value-modern mb-1">{{ value }}</h3>
+        <p class="stats-label-modern mb-0">
+            {% if caller is defined %}
+                {{ caller() }}
+            {% else %}
+                {{ label_text }}
+            {% endif %}
+        </p>
+    </div>
+</div>
+{% endmacro %}
+
+
+{% macro page_header_modern_standard(category, icon_class, title, subtitle=None, mb='mb-4', actions_wrap=False, actions_class='d-flex flex-wrap gap-2') %}
+<div class="modern-header {{ mb }}">
+    <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">{{ category }}</p>
+    <h1 class="page-title-modern mb-2">
+        <i class="{{ icon_class }}"></i> {{ title }}
+    </h1>
+    {% if subtitle is not none %}
+    <p class="text-muted mb-3">{{ subtitle }}</p>
+    {% endif %}
+
+    {% if caller is defined %}
+        {% if actions_wrap %}
+        <div class="{{ actions_class }}">
+            {{ caller() }}
+        </div>
+        {% else %}
+            {{ caller() }}
+        {% endif %}
+    {% endif %}
+</div>
+{% endmacro %}
