@@ -5711,40 +5711,18 @@ def novo_cliente():
                     else "SEM_CIDADE"
                 )
             )
-            # Gerar código único do cliente com verificação reforçada
-            codigo_cliente = None
-            max_tentativas = 10
-            
-            for tentativa in range(max_tentativas):
-                try:
-                    codigo_cliente = Cliente.gerar_codigo_cliente(
-                        municipio, current_user.empresa_id
-                    )
-                    # Verificar se o código já existe
-                    existente = Cliente.query.filter_by(
-                        empresa_id=current_user.empresa_id,
-                        codigo_cliente=codigo_cliente,
-                    ).first()
-                    
-                    if not existente:
-                        break  # Código único encontrado!
-                    
-                    # Se existir, aguardar um pouco e tentar novamente
-                    import time
-                    time.sleep(0.05 * (tentativa + 1))
-                    
-                except Exception as e:
-                    app.logger.warning(f"Tentativa {tentativa + 1} de gerar código: {str(e)}")
-                    if tentativa == max_tentativas - 1:
-                        raise Exception(
-                            f"Não foi possível gerar código único após {max_tentativas} tentativas. "
-                            "Por favor, tente novamente."
-                        )
-                    import time
-                    time.sleep(0.1 * (tentativa + 1))
-            
-            if not codigo_cliente:
-                raise Exception("Falha ao gerar código único para o cliente.")
+            # Gerar código único do cliente
+            # A função gerar_codigo_cliente já tem retry interno e é thread-safe
+            try:
+                codigo_cliente = Cliente.gerar_codigo_cliente(
+                    municipio, current_user.empresa_id
+                )
+            except Exception as e:
+                app.logger.error(f"Erro ao gerar código de cliente: {str(e)}")
+                raise Exception(
+                    "Não foi possível gerar código único para o cliente. "
+                    "Por favor, tente novamente em alguns instantes."
+                )
 
             # Criar cliente
             cliente = Cliente(
@@ -5821,26 +5799,28 @@ def novo_cliente():
 
             db.session.add(cliente)
             
-            # Tentar salvar com retry em caso de violação de unicidade
-            max_commit_tentativas = 3
-            commit_sucesso = False
+            # Tentar salvar com retry em caso de violação de unicidade (raro com novo sistema)
+            max_commit_tentativas = 5
             
             for commit_tentativa in range(max_commit_tentativas):
                 try:
                     db.session.commit()
-                    commit_sucesso = True
-                    break
+                    break  # Sucesso!
+                    
                 except Exception as e:
                     from sqlalchemy.exc import IntegrityError
                     db.session.rollback()
                     
-                    # Verificar se é erro de unicidade do código
-                    if isinstance(e, IntegrityError) and 'codigo_cliente' in str(e):
+                    # Se for erro de unicidade no código (muito raro agora)
+                    if isinstance(e, IntegrityError) and 'codigo_cliente' in str(e).lower():
                         if commit_tentativa < max_commit_tentativas - 1:
                             # Gerar novo código e tentar novamente
-                            app.logger.warning(f"Código duplicado detectado, gerando novo código (tentativa {commit_tentativa + 1})")
+                            app.logger.warning(
+                                f"Conflito de código detectado na tentativa {commit_tentativa + 1}, "
+                                f"gerando novo código..."
+                            )
                             import time
-                            time.sleep(0.1 * (commit_tentativa + 1))
+                            time.sleep(0.15 * (commit_tentativa + 1))
                             
                             novo_codigo = Cliente.gerar_codigo_cliente(
                                 municipio, current_user.empresa_id
@@ -5848,15 +5828,28 @@ def novo_cliente():
                             cliente.codigo_cliente = novo_codigo
                             db.session.add(cliente)
                         else:
+                            # Última tentativa falhou
+                            app.logger.error(f"Falha persistente ao salvar cliente: {str(e)}")
                             raise Exception(
-                                "Não foi possível salvar o cliente devido a conflito de código. "
-                                "Por favor, tente novamente."
+                                "Não foi possível salvar o cliente após múltiplas tentativas. "
+                                "Por favor, aguarde alguns segundos e tente novamente."
                             )
+                    
+                    # Se for outro tipo de erro de integridade (CPF/CNPJ duplicado)
+                    elif isinstance(e, IntegrityError):
+                        if 'cpf' in str(e).lower():
+                            raise Exception(
+                                "Já existe um cliente cadastrado com este CPF nesta empresa."
+                            )
+                        elif 'cnpj' in str(e).lower():
+                            raise Exception(
+                                "Já existe um cliente cadastrado com este CNPJ nesta empresa."
+                            )
+                        else:
+                            raise Exception(f"Erro de integridade de dados: {str(e)}")
                     else:
+                        # Outro tipo de erro
                         raise
-            
-            if not commit_sucesso:
-                raise Exception("Falha ao salvar cliente após múltiplas tentativas.")
 
             flash("Cliente cadastrado com sucesso!", "success")
             app.logger.info(f"Cliente {cliente.nome} cadastrado com código {cliente.codigo_cliente}")

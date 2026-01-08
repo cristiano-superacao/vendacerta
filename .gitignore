@@ -55,7 +55,6 @@ temp/
 ANALISE_*.md
 !ANALISE_SISTEMA.md
 IMPLEMENTACAO_*.md
-CORRECAO_*.md
 VALIDACAO_TECNICA*.md
 !VALIDACAO_FINAL.md
 RESUMO_EXECUTIVO*.md
@@ -69,7 +68,11 @@ LIMPEZA_*.md
 SECURITY_*.md
 SUMARIO_*.md
 VERIFICACAO_*.md
-resultado_*.txt
+
+# Excecoes: documentacao essencial de correcoes
+!docs/CORRECAO_CONFLITO_CODIGO.md
+!docs/CORRECAO_CODIGO_DUPLICADO.md
+!docs/CORRECAO_IMPORTACAO_DUPLICADOS.md
 
 # Scripts de limpeza
 limpar_documentacao.ps1

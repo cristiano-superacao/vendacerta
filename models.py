@@ -906,6 +906,17 @@ class Cliente(db.Model):
         else:
             return 'vermelho'
 
+    # Lock global para geração de código (evita race conditions)
+    _codigo_lock = None
+
+    @staticmethod
+    def _get_codigo_lock():
+        """Retorna um lock thread-safe para geração de código"""
+        if Cliente._codigo_lock is None:
+            import threading
+            Cliente._codigo_lock = threading.Lock()
+        return Cliente._codigo_lock
+
     @staticmethod
     def gerar_codigo_cliente(cidade, empresa_id):
         """
@@ -913,102 +924,109 @@ class Cliente(db.Model):
         - 4 primeiros dígitos: código sequencial do município (ordem de cadastro)
         - 4 últimos dígitos: sequência do cliente no município
         
-        Usa lock para evitar race conditions em cadastros simultâneos.
+        Usa lock thread-local e verificação atômica para evitar race conditions.
         """
         if not cidade or cidade.strip() == '':
             cidade = 'SEM_CIDADE'
 
         cidade_normalizada = cidade.strip().upper()
-        max_tentativas = 10
-        tentativa = 0
         
-        while tentativa < max_tentativas:
-            tentativa += 1
+        # Lock para evitar race conditions entre threads
+        with Cliente._get_codigo_lock():
+            max_tentativas = 20
             
-            try:
-                # 1. Tentar encontrar código de município existente para esta cidade nesta empresa
-                # Busca qualquer cliente desta cidade que já tenha código gerado
-                # Usa with_for_update para garantir lock
-                cliente_existente = Cliente.query.filter(
-                    Cliente.empresa_id == empresa_id,
-                    db.func.upper(Cliente.cidade) == cidade_normalizada,
-                    Cliente.codigo_cliente.isnot(None),
-                    Cliente.codigo_cliente != ''
-                ).order_by(Cliente.codigo_cliente.desc()).first()
+            for tentativa in range(max_tentativas):
+                try:
+                    # 1. Buscar código existente do município nesta empresa e cidade
+                    cliente_existente = Cliente.query.filter(
+                        Cliente.empresa_id == empresa_id,
+                        db.func.upper(Cliente.cidade) == cidade_normalizada,
+                        Cliente.codigo_cliente.isnot(None),
+                        Cliente.codigo_cliente != ''
+                    ).order_by(Cliente.codigo_cliente.desc()).first()
 
-                codigo_municipio = None
+                    codigo_municipio = None
+                    if cliente_existente:
+                        try:
+                            partes = cliente_existente.codigo_cliente.split('-')
+                            if len(partes) >= 1 and len(partes[0]) == 4 and partes[0].isdigit():
+                                codigo_municipio = partes[0]
+                        except Exception:
+                            pass
 
-                if cliente_existente:
-                    try:
-                        # Tenta extrair o prefixo do código existente
-                        partes = cliente_existente.codigo_cliente.split('-')
-                        if len(partes) >= 1 and len(partes[0]) == 4 and partes[0].isdigit():
-                            codigo_municipio = partes[0]
-                    except Exception:
-                        pass
+                    # 2. Se não existe código para o município, criar novo
+                    if not codigo_municipio:
+                        # Buscar maior código de município já usado na empresa
+                        stmt = db.session.query(
+                            db.func.max(db.func.substr(Cliente.codigo_cliente, 1, 4))
+                        ).filter(
+                            Cliente.empresa_id == empresa_id,
+                            Cliente.codigo_cliente.isnot(None),
+                            Cliente.codigo_cliente.like('____-%')
+                        )
+                        
+                        maior_codigo = stmt.scalar()
+                        if maior_codigo and maior_codigo.isdigit():
+                            proximo_codigo = int(maior_codigo) + 1
+                        else:
+                            proximo_codigo = 1
+                        
+                        codigo_municipio = str(proximo_codigo).zfill(4)
 
-                # 2. Se não encontrou código para a cidade, gerar novo sequencial
-                if not codigo_municipio:
-                    # Buscar o maior código de município (prefixo) já utilizado na empresa
-                    # Filtra apenas códigos que seguem o padrão XXXX-YYYY
-                    stmt = db.session.query(db.func.max(db.func.substr(Cliente.codigo_cliente, 1, 4)))\
-                        .filter(Cliente.empresa_id == empresa_id)\
-                        .filter(Cliente.codigo_cliente.isnot(None))\
-                        .filter(Cliente.codigo_cliente.like('____-%'))
+                    # 3. Buscar última sequência usada neste município
+                    prefixo_busca = f"{codigo_municipio}-%"
+                    ultimo_cliente = Cliente.query.filter(
+                        Cliente.empresa_id == empresa_id,
+                        Cliente.codigo_cliente.like(prefixo_busca)
+                    ).order_by(Cliente.codigo_cliente.desc()).first()
 
-                    maior_codigo = stmt.scalar()
+                    proxima_sequencia = 1
+                    if ultimo_cliente and ultimo_cliente.codigo_cliente:
+                        try:
+                            partes = ultimo_cliente.codigo_cliente.split('-')
+                            if len(partes) == 2 and partes[0] == codigo_municipio:
+                                proxima_sequencia = int(partes[1]) + 1
+                        except Exception:
+                            pass
 
-                    if maior_codigo and maior_codigo.isdigit():
-                        proximo_codigo = int(maior_codigo) + 1
-                    else:
-                        proximo_codigo = 1
-
-                    codigo_municipio = str(proximo_codigo).zfill(4)
-
-                # 3. Gerar sequência para o cliente dentro deste município
-                # Busca o último cliente com lock para evitar duplicação
-                prefixo_busca = f"{codigo_municipio}-%"
-                ultimo_cliente = Cliente.query.filter(
-                    Cliente.empresa_id == empresa_id,
-                    Cliente.codigo_cliente.like(prefixo_busca)
-                ).order_by(Cliente.codigo_cliente.desc()).first()
-
-                proxima_sequencia = 1
-                if ultimo_cliente and ultimo_cliente.codigo_cliente:
-                    try:
-                        partes = ultimo_cliente.codigo_cliente.split('-')
-                        if len(partes) == 2 and partes[0] == codigo_municipio:
-                            proxima_sequencia = int(partes[1]) + 1
-                    except Exception:
-                        pass
-
-                codigo_sequencia = str(proxima_sequencia).zfill(4)
-                codigo_gerado = f"{codigo_municipio}-{codigo_sequencia}"
-                
-                # Verificar se o código já existe antes de retornar
-                verificacao = Cliente.query.filter(
-                    Cliente.empresa_id == empresa_id,
-                    Cliente.codigo_cliente == codigo_gerado
-                ).first()
-                
-                if not verificacao:
-                    return codigo_gerado
+                    # 4. Buscar próxima sequência disponível (evita gaps de códigos deletados)
+                    while proxima_sequencia < 9999:
+                        codigo_tentativa = f"{codigo_municipio}-{str(proxima_sequencia).zfill(4)}"
+                        
+                        # Verificação atômica de existência
+                        existe = db.session.query(
+                            db.session.query(Cliente).filter(
+                                Cliente.empresa_id == empresa_id,
+                                Cliente.codigo_cliente == codigo_tentativa
+                            ).exists()
+                        ).scalar()
+                        
+                        if not existe:
+                            return codigo_tentativa
+                        
+                        proxima_sequencia += 1
                     
-                # Se chegou aqui, o código já existe, incrementar e tentar novamente
-                proxima_sequencia += 1
-                codigo_sequencia = str(proxima_sequencia).zfill(4)
-                return f"{codigo_municipio}-{codigo_sequencia}"
-                
-            except Exception as e:
-                # Em caso de erro, aguardar um pouco e tentar novamente
-                import time
-                time.sleep(0.1 * tentativa)
-                continue
-        
-        # Fallback: gerar código único baseado em timestamp
-        import time
-        timestamp = str(int(time.time() * 1000))[-8:]
-        return f"{timestamp[:4]}-{timestamp[4:8]}"
+                    # Se esgotou sequências do município (improvável), tentar outro município
+                    if tentativa < max_tentativas - 1:
+                        import time
+                        time.sleep(0.05 * (tentativa + 1))
+                        continue
+                        
+                except Exception as e:
+                    # Log e retry
+                    import time
+                    time.sleep(0.1 * (tentativa + 1))
+                    if tentativa == max_tentativas - 1:
+                        # Última tentativa: usar fallback seguro com UUID
+                        import uuid
+                        unique_suffix = str(uuid.uuid4().int)[-8:]
+                        return f"{unique_suffix[:4]}-{unique_suffix[4:8]}"
+                    continue
+            
+            # Fallback final com UUID (extremamente improvável chegar aqui)
+            import uuid
+            unique_suffix = str(uuid.uuid4().int)[-8:]
+            return f"{unique_suffix[:4]}-{unique_suffix[4:8]}"
 
     def get_total_compras_mes(self, mes=None, ano=None):
         """Retorna o total de compras no mês especificado"""
