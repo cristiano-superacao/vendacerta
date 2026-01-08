@@ -1,49 +1,44 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_modern_standard, stats_card_modern %}
+
 {% block title %}Backup e Restauração - Sistema de Metas{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header Modernizado -->
-    <div class="modern-header mb-4">
-        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">INSTITUCIONAL</p>
-        <h1 class="page-title-modern mb-2">
-            <i class="bi bi-hdd-stack"></i> Backup e Restauração
-        </h1>
-        <p class="text-muted mb-3">Super Administrador</p>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-building"></i> Empresas
-            </a>
-            <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-people"></i> Usuários
-            </a>
-            <a href="{{ url_for('backup_config_page') }}" class="btn btn-warning">
-                <i class="bi bi-gear-fill"></i> Configurar Agendamento
-            </a>
-            {% if not is_postgresql %}
-            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalUpload">
-                <i class="bi bi-upload"></i> Enviar Backup
+    {% call page_header_modern_standard('INSTITUCIONAL', 'bi bi-hdd-stack', 'Backup e Restauração', 'Super Administrador', actions_wrap=True) %}
+        <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-building"></i> Empresas
+        </a>
+        <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-people"></i> Usuários
+        </a>
+        <a href="{{ url_for('backup_config_page') }}" class="btn btn-warning">
+            <i class="bi bi-gear-fill"></i> Configurar Agendamento
+        </a>
+        {% if not is_postgresql %}
+        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalUpload">
+            <i class="bi bi-upload"></i> Enviar Backup
+        </button>
+        <form method="POST" action="{{ url_for('criar_backup') }}" style="display: inline;">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-plus-circle"></i> Criar Backup
             </button>
-            <form method="POST" action="{{ url_for('criar_backup') }}" style="display: inline;">
-                <button type="submit" class="btn btn-outline-primary">
-                    <i class="bi bi-plus-circle"></i> Criar Backup
-                </button>
-            </form>
-            <form method="POST" action="{{ url_for('executar_backup_agora') }}" style="display: inline;">
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-lightning-charge-fill"></i> Backup Agora
-                </button>
-            </form>
-            <form method="POST" action="{{ url_for('limpar_todos_clientes') }}" style="display: inline;" 
-                  onsubmit="return confirm('⚠️ ATENÇÃO: Esta ação irá remover TODOS os clientes e suas compras cadastradas!\n\nTem certeza que deseja continuar?');">
-                <button type="submit" class="btn btn-danger">
-                    <i class="bi bi-trash-fill"></i> Limpar Clientes
-                </button>
-            </form>
-            {% endif %}
-        </div>
-    </div>
+        </form>
+        <form method="POST" action="{{ url_for('executar_backup_agora') }}" style="display: inline;">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-lightning-charge-fill"></i> Backup Agora
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('limpar_todos_clientes') }}" style="display: inline;" 
+              onsubmit="return confirm('⚠️ ATENÇÃO: Esta ação irá remover TODOS os clientes e suas compras cadastradas!\n\nTem certeza que deseja continuar?');">
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash-fill"></i> Limpar Clientes
+            </button>
+        </form>
+        {% endif %}
+    {% endcall %}
 
     {% if is_postgresql %}
     <!-- Informação para PostgreSQL -->
@@ -72,18 +67,7 @@
     <!-- Cards de Estatísticas -->
     <div class="row g-4 mb-4">
         <div class="col-lg-4 col-md-6">
-            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #6366f1 !important;">
-                <div class="card-body position-relative">
-                    <span class="badge bg-primary bg-opacity-10 text-primary position-absolute top-0 end-0 m-3">TOTAL</span>
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="icon-modern bg-primary bg-opacity-10 text-primary">
-                            <i class="bi bi-hdd-stack"></i>
-                        </div>
-                    </div>
-                    <h3 class="stats-value-modern mb-1">{{ backups|length }}</h3>
-                    <p class="stats-label-modern mb-0">TOTAL DE BACKUPS</p>
-                </div>
-            </div>
+            {{ stats_card_modern('#6366f1', 'bg-primary bg-opacity-10 text-primary', 'TOTAL', 'bg-primary bg-opacity-10 text-primary', 'bi bi-hdd-stack', backups|length, 'TOTAL DE BACKUPS') }}
         </div>
         <div class="col-lg-4 col-md-6">
             <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #10b981 !important;">

@@ -1,28 +1,25 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_modern_standard, stats_card_modern %}
+
+{% from "_macros/ui.html" import stats_card_modern %}
+
 {% block title %}Gerenciamento de Usuários - Sistema de Metas{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header Modernizado -->
-    <div class="modern-header mb-4">
-        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">INSTITUCIONAL</p>
-        <h1 class="page-title-modern mb-2">
-            <i class="bi bi-people-fill"></i> Gerenciamento de Usuários
-        </h1>
-        <p class="text-muted mb-3">Super Administrador</p>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{{ url_for('super_admin_backups') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-hdd-stack"></i> Backups
-            </a>
-            <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-building"></i> Empresas
-            </a>
-            <a href="{{ url_for('super_admin_criar_usuario') }}" class="btn btn-outline-primary">
-                <i class="bi bi-plus-circle"></i> Novo Usuário
-            </a>
-        </div>
-    </div>
+    {% call page_header_modern_standard('INSTITUCIONAL', 'bi bi-people-fill', 'Gerenciamento de Usuários', 'Super Administrador', actions_wrap=True) %}
+        <a href="{{ url_for('super_admin_backups') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-hdd-stack"></i> Backups
+        </a>
+        <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-building"></i> Empresas
+        </a>
+        <a href="{{ url_for('super_admin_criar_usuario') }}" class="btn btn-outline-primary">
+            <i class="bi bi-plus-circle"></i> Novo Usuário
+        </a>
+    {% endcall %}
 
     <!-- Filtro de Empresa -->
     {% if empresas|length > 1 %}
@@ -50,60 +47,16 @@
     <!-- Cards de Estatísticas -->
     <div class="row g-4 mb-4">
         <div class="col-lg-3 col-md-6">
-            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #718096 !important;">
-                <div class="card-body position-relative">
-                    <span class="badge bg-secondary bg-opacity-10 text-secondary position-absolute top-0 end-0 m-3">TOTAL</span>
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="icon-modern bg-secondary bg-opacity-10 text-secondary">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                    </div>
-                    <h3 class="stats-value-modern mb-1">{{ usuarios|length }}</h3>
-                    <p class="stats-label-modern mb-0">TOTAL DE USUÁRIOS</p>
-                </div>
-            </div>
+            {{ stats_card_modern('#718096', 'bg-secondary bg-opacity-10 text-secondary', 'TOTAL', 'bg-secondary bg-opacity-10 text-secondary', 'bi bi-people-fill', usuarios|length, 'TOTAL DE USUÁRIOS') }}
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #10b981 !important;">
-                <div class="card-body position-relative">
-                    <span class="badge bg-success bg-opacity-10 text-success position-absolute top-0 end-0 m-3">ATIVOS</span>
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="icon-modern bg-success bg-opacity-10 text-success">
-                            <i class="bi bi-check-circle-fill"></i>
-                        </div>
-                    </div>
-                    <h3 class="stats-value-modern mb-1">{{ usuarios|selectattr('ativo')|list|length }}</h3>
-                    <p class="stats-label-modern mb-0">USUÁRIOS ATIVOS</p>
-                </div>
-            </div>
+            {{ stats_card_modern('#10b981', 'bg-success bg-opacity-10 text-success', 'ATIVOS', 'bg-success bg-opacity-10 text-success', 'bi bi-check-circle-fill', usuarios|selectattr('ativo')|list|length, 'USUÁRIOS ATIVOS') }}
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #ef4444 !important;">
-                <div class="card-body position-relative">
-                    <span class="badge bg-danger bg-opacity-10 text-danger position-absolute top-0 end-0 m-3">BLOQUEADOS</span>
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="icon-modern bg-danger bg-opacity-10 text-danger">
-                            <i class="bi bi-shield-lock"></i>
-                        </div>
-                    </div>
-                    <h3 class="stats-value-modern mb-1">{{ usuarios|selectattr('bloqueado')|list|length }}</h3>
-                    <p class="stats-label-modern mb-0">USUÁRIOS BLOQUEADOS</p>
-                </div>
-            </div>
+            {{ stats_card_modern('#ef4444', 'bg-danger bg-opacity-10 text-danger', 'BLOQUEADOS', 'bg-danger bg-opacity-10 text-danger', 'bi bi-shield-lock', usuarios|selectattr('bloqueado')|list|length, 'USUÁRIOS BLOQUEADOS') }}
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #3b82f6 !important;">
-                <div class="card-body position-relative">
-                    <span class="badge bg-primary bg-opacity-10 text-primary position-absolute top-0 end-0 m-3">EMPRESAS</span>
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="icon-modern bg-primary bg-opacity-10 text-primary">
-                            <i class="bi bi-building"></i>
-                        </div>
-                    </div>
-                    <h3 class="stats-value-modern mb-1">{{ empresas|length }}</h3>
-                    <p class="stats-label-modern mb-0">EMPRESAS CADASTRADAS</p>
-                </div>
-            </div>
+            {{ stats_card_modern('#3b82f6', 'bg-primary bg-opacity-10 text-primary', 'EMPRESAS', 'bg-primary bg-opacity-10 text-primary', 'bi bi-building', empresas|length, 'EMPRESAS CADASTRADAS') }}
         </div>
     </div>
 
