@@ -17,13 +17,13 @@
             </a>
             {% endif %}
 
-            {% if current_user.pode_importar_clientes %}
+            {% if current_user.pode_importar_clientes or current_user.cargo in ['admin','supervisor','supervisor_manutencao','gerente','gerente_manutencao','rh'] %}
             <a href="{{ url_for('importar_clientes') }}" class="btn btn-outline-primary">
                 <i class="bi bi-cloud-upload me-2"></i>Importar Excel
             </a>
             {% endif %}
 
-            {% if current_user.pode_criar_clientes %}
+            {% if current_user.pode_criar_clientes or current_user.cargo in ['admin','supervisor','gerente','vendedor','rh','supervisor_manutencao','gerente_manutencao'] %}
             <a href="{{ url_for('novo_cliente') }}" class="btn btn-success">
                 <i class="bi bi-plus-circle me-2"></i>Novo Cliente
             </a>
