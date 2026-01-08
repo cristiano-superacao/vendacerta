@@ -1,67 +1,40 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_clean, stats_card_clean %}
+
 {% block title %}Vendedores - Sistema de Metas{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header Clean -->
-    <div class="page-header-clean mb-4">
-        <div class="header-content">
-            <p class="header-subtitle">OPERACIONAL</p>
-            <h1 class="header-title">
-                <i class="bi bi-people-fill"></i> Gerenciamento de Vendedores
-            </h1>
-        </div>
-        <div class="header-actions">
-            <a href="{{ url_for('lista_supervisores') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-person-badge"></i> Supervisores
-            </a>
-            <a href="{{ url_for('lista_equipes') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-diagram-3-fill"></i> Equipes
-            </a>
-            <a href="{{ url_for('lista_metas') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-bullseye"></i> Metas
-            </a>
-            <a href="{{ url_for('importar_vendedores') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-upload"></i> Importar
-            </a>
-            <a href="{{ url_for('novo_vendedor') }}" class="btn btn-primary-clean">
-                <i class="bi bi-plus-circle"></i> Novo Vendedor
-            </a>
-        </div>
-    </div>
+    {% call page_header_clean('OPERACIONAL', 'bi bi-people-fill', 'Gerenciamento de Vendedores') %}
+        <a href="{{ url_for('lista_supervisores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-person-badge"></i> Supervisores
+        </a>
+        <a href="{{ url_for('lista_equipes') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-diagram-3-fill"></i> Equipes
+        </a>
+        <a href="{{ url_for('lista_metas') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-bullseye"></i> Metas
+        </a>
+        <a href="{{ url_for('importar_vendedores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-upload"></i> Importar
+        </a>
+        <a href="{{ url_for('novo_vendedor') }}" class="btn btn-primary-clean">
+            <i class="bi bi-plus-circle"></i> Novo Vendedor
+        </a>
+    {% endcall %}
 
     <!-- Cards de Estatísticas -->
     <div class="row g-4 mb-4">
         <div class="col-lg-4 col-md-6">
-            <div class="stats-card-clean stats-card-green h-100">
-                <div class="stats-icon-clean stats-icon-green">
-                    <i class="bi bi-people-fill"></i>
-                </div>
-                <p class="stats-label-clean">Total de Vendedores</p>
-                <h3 class="stats-value-clean">{{ stats.total }}</h3>
-                <p class="stats-subtitle-clean">Cadastrados no sistema</p>
-            </div>
+            {{ stats_card_clean('green', 'bi bi-people-fill', 'Total de Vendedores', stats.total, 'Cadastrados no sistema') }}
         </div>
         <div class="col-lg-4 col-md-6">
-            <div class="stats-card-clean stats-card-teal h-100">
-                <div class="stats-icon-clean stats-icon-teal">
-                    <i class="bi bi-person-badge"></i>
-                </div>
-                <p class="stats-label-clean">Com Supervisor</p>
-                <h3 class="stats-value-clean">{{ stats.com_supervisor }}</h3>
-                <p class="stats-subtitle-clean">Supervisionados ativos</p>
-            </div>
+            {{ stats_card_clean('teal', 'bi bi-person-badge', 'Com Supervisor', stats.com_supervisor, 'Supervisionados ativos') }}
         </div>
         <div class="col-lg-4 col-md-6">
-            <div class="stats-card-clean stats-card-purple h-100">
-                <div class="stats-icon-clean stats-icon-purple">
-                    <i class="bi bi-diagram-3-fill"></i>
-                </div>
-                <p class="stats-label-clean">Em Equipes</p>
-                <h3 class="stats-value-clean">{{ stats.em_equipes }}</h3>
-                <p class="stats-subtitle-clean">Vinculados à equipes</p>
-            </div>
+            {{ stats_card_clean('purple', 'bi bi-diagram-3-fill', 'Em Equipes', stats.em_equipes, 'Vinculados à equipes') }}
         </div>
     </div>
 

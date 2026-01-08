@@ -1,69 +1,40 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_clean, stats_card_clean %}
+
 {% block title %}Supervisores - Sistema de Metas{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header Clean -->
-    <div class="page-header-clean mb-4">
-        <div class="header-content">
-            <p class="header-subtitle">OPERACIONAL</p>
-            <h1 class="header-title">
-                <i class="bi bi-person-badge"></i> Gerenciamento de Supervisores
-            </h1>
-        </div>
-        <div class="header-actions">
-            <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-people"></i> Vendedores
-            </a>
-            <a href="{{ url_for('lista_equipes') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-diagram-3-fill"></i> Equipes
-            </a>
-            <a href="{{ url_for('lista_metas') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-bullseye"></i> Metas
-            </a>
-            <a href="{{ url_for('importar_supervisores') }}" class="btn btn-secondary-clean">
-                <i class="bi bi-upload"></i> Importar
-            </a>
-            <a href="{{ url_for('novo_supervisor') }}" class="btn btn-primary-clean">
-                <i class="bi bi-plus-circle"></i> Novo Supervisor
-            </a>
-        </div>
-    </div>
+    {% call page_header_clean('OPERACIONAL', 'bi bi-person-badge', 'Gerenciamento de Supervisores') %}
+        <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-people"></i> Vendedores
+        </a>
+        <a href="{{ url_for('lista_equipes') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-diagram-3-fill"></i> Equipes
+        </a>
+        <a href="{{ url_for('lista_metas') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-bullseye"></i> Metas
+        </a>
+        <a href="{{ url_for('importar_supervisores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-upload"></i> Importar
+        </a>
+        <a href="{{ url_for('novo_supervisor') }}" class="btn btn-primary-clean">
+            <i class="bi bi-plus-circle"></i> Novo Supervisor
+        </a>
+    {% endcall %}
 
     <!-- Cards de Estatísticas -->
     <div class="row g-4 mb-4">
         <div class="col-lg-4 col-md-6">
-            <div class="stats-card-clean stats-card-green h-100">
-                <div class="stats-icon-clean stats-icon-green">
-                    <i class="bi bi-person-badge"></i>
-                </div>
-                <p class="stats-label-clean">Total de Supervisores</p>
-                <h3 class="stats-value-clean">{{ stats.total }}</h3>
-                <p class="stats-subtitle-clean">Cadastrados no sistema</p>
-            </div>
+            {{ stats_card_clean('green', 'bi bi-person-badge', 'Total de Supervisores', stats.total, 'Cadastrados no sistema') }}
         </div>
         <div class="col-lg-4 col-md-6">
-            <div class="stats-card-clean stats-card-teal h-100">
-                <div class="stats-icon-clean stats-icon-teal">
-                    <i class="bi bi-people-fill"></i>
-                </div>
-                <p class="stats-label-clean">Vendedores Supervisionados</p>
-                <h3 class="stats-value-clean">{{ stats.total_vendedores }}</h3>
-                <p class="stats-subtitle-clean">Total sob gestão</p>
-            </div>
+            {{ stats_card_clean('teal', 'bi bi-people-fill', 'Vendedores Supervisionados', stats.total_vendedores, 'Total sob gestão') }}
         </div>
         <div class="col-lg-4 col-md-6">
-            <div class="stats-card-clean stats-card-green h-100">
-                <div class="stats-icon-clean stats-icon-green">
-                    <i class="bi bi-graph-up-arrow"></i>
-                </div>
-                <p class="stats-label-clean">Média de Vendedores</p>
-                <h3 class="stats-value-clean">
-                    {{ "%.1f"|format(stats.media_vendedores) }}
-                </h3>
-                <p class="stats-subtitle-clean">Por supervisor</p>
-            </div>
+            {{ stats_card_clean('green', 'bi bi-graph-up-arrow', 'Média de Vendedores', "%.1f"|format(stats.media_vendedores), 'Por supervisor') }}
         </div>
     </div>
             </div>
