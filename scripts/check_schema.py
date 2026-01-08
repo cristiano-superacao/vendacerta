@@ -13,6 +13,8 @@ import os
 import sys
 from sqlalchemy import create_engine, inspect
 
+from db_utils import get_database_url
+
 REQUIRED_COLS = [
     "supervisor_id",
     "gerente_id",
@@ -23,16 +25,18 @@ REQUIRED_COLS = [
 
 
 def _build_db_url():
-    url = os.environ.get("DATABASE_URL") or os.environ.get("URL_DO_BANCO_DE_DADOS")
-    if url and url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
+    url = get_database_url(
+        prefer_public=False,
+        default_pg={
+            "PGHOST": "localhost",
+            "PGPORT": "5432",
+            "PGUSER": "postgres",
+            "PGPASSWORD": "postgres",
+            "PGDATABASE": "vendacerta",
+        },
+    )
     if not url:
-        pghost = os.environ.get("PGHOST", "localhost")
-        pgport = os.environ.get("PGPORT", "5432")
-        pguser = os.environ.get("PGUSER", "postgres")
-        pgpassword = os.environ.get("PGPASSWORD", "postgres")
-        pgdatabase = os.environ.get("PGDATABASE", "vendacerta")
-        url = f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
+        raise RuntimeError("Não foi possível montar DATABASE_URL")
     return url
 
 

@@ -6,44 +6,21 @@ import os
 import sys
 from sqlalchemy import create_engine, text, inspect
 
+from db_utils import get_database_url
+
 def obter_database_url():
     """Obtem a URL do banco de dados Railway"""
-    # Priorizar DATABASE_PUBLIC_URL para acesso externo
-    db_url = os.getenv('DATABASE_PUBLIC_URL')
-    if db_url:
+    db_url = get_database_url(prefer_public=True, allow_internal_host=False)
+    if not db_url:
+        print("[ERRO] Nenhuma configuracao de banco encontrada!")
+        return None
+    if os.getenv('DATABASE_PUBLIC_URL'):
         print(f"[OK] DATABASE_PUBLIC_URL encontrada (acesso externo)")
-        return db_url
-    
-    # Tentar DATABASE_URL (rede interna Railway)
-    db_url = os.getenv('DATABASE_URL')
-    if db_url:
+    elif os.getenv('DATABASE_URL'):
         print(f"[OK] DATABASE_URL encontrada (rede interna)")
-        return db_url
-    
-    # Construir a partir de variaveis individuais PG*
-    pghost = os.getenv('PGHOST')
-    pgport = os.getenv('PGPORT', '5432')
-    pguser = os.getenv('PGUSER')
-    pgpassword = os.getenv('PGPASSWORD')
-    pgdatabase = os.getenv('PGDATABASE')
-    
-    if all([pghost, pguser, pgpassword, pgdatabase]):
-        # Verificar se é host interno do Railway
-        if 'railway.internal' in pghost:
-            print(f"[AVISO] Host interno detectado: {pghost}")
-            print(f"[INFO] Tentando usar DATABASE_PUBLIC_URL...")
-            # Nao usar host interno para conexao externa
-            return None
-        
-        db_url = f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
-        print(f"[OK] URL construida a partir de variaveis PG*")
-        print(f"     Host: {pghost}:{pgport}")
-        print(f"     Database: {pgdatabase}")
-        print(f"     User: {pguser}")
-        return db_url
-    
-    print("[ERRO] Nenhuma configuracao de banco encontrada!")
-    return None
+    else:
+        print(f"[OK] URL construída a partir de variáveis PG*")
+    return db_url
 
 def verificar_tabelas_existem(engine):
     """Verifica quais tabelas existem no banco"""

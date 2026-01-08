@@ -3,34 +3,16 @@ Verifica no PostgreSQL do Railway se o schema de manutenção/técnicos está co
 - Tabela: faixas_comissao_manutencao
 - Coluna: tecnicos.faixa_manutencao_id
 """
-import os
 import sys
+
 from sqlalchemy import create_engine, inspect
 
-
-def get_db_url():
-    url = (
-        os.getenv("DATABASE_PUBLIC_URL")
-        or os.getenv("DATABASE_URL")
-    )
-    if url and url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
-    if url:
-        return url
-    # Build from PG* vars if needed
-    host = os.getenv("PGHOST")
-    port = os.getenv("PGPORT", "5432")
-    user = os.getenv("PGUSER")
-    pwd = os.getenv("PGPASSWORD")
-    db = os.getenv("PGDATABASE")
-    if all([host, user, pwd, db]):
-        return f"postgresql://{user}:{pwd}@{host}:{port}/{db}"
-    return None
+from db_utils import get_database_url
 
 
 def main():
     print("\n=== Verificação de Schema: Manutenção/Técnicos ===")
-    url = get_db_url()
+    url = get_database_url(prefer_public=True)
     if not url:
         print("[ERRO] Variáveis de conexão não encontradas.")
         sys.exit(1)

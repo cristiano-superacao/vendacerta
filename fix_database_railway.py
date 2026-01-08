@@ -11,6 +11,8 @@ import sys
 import time
 from sqlalchemy import create_engine, text, inspect
 
+from db_utils import get_database_url
+
 def fix_database():
     """Corrige o banco de dados adicionando colunas faltantes.
 
@@ -18,28 +20,13 @@ def fix_database():
     Nunca faz sys.exit() para não derrubar o processo do servidor.
     """
     
-    # Tenta obter a URL do banco de dados de múltiplas variáveis de ambiente
-    database_url = os.environ.get('DATABASE_URL') or os.environ.get('DATABASE_PUBLIC_URL')
-    
-    # Se não encontrou, tenta construir a partir das variáveis PG* individuais
+    database_url = get_database_url(prefer_public=True)
     if not database_url:
-        pghost = os.environ.get('PGHOST')
-        pgport = os.environ.get('PGPORT')
-        pguser = os.environ.get('PGUSER')
-        pgpassword = os.environ.get('PGPASSWORD')
-        pgdatabase = os.environ.get('PGDATABASE')
-        
-        if all([pghost, pgport, pguser, pgpassword, pgdatabase]):
-            database_url = f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
-            print("✅ URL do banco construída a partir de variáveis PG* individuais")
-        else:
-            print("❌ Nenhuma variável de ambiente de URL de banco de dados encontrada!")
-            print("📝 Configure DATABASE_URL ou as variáveis PG* no Railway.")
-            return False
-    
-    # Corrigir URL se necessário (Railway usa postgres:// mas SQLAlchemy precisa de postgresql://)
-    if database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        print("❌ Nenhuma variável de ambiente de URL de banco de dados encontrada!")
+        print("📝 Configure DATABASE_URL/DATABASE_PUBLIC_URL ou as variáveis PG* no Railway.")
+        return False
+    if not (os.environ.get('DATABASE_URL') or os.environ.get('DATABASE_PUBLIC_URL')):
+        print("✅ URL do banco construída a partir de variáveis PG* individuais")
     
     print("🔗 Conectando ao banco de dados...")
     

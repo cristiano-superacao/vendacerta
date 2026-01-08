@@ -5,31 +5,10 @@ Usa DATABASE_PUBLIC_URL ou variáveis PG* para conexão externa
 import os
 import psycopg2
 
-def get_public_db_url():
-    """Obtém URL pública do banco"""
-    # Priorizar DATABASE_PUBLIC_URL
-    url = os.getenv('DATABASE_PUBLIC_URL')
-    if url:
-        print(f"[OK] Usando DATABASE_PUBLIC_URL")
-        return url
-    
-    # Construir de PG* vars
-    host = os.getenv('PGHOST')
-    port = os.getenv('PGPORT', '5432')
-    user = os.getenv('PGUSER')
-    pwd = os.getenv('PGPASSWORD')
-    db = os.getenv('PGDATABASE')
-    
-    if all([host, user, pwd, db]) and 'railway.internal' not in host:
-        url = f"postgresql://{user}:{pwd}@{host}:{port}/{db}"
-        print(f"[OK] URL construída de PG* vars (host público)")
-        return url
-    
-    print("[ERRO] Sem URL pública disponível")
-    return None
+from db_utils import get_database_url
 
 def fix_schema():
-    url = get_public_db_url()
+    url = get_database_url(prefer_public=True, allow_internal_host=False)
     if not url:
         return False
     
