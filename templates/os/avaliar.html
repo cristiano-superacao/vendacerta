@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_prescrimed_custom %}
+
 {% block title %}Avaliar OS {{ os.numero_os }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4 py-3">
     <!-- Cabeçalho padronizado -->
-    <div class="page-header-clean mb-4">
-        <p class="page-category">MANUTENÇÃO</p>
+    {% call page_header_prescrimed_custom('MANUTENÇÃO') %}
         <h1 class="page-title-clean">
             <i class="bi bi-star-fill text-warning me-2"></i>
             Avaliar Atendimento
@@ -17,7 +18,7 @@
         <p class="page-subtitle-clean small text-muted mt-1">
             Registre a satisfação do cliente em relação ao atendimento realizado nesta ordem de serviço.
         </p>
-    </div>
+    {% endcall %}
 
     <div class="row justify-content-center g-4">
         <div class="col-lg-8">

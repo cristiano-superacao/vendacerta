@@ -1,72 +1,40 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_prescrimed, stats_card_clean %}
+
 {% block title %}Ordens de Serviço{% endblock %}
 
 {% block content %}
 <!-- Header Padrão Prescrimed -->
-<div class="page-header-clean mb-4">
-    <p class="page-category">MANUTENÇÃO</p>
-    <h1 class="page-title-clean">Ordens de Serviço</h1>
-    <p class="page-subtitle-clean">Gerenciar todas as ordens de serviço de manutenção</p>
-
-    <div class="d-flex gap-2 mt-3 flex-wrap">
-        {% if current_user.cargo in ['admin', 'administrativo'] %}
-        <a href="{{ url_for('nova_ordem_servico') }}" class="btn-primary-clean">
-            <i class="bi bi-plus-lg"></i>
-            <span>Nova OS</span>
-        </a>
-        {% endif %}
-    </div>
-</div>
+{% call page_header_prescrimed('MANUTENÇÃO', 'Ordens de Serviço', 'Gerenciar todas as ordens de serviço de manutenção') %}
+    {% if current_user.cargo in ['admin', 'administrativo'] %}
+    <a href="{{ url_for('nova_ordem_servico') }}" class="btn-primary-clean">
+        <i class="bi bi-plus-lg"></i>
+        <span>Nova OS</span>
+    </a>
+    {% endif %}
+{% endcall %}
 
 <!-- Cards de Estatísticas -->
 <div class="row g-3 mb-4">
     <!-- Card Aguardando Aprovação -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-red h-100">
-            <div class="stats-icon-clean stats-icon-red">
-                <i class="bi bi-hourglass-split"></i>
-            </div>
-            <p class="stats-label-clean">Aguardando Aprovação</p>
-            <h3 class="stats-value-clean">{{ stats.aguardando_aprovacao }}</h3>
-            <p class="stats-subtitle-clean">Pendentes de análise</p>
-        </div>
+        {{ stats_card_clean('red', 'bi bi-hourglass-split', 'Aguardando Aprovação', stats.aguardando_aprovacao, 'Pendentes de análise') }}
     </div>
 
     <!-- Card Em Andamento -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-teal h-100">
-            <div class="stats-icon-clean stats-icon-teal">
-                <i class="bi bi-tools"></i>
-            </div>
-            <p class="stats-label-clean">Em Andamento</p>
-            <h3 class="stats-value-clean">{{ stats.em_andamento }}</h3>
-            <p class="stats-subtitle-clean">Sendo executadas</p>
-        </div>
+        {{ stats_card_clean('teal', 'bi bi-tools', 'Em Andamento', stats.em_andamento, 'Sendo executadas') }}
     </div>
 
     <!-- Card Concluídas -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-green h-100">
-            <div class="stats-icon-clean stats-icon-green">
-                <i class="bi bi-check-circle-fill"></i>
-            </div>
-            <p class="stats-label-clean">Concluídas</p>
-            <h3 class="stats-value-clean">{{ stats.concluida }}</h3>
-            <p class="stats-subtitle-clean">Finalizadas com sucesso</p>
-        </div>
+        {{ stats_card_clean('green', 'bi bi-check-circle-fill', 'Concluídas', stats.concluida, 'Finalizadas com sucesso') }}
     </div>
 
     <!-- Card Total -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-purple h-100">
-            <div class="stats-icon-clean stats-icon-purple">
-                <i class="bi bi-clipboard-data"></i>
-            </div>
-            <p class="stats-label-clean">Total</p>
-            <h3 class="stats-value-clean">{{ stats.total }}</h3>
-            <p class="stats-subtitle-clean">Todas as ordens</p>
-        </div>
+        {{ stats_card_clean('purple', 'bi bi-clipboard-data', 'Total', stats.total, 'Todas as ordens') }}
     </div>
 </div>
 

@@ -1,80 +1,48 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_prescrimed, stats_card_clean %}
+
 {% block title %}Dashboard - Sistema de Metas{% endblock %}
 
 {% block content %}
 <!-- Header Padrão Prescrimed -->
-<div class="page-header-clean mb-4">
-    <p class="page-category">ADMINISTRATIVO</p>
-    <h1 class="page-title-clean">Dashboard</h1>
-    <p class="page-subtitle-clean">Gestão completa de vendas, metas e comissões em {{ resumo_global.mes }}/{{ resumo_global.ano }}</p>
-
-    <div class="d-flex gap-2 mt-3 flex-wrap">
-        {% if current_user.is_super_admin %}
-        <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-secondary-clean">
-            <i class="bi bi-building"></i>
-            <span>Empresas</span>
-        </a>
-        {% endif %}
-        <a href="{{ url_for('lista_metas') }}" class="btn-primary-clean">
-            <i class="bi bi-plus-lg"></i>
-            <span>Nova Meta</span>
-        </a>
-        <a href="{{ url_for('exportar_pdf_dashboard') }}" class="btn-primary-clean">
-            <i class="bi bi-file-earmark-pdf"></i>
-            <span>Exportar PDF</span>
-        </a>
-    </div>
-</div>
+{% call page_header_prescrimed('ADMINISTRATIVO', 'Dashboard', 'Gestão completa de vendas, metas e comissões em ' ~ resumo_global.mes ~ '/' ~ resumo_global.ano) %}
+    {% if current_user.is_super_admin %}
+    <a href="{{ url_for('super_admin_empresas') }}" class="btn btn-secondary-clean">
+        <i class="bi bi-building"></i>
+        <span>Empresas</span>
+    </a>
+    {% endif %}
+    <a href="{{ url_for('lista_metas') }}" class="btn-primary-clean">
+        <i class="bi bi-plus-lg"></i>
+        <span>Nova Meta</span>
+    </a>
+    <a href="{{ url_for('exportar_pdf_dashboard') }}" class="btn-primary-clean">
+        <i class="bi bi-file-earmark-pdf"></i>
+        <span>Exportar PDF</span>
+    </a>
+{% endcall %}
 
 <!-- Cards de Estatísticas - Padrão Prescrimed -->
 <div class="row g-3 mb-4">
     <!-- Card Total de Vendedores -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-green h-100">
-            <div class="stats-icon-clean stats-icon-green">
-                <i class="bi bi-people-fill"></i>
-            </div>
-            <p class="stats-label-clean">Total de Vendedores</p>
-            <h3 class="stats-value-clean">{{ resumo_global.total_vendedores }}</h3>
-            <p class="stats-subtitle-clean">Ativos no sistema</p>
-        </div>
+        {{ stats_card_clean('green', 'bi bi-people-fill', 'Total de Vendedores', resumo_global.total_vendedores, 'Ativos no sistema') }}
     </div>
 
     <!-- Card Receita Total -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-teal h-100">
-            <div class="stats-icon-clean stats-icon-teal">
-                <i class="bi bi-currency-dollar"></i>
-            </div>
-            <p class="stats-label-clean">Receita</p>
-            <h3 class="stats-value-clean">{{ resumo_global.total_receita_formatada }}</h3>
-            <p class="stats-subtitle-clean positive">{{ "%.1f"|format(resumo_global.alcance_equipe|default(0)) }}% da meta</p>
-        </div>
+        {{ stats_card_clean('teal', 'bi bi-currency-dollar', 'Receita', resumo_global.total_receita_formatada, "%.1f"|format(resumo_global.alcance_equipe|default(0)) ~ '% da meta', 'positive') }}
     </div>
 
     <!-- Card Meta Total -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-red h-100">
-            <div class="stats-icon-clean stats-icon-red">
-                <i class="bi bi-bullseye"></i>
-            </div>
-            <p class="stats-label-clean">Meta do Mês</p>
-            <h3 class="stats-value-clean">{{ resumo_global.total_meta_formatada }}</h3>
-            <p class="stats-subtitle-clean">Objetivo do período</p>
-        </div>
+        {{ stats_card_clean('red', 'bi bi-bullseye', 'Meta do Mês', resumo_global.total_meta_formatada, 'Objetivo do período') }}
     </div>
 
     <!-- Card Comissão Total -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stats-card-clean stats-card-purple h-100">
-            <div class="stats-icon-clean stats-icon-purple">
-                <i class="bi bi-wallet2"></i>
-            </div>
-            <p class="stats-label-clean">Comissão</p>
-            <h3 class="stats-value-clean">{{ resumo_global.total_comissao_formatada }}</h3>
-            <p class="stats-subtitle-clean">Saldo acumulado</p>
-        </div>
+        {{ stats_card_clean('purple', 'bi bi-wallet2', 'Comissão', resumo_global.total_comissao_formatada, 'Saldo acumulado') }}
     </div>
 </div>
 

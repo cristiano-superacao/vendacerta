@@ -1,26 +1,22 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_prescrimed %}
+
 {% block title %}Nova Ordem de Serviço{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <!-- Cabeçalho no padrão da lista (Imagem 1) -->
-    <div class="page-header-clean mb-4">
-        <p class="page-category">MANUTENÇÃO</p>
-        <h1 class="page-title-clean">Nova Ordem de Serviço</h1>
-        <p class="page-subtitle-clean">Registre uma nova solicitação de manutenção</p>
-
-        <div class="d-flex gap-2 mt-3 flex-wrap">
-            <button type="submit" form="novaOSForm" class="btn-primary-clean">
-                <i class="bi bi-check-lg"></i>
-                <span>Criar OS</span>
-            </button>
-            <a href="{{ url_for('lista_ordens_servico') }}" class="btn-secondary-clean">
-                <i class="bi bi-arrow-left"></i>
-                <span>Voltar</span>
-            </a>
-        </div>
-    </div>
+    {% call page_header_prescrimed('MANUTENÇÃO', 'Nova Ordem de Serviço', 'Registre uma nova solicitação de manutenção') %}
+        <button type="submit" form="novaOSForm" class="btn-primary-clean">
+            <i class="bi bi-check-lg"></i>
+            <span>Criar OS</span>
+        </button>
+        <a href="{{ url_for('lista_ordens_servico') }}" class="btn-secondary-clean">
+            <i class="bi bi-arrow-left"></i>
+            <span>Voltar</span>
+        </a>
+    {% endcall %}
 
     <div class="row">
         <!-- Formulário -->
