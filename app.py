@@ -5711,28 +5711,40 @@ def novo_cliente():
                     else "SEM_CIDADE"
                 )
             )
-            # Gerar código único do cliente com verificação preventiva
-            codigo_cliente = Cliente.gerar_codigo_cliente(
-                municipio, current_user.empresa_id
-            )
-            # Evitar colisões por concorrência ou dados anteriores
-            try_count = 0
-            while True:
-                existente = Cliente.query.filter_by(
-                    empresa_id=current_user.empresa_id,
-                    codigo_cliente=codigo_cliente,
-                ).first()
-                if not existente:
-                    break
-                try_count += 1
-                if try_count > 5:
-                    raise Exception(
-                        "Falha ao gerar código único para cliente após múltiplas tentativas"
+            # Gerar código único do cliente com verificação reforçada
+            codigo_cliente = None
+            max_tentativas = 10
+            
+            for tentativa in range(max_tentativas):
+                try:
+                    codigo_cliente = Cliente.gerar_codigo_cliente(
+                        municipio, current_user.empresa_id
                     )
-                # Recalcular usando estado atual do banco
-                codigo_cliente = Cliente.gerar_codigo_cliente(
-                    municipio, current_user.empresa_id
-                )
+                    # Verificar se o código já existe
+                    existente = Cliente.query.filter_by(
+                        empresa_id=current_user.empresa_id,
+                        codigo_cliente=codigo_cliente,
+                    ).first()
+                    
+                    if not existente:
+                        break  # Código único encontrado!
+                    
+                    # Se existir, aguardar um pouco e tentar novamente
+                    import time
+                    time.sleep(0.05 * (tentativa + 1))
+                    
+                except Exception as e:
+                    app.logger.warning(f"Tentativa {tentativa + 1} de gerar código: {str(e)}")
+                    if tentativa == max_tentativas - 1:
+                        raise Exception(
+                            f"Não foi possível gerar código único após {max_tentativas} tentativas. "
+                            "Por favor, tente novamente."
+                        )
+                    import time
+                    time.sleep(0.1 * (tentativa + 1))
+            
+            if not codigo_cliente:
+                raise Exception("Falha ao gerar código único para o cliente.")
 
             # Criar cliente
             cliente = Cliente(
@@ -5808,29 +5820,61 @@ def novo_cliente():
                 cliente.set_formas_pagamento_list([])
 
             db.session.add(cliente)
-            try:
-                db.session.commit()
-            except Exception as e:
-                # Em caso de violação de unicidade, tentar novamente uma vez
-                from sqlalchemy.exc import IntegrityError
-                db.session.rollback()
-                if isinstance(e, IntegrityError):
-                    codigo_cliente = Cliente.gerar_codigo_cliente(
-                        municipio, current_user.empresa_id
-                    )
-                    cliente.codigo_cliente = codigo_cliente
-                    db.session.add(cliente)
+            
+            # Tentar salvar com retry em caso de violação de unicidade
+            max_commit_tentativas = 3
+            commit_sucesso = False
+            
+            for commit_tentativa in range(max_commit_tentativas):
+                try:
                     db.session.commit()
-                else:
-                    raise
+                    commit_sucesso = True
+                    break
+                except Exception as e:
+                    from sqlalchemy.exc import IntegrityError
+                    db.session.rollback()
+                    
+                    # Verificar se é erro de unicidade do código
+                    if isinstance(e, IntegrityError) and 'codigo_cliente' in str(e):
+                        if commit_tentativa < max_commit_tentativas - 1:
+                            # Gerar novo código e tentar novamente
+                            app.logger.warning(f"Código duplicado detectado, gerando novo código (tentativa {commit_tentativa + 1})")
+                            import time
+                            time.sleep(0.1 * (commit_tentativa + 1))
+                            
+                            novo_codigo = Cliente.gerar_codigo_cliente(
+                                municipio, current_user.empresa_id
+                            )
+                            cliente.codigo_cliente = novo_codigo
+                            db.session.add(cliente)
+                        else:
+                            raise Exception(
+                                "Não foi possível salvar o cliente devido a conflito de código. "
+                                "Por favor, tente novamente."
+                            )
+                    else:
+                        raise
+            
+            if not commit_sucesso:
+                raise Exception("Falha ao salvar cliente após múltiplas tentativas.")
 
             flash("Cliente cadastrado com sucesso!", "success")
+            app.logger.info(f"Cliente {cliente.nome} cadastrado com código {cliente.codigo_cliente}")
             return redirect(url_for("lista_clientes"))
 
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Erro ao cadastrar cliente: {str(e)}")
-            flash(f"Erro ao cadastrar cliente: {str(e)}", "danger")
+            
+            # Mensagem mais amigável para o usuário
+            if 'codigo_cliente' in str(e) and 'duplicate' in str(e).lower():
+                flash(
+                    "Ocorreu um conflito ao gerar o código do cliente. "
+                    "Por favor, tente cadastrar novamente.",
+                    "warning"
+                )
+            else:
+                flash(f"Erro ao cadastrar cliente: {str(e)}", "danger")
 
     return render_template(
         "clientes/form.html", form=form, titulo="Novo Cliente", cliente=None
@@ -7891,9 +7935,31 @@ def importar_clientes():
                             if municipio
                             else cidade if cidade else "SEM_CIDADE"
                         )
-                        codigo_cliente = Cliente.gerar_codigo_cliente(
-                            municipio_codigo, current_user.empresa_id
-                        )
+                        
+                        # Gerar código único com verificação de duplicação
+                        codigo_cliente = None
+                        for tentativa in range(5):
+                            try:
+                                codigo_cliente = Cliente.gerar_codigo_cliente(
+                                    municipio_codigo, current_user.empresa_id
+                                )
+                                # Verificar se já existe
+                                if not Cliente.query.filter_by(
+                                    empresa_id=current_user.empresa_id,
+                                    codigo_cliente=codigo_cliente
+                                ).first():
+                                    break  # Código único encontrado
+                                # Se chegou aqui, código já existe
+                                import time
+                                time.sleep(0.05 * (tentativa + 1))
+                            except Exception:
+                                pass
+                        
+                        if not codigo_cliente:
+                            # Fallback: gerar código baseado em timestamp
+                            import time
+                            timestamp = str(int(time.time() * 1000))[-8:]
+                            codigo_cliente = f"{timestamp[:4]}-{timestamp[4:8]}"
 
                         # Criar cliente
                         cliente = Cliente(
@@ -7938,10 +8004,38 @@ def importar_clientes():
                         importados += 1
 
                 except Exception as e:
-                    erros.append(f"Linha {index + 2}: {str(e)}")
+                    error_msg = str(e)
+                    # Se for erro de duplicação de código, tentar gerar novo
+                    if 'codigo_cliente' in error_msg and 'duplicate' in error_msg.lower():
+                        try:
+                            import time
+                            time.sleep(0.1)
+                            # Tentar gerar novo código
+                            novo_codigo = Cliente.gerar_codigo_cliente(
+                                municipio_codigo if 'municipio_codigo' in locals() else 'SEM_CIDADE',
+                                current_user.empresa_id
+                            )
+                            if 'cliente' in locals() and hasattr(cliente, 'codigo_cliente'):
+                                cliente.codigo_cliente = novo_codigo
+                                db.session.add(cliente)
+                                # Não adicionar ao contador de erros, tentar novamente no commit
+                                continue
+                        except Exception:
+                            pass
+                    erros.append(f"Linha {index + 2}: {error_msg}")
 
-            # Commit
-            db.session.commit()
+            # Commit com retry em caso de erro de duplicação
+            try:
+                db.session.commit()
+            except Exception as e:
+                from sqlalchemy.exc import IntegrityError
+                db.session.rollback()
+                
+                # Se for erro de código duplicado, informar o usuário
+                if isinstance(e, IntegrityError) and 'codigo_cliente' in str(e):
+                    erros.append("Erro de duplicação de código de cliente detectado. Por favor, tente importar novamente.")
+                else:
+                    erros.append(f"Erro ao salvar no banco: {str(e)}")
 
             # Feedback
             total_processados = importados + atualizados
