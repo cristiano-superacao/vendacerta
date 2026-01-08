@@ -1,20 +1,17 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import page_header_modern_standard %}
+
 {% block title %}{% if meta %}Editar{% else %}Nova{% endif %} Meta - Sistema de Metas{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <!-- Header Modernizado -->
-    <div class="modern-header mb-4">
-        <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">METAS E COMISSÕES</p>
-        <h1 class="page-title-modern mb-2">
-            <i class="bi bi-bullseye"></i> {% if meta %}Editar Meta{% else %}Nova Meta{% endif %}
-        </h1>
-        <p class="text-muted mb-3">Defina metas mensais e acompanhe o desempenho dos vendedores</p>
+    {% call page_header_modern_standard('METAS E COMISSÕES', 'bi bi-bullseye', ('Editar Meta' if meta else 'Nova Meta'), 'Defina metas mensais e acompanhe o desempenho dos vendedores') %}
         <a href="{{ url_for('lista_metas') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Voltar
         </a>
-    </div>
+    {% endcall %}
 
     <div class="row justify-content-center">
         <div class="col-lg-10">
