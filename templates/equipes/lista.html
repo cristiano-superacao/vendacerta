@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% from "_macros/ui.html" import stats_card_modern %}
+
 {% block title %}Equipes - Sistema de Metas{% endblock %}
 
 {% block content %}
@@ -36,36 +38,14 @@
 <!-- Cards de Estatísticas Modernizados -->
 <div class="row g-4 mb-4">
     <div class="col-md-6">
-        <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #6366f1 !important;">
-            <div class="card-body position-relative">
-                <span class="badge bg-primary bg-opacity-10 text-primary position-absolute top-0 end-0 m-3">ATIVAS</span>
-                <div class="d-flex align-items-center mb-3">
-                    <div class="icon-modern bg-primary bg-opacity-10 text-primary">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                </div>
-                <h3 class="stats-value-modern mb-1">{{ stats.total_equipes }}</h3>
-                <p class="stats-label-modern mb-0">
-                    <i class="bi bi-diagram-3"></i> EQUIPES CADASTRADAS
-                </p>
-            </div>
-        </div>
+        {% call stats_card_modern('#6366f1', 'bg-primary bg-opacity-10 text-primary', 'ATIVAS', 'bg-primary bg-opacity-10 text-primary', 'bi bi-people-fill', stats.total_equipes) %}
+            <i class="bi bi-diagram-3"></i> EQUIPES CADASTRADAS
+        {% endcall %}
     </div>
     <div class="col-md-6">
-        <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #06b6d4 !important;">
-            <div class="card-body position-relative">
-                <span class="badge bg-info bg-opacity-10 text-info position-absolute top-0 end-0 m-3">TOTAL</span>
-                <div class="d-flex align-items-center mb-3">
-                    <div class="icon-modern bg-info bg-opacity-10 text-info">
-                        <i class="bi bi-person-badge"></i>
-                    </div>
-                </div>
-                <h3 class="stats-value-modern mb-1">{{ stats.total_vendedores }}</h3>
-                <p class="stats-label-modern mb-0">
-                    <i class="bi bi-people"></i> VENDEDORES ALOCADOS
-                </p>
-            </div>
-        </div>
+        {% call stats_card_modern('#06b6d4', 'bg-info bg-opacity-10 text-info', 'TOTAL', 'bg-info bg-opacity-10 text-info', 'bi bi-person-badge', stats.total_vendedores) %}
+            <i class="bi bi-people"></i> VENDEDORES ALOCADOS
+        {% endcall %}
     </div>
 </div>
 
