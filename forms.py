@@ -499,9 +499,12 @@ class ClienteForm(FlaskForm):
                 raise ValidationError('CPF deve ter 11 dígitos')
 
             # Verifica se já existe (ignora próprio registro em edição)
-            cliente = Cliente.query.filter_by(cpf=cpf_numbers).first()
+            query = Cliente.query.filter_by(cpf=cpf_numbers)
+            if self.empresa_id:
+                query = query.filter_by(empresa_id=self.empresa_id)
+            cliente = query.first()
             if cliente and (self.cliente_id is None or cliente.id != self.cliente_id):
-                raise ValidationError('Este CPF já está cadastrado.')
+                raise ValidationError('Este CPF já está cadastrado nesta empresa.')
 
     def validate_cnpj(self, cnpj):
         """Valida formato e unicidade do CNPJ"""
@@ -513,9 +516,12 @@ class ClienteForm(FlaskForm):
                 raise ValidationError('CNPJ deve ter 14 dígitos')
 
             # Verifica se já existe (ignora próprio registro em edição)
-            cliente = Cliente.query.filter_by(cnpj=cnpj_numbers).first()
+            query = Cliente.query.filter_by(cnpj=cnpj_numbers)
+            if self.empresa_id:
+                query = query.filter_by(empresa_id=self.empresa_id)
+            cliente = query.first()
             if cliente and (self.cliente_id is None or cliente.id != self.cliente_id):
-                raise ValidationError('Este CNPJ já está cadastrado.')
+                raise ValidationError('Este CNPJ já está cadastrado nesta empresa.')
 
 class CompraClienteForm(FlaskForm):
     """Formulário de registro de compra do cliente"""
