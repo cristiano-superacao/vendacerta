@@ -1,5 +1,94 @@
 # 📝 Changelog - Sistema de Gestão de Metas e Comissões
 
+## [2.9.0] - 2026-01-09
+
+### 🎨 Padronização Completa da Interface do Usuário
+
+#### Design System Implementado
+- **CLASSES GLOBAIS**: Sistema unificado de design em `static/css/custom.css`
+  - `.page-header-clean`: Header limpo e profissional
+  - `.page-title-clean`: Título padronizado com ícone
+  - `.page-subtitle-clean`: Subtítulo em maiúsculas
+  - `.btn-primary-clean`: Botão primário consistente
+  - `.btn-secondary-clean`: Botão secundário consistente
+
+#### Módulos Padronizados
+- **CLIENTES**: Relatórios (relatorio.html, relatorio_vendas.html)
+  - Header clean aplicado
+  - Botões de ação padronizados
+  - Filtros com estilo consistente
+  - Layout responsivo mantido
+
+- **ESTOQUE**: Todas as páginas modernizadas
+  - produtos.html: Lista com header clean + botões padronizados
+  - produto_visualizar.html: Visualização com ações consistentes
+  - movimentacoes.html: Histórico com filtros modernos
+  - dashboard.html: Quick links padronizados
+
+- **CONFIGURAÇÕES**: Comissões (comissoes.html)
+  - Header institucional aplicado
+  - Empty state com CTA modernizado
+  - Tabela profissional
+
+- **METAS**: Configuração e importação
+  - configurar.html: Ações primárias padronizadas
+  - importar.html: Upload com botões consistentes
+
+- **RELATÓRIOS**: Metas avançado (metas_avancado.html)
+  - Header clean aplicado
+  - Filtros com botões padronizados
+
+- **MENSAGENS**: Caixa de entrada e enviadas
+  - caixa_entrada.html: Header e ações consistentes
+  - enviadas.html: Empty state modernizado
+
+- **SUPER ADMIN**: Páginas administrativas
+  - backup_config.html: Formulário com botões padronizados
+  - usuario_form.html: Ações submit/cancel estilizadas
+
+- **CLIENTES E EQUIPES**: Páginas de detalhes
+  - templates/clientes/ver.html: Ações padronizadas
+  - templates/equipes/detalhes.html: Header clean aplicado
+
+#### Benefícios
+- ✅ **CONSISTÊNCIA**: Design uniforme em todos os módulos
+- ✅ **RESPONSIVIDADE**: Layout adaptativo mantido em todas as páginas
+- ✅ **PROFISSIONALISMO**: Visual limpo e moderno
+- ✅ **MANUTENIBILIDADE**: Classes reutilizáveis centralizadas
+- ✅ **ACESSIBILIDADE**: Contraste e hierarquia visual aprimorados
+
+### 🔄 Nova Ferramenta: Script de Duplicação de Clientes
+
+#### Funcionalidade Implementada
+- **SCRIPT**: `scripts/duplicar_clientes_para_empresa.py`
+  - Duplica todos os clientes (incluindo inativos) para empresa alvo
+  - Respeita unicidade por empresa (CPF/CNPJ/código)
+  - Gera códigos únicos por cidade/empresa automaticamente
+  - Mapeia vendedor/supervisor por e-mail (ou NULL se não encontrar)
+  - Idempotente: pula duplicatas existentes por documento
+
+#### Uso
+```bash
+# Simulação (dry-run)
+python scripts/duplicar_clientes_para_empresa.py --dry-run
+
+# Execução real
+python scripts/duplicar_clientes_para_empresa.py
+```
+
+#### Características
+- 🔒 **SEGURO**: Transação única com rollback em erros
+- 🔄 **IDEMPOTENTE**: Pode ser executado múltiplas vezes sem duplicar
+- 📊 **RELATÓRIO**: Contagem detalhada (processados/inseridos/pulados/erros)
+- 🎯 **INTELIGENTE**: Regenera código em caso de colisão
+- ⚡ **RÁPIDO**: Processamento em lote com flush periódico
+
+#### Documentação
+- Atualizado: scripts/README.md com instruções de uso
+- Adicionado: Exemplos de execução e casos de uso
+
+---
+
 ## [2.8.0] - 2025-12-30
 
 ### 📈 Relatório de Metas Avançado com Visões Vendedor e Supervisor

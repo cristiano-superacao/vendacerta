@@ -17,6 +17,7 @@ Esta pasta contém scripts de utilidade para desenvolvimento, testes e manutenç
 |--------|-----------|-----|
 | `criar_teste.py` | Cria dados de teste | `python scripts/criar_teste.py` |
 | `test_registro.py` | Testa funcionalidade de registro | `python scripts/test_registro.py` |
+| `duplicar_clientes_para_empresa.py` | Duplica clientes para empresa alvo | `python scripts/duplicar_clientes_para_empresa.py [--dry-run]` |
 
 ### ⚙️ Utilitários
 
@@ -28,6 +29,50 @@ Esta pasta contém scripts de utilidade para desenvolvimento, testes e manutenç
 ---
 
 ## 🎯 Como Usar
+
+### Duplicação de Clientes Entre Empresas
+
+**Script**: `duplicar_clientes_para_empresa.py`
+
+**Descrição**: Duplica todos os clientes (incluindo inativos) de outras empresas para a empresa "Teste 001".
+
+**Características**:
+- ✅ Respeita unicidade por empresa (CPF/CNPJ/código)
+- ✅ Gera códigos únicos automaticamente por cidade/empresa
+- ✅ Mapeia vendedor/supervisor por e-mail
+- ✅ Idempotente (pula duplicatas)
+- ✅ Transação segura com rollback
+- ✅ Suporta dry-run para simulação
+
+**Uso**:
+```bash
+# Simulação (não persiste alterações)
+python scripts/duplicar_clientes_para_empresa.py --dry-run
+
+# Execução real
+python scripts/duplicar_clientes_para_empresa.py
+```
+
+**Pré-requisitos**:
+- Empresa "Teste 001" deve existir no banco
+- Conexão ativa com banco de dados
+
+**Saída esperada**:
+```
+📦 Duplicação de clientes para a empresa: Teste 001 (ID=2)
+
+Encontrados 150 clientes de origem para processar.
+
+✅ Dados persistidos com sucesso.
+
+Resumo da operação:
+  • Processados: 150
+  • Inseridos:  142
+  • Pulados por documento (CPF/CNPJ): 6
+  • Erros:      2
+```
+
+---
 
 ### Ambiente de Desenvolvimento
 ```bash
