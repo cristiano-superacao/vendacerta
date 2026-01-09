@@ -5,20 +5,20 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Cabeçalho -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-1">
+            <h2 class="page-title-clean mb-1">
                 <i class="bi bi-graph-up-arrow text-primary me-2"></i>Relatório de Vendas
             </h2>
-            <p class="text-muted mb-0">Análise detalhada de clientes e vendas do ano {{ ano }}</p>
+            <p class="page-subtitle-clean mb-0">Análise detalhada de clientes e vendas do ano {{ ano }}</p>
         </div>
-        <div class="btn-group">
-            <button onclick="window.print()" class="btn btn-outline-primary">
+        <div class="btn-group d-flex gap-2 flex-wrap">
+            <button onclick="window.print()" class="btn btn-secondary-clean">
                 <i class="bi bi-printer me-2"></i>Imprimir
             </button>
             {% if current_user.pode_exportar_dados %}
             <a href="{{ url_for('exportar_relatorio_vendas', ano=ano, status=filtros.status, vendedor_id=filtros.vendedor_id, supervisor_id=filtros.supervisor_id, cidade=filtros.cidade, bairro=filtros.bairro) }}"
-               class="btn btn-success">
+               class="btn btn-primary-clean">
                 <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
             </a>
             {% endif %}
@@ -156,10 +156,10 @@
 
                 <div class="col-12">
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary-clean">
                             <i class="bi bi-search me-2"></i>Filtrar
                         </button>
-                        <a href="{{ url_for('relatorio_vendas') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('relatorio_vendas') }}" class="btn btn-secondary-clean">
                             <i class="bi bi-x-circle me-2"></i>Limpar Filtros
                         </a>
                     </div>
