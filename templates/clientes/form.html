@@ -563,6 +563,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 supervisorInput.value = '';
             }
         });
+
+        // Preencher supervisor automaticamente se já houver vendedor selecionado na primeira carga
+        if (vendedorSelect.value) {
+            vendedorSelect.dispatchEvent(new Event('change'));
+        }
     }
 
     // Sincronizar município com cidade (campo legado)
