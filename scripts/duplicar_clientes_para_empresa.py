@@ -22,14 +22,80 @@ import os
 import sys
 import argparse
 
+# Evita imports pesados do app (ex.: PDF/reportlab) durante scripts de manutenção
+os.environ.setdefault("INIT_DB_ONLY", "1")
+
+
+def _auto_ajustar_sqlite_local():
+    """Garante que scripts de manutenção usem o mesmo SQLite local do projeto.
+
+    Problema comum:
+    - `DATABASE_URL=sqlite:///vendacerta.db` aponta para um arquivo inexistente na raiz,
+      enquanto o banco real usado no desenvolvimento está em `instance/vendacerta.db`.
+
+    Este ajuste só ocorre quando:
+    - DATABASE_URL aponta para SQLite
+    - o arquivo alvo não existe
+    - existe `instance/vendacerta.db`
+    """
+    db_url = os.environ.get("DATABASE_URL") or os.environ.get("URL_DO_BANCO_DE_DADOS")
+    if not db_url:
+        return
+    if not db_url.startswith("sqlite:///"):
+        return
+
+    # Caminho relativo (sqlite:///arquivo.db) resolve no CWD do processo
+    rel_path = db_url.replace("sqlite:///", "", 1)
+    cwd_target = os.path.abspath(os.path.join(os.getcwd(), rel_path))
+    instance_target = os.path.abspath(os.path.join(ROOT_DIR, "instance", "vendacerta.db"))
+
+    if not os.path.exists(cwd_target) and os.path.exists(instance_target):
+        # Força caminho absoluto para evitar dependência do CWD
+        instance_uri = "sqlite:///" + instance_target.replace("\\", "/")
+        os.environ["DATABASE_URL"] = instance_uri
+
+
+_auto_ajustar_sqlite_local()
+
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from app import app, db
-from models import Cliente, Empresa, Vendedor, Usuario
-from sqlalchemy import and_, or_
-from sqlalchemy.exc import IntegrityError
+# Imports que dependem do contexto do app/banco serão carregados sob demanda
+app = None
+db = None
+Cliente = None
+Empresa = None
+Vendedor = None
+Usuario = None
+and_ = None
+or_ = None
+IntegrityError = None
+
+
+def _carregar_contexto_app():
+    """Importa app/db/models após variáveis de ambiente estarem definidas."""
+    global app, db, Cliente, Empresa, Vendedor, Usuario, and_, or_, IntegrityError
+
+    # Evita que o import do app dispare init do banco (sync/background),
+    # o que pode interferir com transações e causar efeitos colaterais
+    # (ex.: reset de senha admin) durante scripts.
+    os.environ.setdefault("SKIP_DB_INIT_ON_START", "1")
+
+    from app import app as flask_app, db as flask_db
+    from models import Cliente as MCliente, Empresa as MEmpresa, Vendedor as MVendedor, Usuario as MUsuario
+    from sqlalchemy import and_ as sand_, or_ as sor_
+    from sqlalchemy.exc import IntegrityError as SIntegrityError
+
+    app = flask_app
+    db = flask_db
+    Cliente = MCliente
+    Empresa = MEmpresa
+    Vendedor = MVendedor
+    Usuario = MUsuario
+    and_ = sand_
+    or_ = sor_
+    IntegrityError = SIntegrityError
 
 
 def encontrar_empresa_alvo(nome_alvo: str) -> Empresa:
@@ -43,7 +109,7 @@ def mapear_vendedor_para_empresa_alvo(orig_vendedor_id, empresa_alvo_id):
     """
     if not orig_vendedor_id:
         return None
-    origem = Vendedor.query.get(orig_vendedor_id)
+    origem = db.session.get(Vendedor, orig_vendedor_id)
     if not origem or not origem.email:
         return None
     # Busca vendedor com mesmo e-mail na empresa alvo
@@ -60,7 +126,7 @@ def mapear_supervisor_para_empresa_alvo(orig_supervisor_id, empresa_alvo_id):
     """
     if not orig_supervisor_id:
         return None
-    origem = Usuario.query.get(orig_supervisor_id)
+    origem = db.session.get(Usuario, orig_supervisor_id)
     if not origem or not origem.email:
         return None
     alvo = Usuario.query.filter(
@@ -70,16 +136,53 @@ def mapear_supervisor_para_empresa_alvo(orig_supervisor_id, empresa_alvo_id):
     return alvo.id if alvo else None
 
 
-def cliente_existe_na_empresa_alvo_por_documento(empresa_id, cpf, cnpj) -> bool:
-    filtros = [Cliente.empresa_id == empresa_id]
+def cliente_existe_na_empresa_alvo(empresa_id, cliente_origem: Cliente) -> bool:
+    """Tenta identificar se o cliente já existe na empresa alvo.
+
+    Ordem de checagem:
+    1) CPF/CNPJ (quando existir)
+    2) codigo_bp (quando existir)
+    3) email (quando existir)
+    4) nome + (celular/telefone) (quando existir)
+
+    Objetivo: tornar o script idempotente também para clientes sem CPF/CNPJ.
+    """
+    filtros_base = [Cliente.empresa_id == empresa_id]
+
+    # 1) CPF/CNPJ
     doc_filters = []
-    if cpf:
-        doc_filters.append(Cliente.cpf == cpf)
-    if cnpj:
-        doc_filters.append(Cliente.cnpj == cnpj)
-    if not doc_filters:
-        return False
-    return db.session.query(Cliente.id).filter(and_(*filtros, or_(*doc_filters))).first() is not None
+    if getattr(cliente_origem, 'cpf', None):
+        doc_filters.append(Cliente.cpf == cliente_origem.cpf)
+    if getattr(cliente_origem, 'cnpj', None):
+        doc_filters.append(Cliente.cnpj == cliente_origem.cnpj)
+    if doc_filters:
+        return db.session.query(Cliente.id).filter(and_(*filtros_base, or_(*doc_filters))).first() is not None
+
+    # 2) código BP
+    if getattr(cliente_origem, 'codigo_bp', None):
+        return db.session.query(Cliente.id).filter(and_(*filtros_base, Cliente.codigo_bp == cliente_origem.codigo_bp)).first() is not None
+
+    # 3) e-mail
+    if getattr(cliente_origem, 'email', None):
+        return db.session.query(Cliente.id).filter(and_(*filtros_base, Cliente.email == cliente_origem.email)).first() is not None
+
+    # 4) nome + (celular/telefone)
+    nome = getattr(cliente_origem, 'nome', None)
+    celular = getattr(cliente_origem, 'celular', None)
+    telefone = getattr(cliente_origem, 'telefone', None)
+    if nome and (celular or telefone):
+        contato_filters = []
+        if celular:
+            contato_filters.append(Cliente.celular == celular)
+        if telefone:
+            contato_filters.append(Cliente.telefone == telefone)
+        return db.session.query(Cliente.id).filter(and_(*filtros_base, Cliente.nome == nome, or_(*contato_filters))).first() is not None
+
+    # 5) fallback: apenas nome (último recurso para evitar duplicação em reruns)
+    if nome:
+        return db.session.query(Cliente.id).filter(and_(*filtros_base, Cliente.nome == nome)).first() is not None
+
+    return False
 
 
 def copiar_campos_cliente(orig: Cliente, empresa_alvo_id: int, vendedor_id_mapeado, supervisor_id_mapeado) -> Cliente:
@@ -155,58 +258,60 @@ def duplicar_clientes(empresa_nome_alvo: str = "Teste 001", dry_run: bool = Fals
 
     print(f"Encontrados {total} clientes de origem para processar.\n")
 
-    # Transação para operação atômica
-    trans = db.session.begin_nested()
+    # Limpa qualquer transação já aberta por consultas anteriores (autobegin)
+    # antes de abrir a transação que controlaremos manualmente.
+    db.session.rollback()
+
+    # Transação externa para agrupar a operação; por cliente usamos savepoint
+    # para permitir erros pontuais sem invalidar toda a execução.
+    trans = db.session.begin()
     try:
         for idx, orig in enumerate(clientes_origem, start=1):
+            if cliente_existe_na_empresa_alvo(empresa_alvo.id, orig):
+                pulados_documento += 1
+                if idx % 100 == 0:
+                    print(f"- {idx}/{total} processados... (pulados por chave: {pulados_documento})")
+                continue
+
+            vend_map = mapear_vendedor_para_empresa_alvo(orig.vendedor_id, empresa_alvo.id)
+            sup_map = mapear_supervisor_para_empresa_alvo(orig.supervisor_id, empresa_alvo.id)
+
+            # Feedback pontual
+            if idx % 200 == 0:
+                print(f"- {idx}/{total} processados... (tentando inserir)")
+
+            if dry_run:
+                # Em dry-run, não escreve no banco; só contabiliza o que seria inserido.
+                copiar_campos_cliente(orig, empresa_alvo.id, vend_map, sup_map)
+                inseridos += 1
+                continue
+
             try:
-                if cliente_existe_na_empresa_alvo_por_documento(empresa_alvo.id, orig.cpf, orig.cnpj):
-                    pulados_documento += 1
-                    if idx % 100 == 0:
-                        print(f"- {idx}/{total} processados... (pulados por CPF/CNPJ: {pulados_documento})")
-                    continue
-
-                vend_map = mapear_vendedor_para_empresa_alvo(orig.vendedor_id, empresa_alvo.id)
-                sup_map = mapear_supervisor_para_empresa_alvo(orig.supervisor_id, empresa_alvo.id)
-
-                novo = copiar_campos_cliente(orig, empresa_alvo.id, vend_map, sup_map)
-                db.session.add(novo)
-
-                # Feedback pontual
-                if idx % 200 == 0:
-                    print(f"- {idx}/{total} processados... (tentando inserir)")
-
-                if not dry_run:
+                with db.session.begin_nested():
+                    novo = copiar_campos_cliente(orig, empresa_alvo.id, vend_map, sup_map)
+                    db.session.add(novo)
                     db.session.flush()  # valida unicidade/códigos
                 inseridos += 1
-
             except IntegrityError as ie:
-                db.session.rollback()  # rollback parcial e segue
                 erros += 1
                 msg = str(ie).lower()
                 if ('unique' in msg) or ('duplicate' in msg):
-                    # Algum conflito inesperado (ex.: código gerado coincidir)
-                    # Tenta gerar novo código e inserir novamente uma vez
+                    # Conflito inesperado (ex.: código gerado coincidir). Retry 1x com novo código.
                     try:
-                        vend_map = mapear_vendedor_para_empresa_alvo(orig.vendedor_id, empresa_alvo.id)
-                        sup_map = mapear_supervisor_para_empresa_alvo(orig.supervisor_id, empresa_alvo.id)
-                        novo = copiar_campos_cliente(orig, empresa_alvo.id, vend_map, sup_map)
-                        # Força novo código
-                        cidade_ref = orig.cidade or orig.municipio or 'SEM_CIDADE'
-                        novo.codigo_cliente = Cliente.gerar_codigo_cliente(cidade_ref, empresa_alvo.id)
-                        db.session.add(novo)
-                        if not dry_run:
+                        with db.session.begin_nested():
+                            novo = copiar_campos_cliente(orig, empresa_alvo.id, vend_map, sup_map)
+                            cidade_ref = orig.cidade or orig.municipio or 'SEM_CIDADE'
+                            novo.codigo_cliente = Cliente.gerar_codigo_cliente(cidade_ref, empresa_alvo.id)
+                            db.session.add(novo)
                             db.session.flush()
                         inseridos += 1
-                        erros -= 1  # compensar sucesso na segunda tentativa
+                        erros -= 1
                     except Exception as e2:
-                        db.session.rollback()
                         erros += 1
                         print(f"⚠️  Conflito ao inserir cliente ID={orig.id} ({orig.nome}). Pulando. Motivo: {str(e2)[:120]}")
                 else:
                     print(f"⚠️  Erro ao inserir cliente ID={orig.id} ({orig.nome}). Pulando. Motivo: {str(ie)[:120]}")
             except Exception as e:
-                db.session.rollback()
                 erros += 1
                 print(f"⚠️  Erro inesperado com cliente ID={orig.id} ({orig.nome}). Pulando. Motivo: {str(e)[:120]}")
 
@@ -224,7 +329,7 @@ def duplicar_clientes(empresa_nome_alvo: str = "Teste 001", dry_run: bool = Fals
     print("Resumo da operação:")
     print(f"  • Processados: {total}")
     print(f"  • Inseridos:  {inseridos}")
-    print(f"  • Pulados por documento (CPF/CNPJ): {pulados_documento}")
+    print(f"  • Pulados por chave (doc/codigo_bp/email/contato): {pulados_documento}")
     print(f"  • Erros:      {erros}")
     print("-"*70 + "\n")
 
@@ -232,10 +337,30 @@ def duplicar_clientes(empresa_nome_alvo: str = "Teste 001", dry_run: bool = Fals
 def main():
     parser = argparse.ArgumentParser(description="Duplicar clientes para a empresa 'Teste 001'")
     parser.add_argument('--dry-run', action='store_true', help='Simula a operação sem persistir no banco')
+    parser.add_argument('--empresa-alvo', default='Teste 001', help='Nome exato da empresa alvo (padrão: Teste 001)')
+    parser.add_argument('--database-url', default=None, help='Override do DATABASE_URL para esta execução')
+    parser.add_argument('--listar-empresas', action='store_true', help='Lista empresas do banco-alvo e sai')
     args = parser.parse_args()
 
+    # Permite override do banco por argumento (útil para Railway/PostgreSQL)
+    if args.database_url:
+        os.environ['DATABASE_URL'] = args.database_url
+
+    # Ajuste automático de SQLite local quando aplicável
+    _auto_ajustar_sqlite_local()
+
+    # Carregar app e models somente após definir env
+    _carregar_contexto_app()
+
     with app.app_context():
-        duplicar_clientes(empresa_nome_alvo="Teste 001", dry_run=args.dry_run)
+        if args.listar_empresas:
+            empresas = Empresa.query.order_by(Empresa.id).all()
+            print("\nEmpresas no banco alvo:")
+            for e in empresas:
+                print(f"- ID={e.id} | {e.nome} | CNPJ={e.cnpj}")
+            return
+
+        duplicar_clientes(empresa_nome_alvo=args.empresa_alvo, dry_run=args.dry_run)
 
 
 if __name__ == '__main__':

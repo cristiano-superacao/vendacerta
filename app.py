@@ -935,7 +935,10 @@ def init_database():
             return False
 
 # Inicialização do banco: resiliente e não bloqueante em produção
+# Observação: alguns scripts de manutenção importam o app apenas para ter
+# acesso ao contexto/ORM e não devem disparar init/seed/reset em import.
 RUN_DB_INIT_ON_START = os.environ.get("RUN_DB_INIT_ON_START", "0") == "1"
+SKIP_DB_INIT_ON_START = os.environ.get("SKIP_DB_INIT_ON_START", "0") == "1"
 
 def _init_db_background(max_attempts: int = 3, delay_seconds: int = 5):
     # Pequeno atraso inicial para permitir correção de schema (fix_database_railway)
@@ -954,18 +957,19 @@ def _init_db_background(max_attempts: int = 3, delay_seconds: int = 5):
         time.sleep(delay_seconds)
     app.logger.warning("[AVISO] Inicialização de banco não concluída após tentativas. Continuando em modo degradado.")
 
-if RUN_DB_INIT_ON_START:
-    # Ambiente de desenvolvimento: permitir inicialização síncrona
-    with app.app_context():
-        try:
-            init_database()
-            iniciar_backup_automatico()
-        except Exception as e:
-            app.logger.error(f"Erro na inicialização: {e}")
-else:
-    # Produção: executar em background para evitar atrasos na saúde do serviço
-    threading.Thread(target=_init_db_background, daemon=True).start()
-    # Backup automático permanece desativado até DB ficar OK; pode ser habilitado após init_db
+if not SKIP_DB_INIT_ON_START:
+    if RUN_DB_INIT_ON_START:
+        # Ambiente de desenvolvimento: permitir inicialização síncrona
+        with app.app_context():
+            try:
+                init_database()
+                iniciar_backup_automatico()
+            except Exception as e:
+                app.logger.error(f"Erro na inicialização: {e}")
+    else:
+        # Produção: executar em background para evitar atrasos na saúde do serviço
+        threading.Thread(target=_init_db_background, daemon=True).start()
+        # Backup automático permanece desativado até DB ficar OK; pode ser habilitado após init_db
 
 @app.route("/login", methods=["GET", "POST"])
 @rate_limit("10 per minute")  # Máximo 10 tentativas de login por minuto

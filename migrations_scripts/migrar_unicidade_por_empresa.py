@@ -8,6 +8,10 @@ Compatível com PostgreSQL.
 """
 
 import os, sys
+# Evitar que o import do app dispare inicialização/seed/reset durante migrações
+os.environ.setdefault("SKIP_DB_INIT_ON_START", "1")
+os.environ.setdefault("INIT_DB_ONLY", "1")
+
 # Garantir que o diretório raiz do projeto está no PYTHONPATH
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if ROOT_DIR not in sys.path:
@@ -70,6 +74,12 @@ def migrar():
             # 1) Remover constraints/índices antigos (se existirem)
             print("➖ Removendo índices/constraints antigos (se existirem)...")
             for idx in DROP_INDEXES:
+                # Em PostgreSQL, UNIQUE CONSTRAINT cria um índice que não pode ser
+                # removido diretamente; precisamos tentar remover a constraint também.
+                try:
+                    conn.execute(text(f'ALTER TABLE clientes DROP CONSTRAINT IF EXISTS {idx}'))
+                except Exception:
+                    pass
                 try:
                     conn.execute(text(f'DROP INDEX IF EXISTS {idx}'))
                     print(f"   - Removido: {idx}")
