@@ -5,20 +5,20 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Cabeçalho -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-1">
+            <h2 class="page-title-clean mb-1">
                 <i class="bi bi-graph-up text-primary me-2"></i>Relatório de Metas Avançado
             </h2>
-            <p class="text-muted mb-0">Análise detalhada de metas de valor e volume com balanceamento</p>
+            <p class="page-subtitle-clean mb-0">Análise detalhada de metas de valor e volume com balanceamento</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('configurar_metas') }}" class="btn btn-primary">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('configurar_metas') }}" class="btn btn-primary-clean">
                 <i class="bi bi-plus-circle me-2"></i>Configurar Nova Meta
             </a>
             <a
                 href="{{ url_for('exportar_pdf_metas_avancado', visao=filtros.visao, vendedor_id=filtros.vendedor_id, supervisor_id=filtros.supervisor_id, tipo_meta=filtros.tipo_meta, ano=filtros.ano, mes=filtros.mes) }}"
-                class="btn btn-outline-secondary"
+                class="btn btn-secondary-clean"
             >
                 <i class="bi bi-filetype-pdf me-2"></i>Exportar PDF
             </a>
@@ -90,7 +90,7 @@
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
+                    <button type="submit" class="btn btn-primary-clean w-100">
                         <i class="bi bi-funnel me-2"></i>Filtrar
                     </button>
                 </div>

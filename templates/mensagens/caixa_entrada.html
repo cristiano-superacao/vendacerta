@@ -15,17 +15,20 @@
             </nav>
 
             <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>
-                    <i class="bi bi-envelope-fill text-primary me-2"></i>
-                    Caixa de Entrada
-                </h2>
-                <div class="btn-group">
-                    <a href="{{ url_for('nova_mensagem') }}" class="btn btn-primary">
+            <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="page-title-clean mb-1">
+                        <i class="bi bi-envelope-fill text-primary me-2"></i>
+                        Caixa de Entrada
+                    </h2>
+                    <p class="page-subtitle-clean mb-0">Mensagens recebidas e ações rápidas</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('nova_mensagem') }}" class="btn btn-primary-clean">
                         <i class="bi bi-plus-circle me-1"></i>
                         Nova Mensagem
                     </a>
-                    <a href="{{ url_for('enviar_mensagem_equipe') }}" class="btn btn-success">
+                    <a href="{{ url_for('enviar_mensagem_equipe') }}" class="btn btn-secondary-clean">
                         <i class="bi bi-people-fill me-1"></i>
                         Mensagem para Equipe
                     </a>

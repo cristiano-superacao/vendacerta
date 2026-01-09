@@ -5,12 +5,12 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Cabeçalho -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-sliders"></i> Configuração de Faixas de Comissão</h2>
-            <p class="text-muted mb-0">Gerencie as faixas de comissão para vendedores e supervisores</p>
+            <h2 class="page-title-clean mb-1"><i class="bi bi-sliders me-2"></i>Configuração de Faixas de Comissão</h2>
+            <p class="page-subtitle-clean mb-0">Gerencie as faixas de comissão para vendedores e supervisores</p>
         </div>
-        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-primary">
+        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-primary-clean">
             <i class="bi bi-plus-circle"></i> Nova Faixa
         </a>
     </div>
@@ -146,7 +146,7 @@
                         <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
                         <h4 class="text-muted mt-3">Nenhuma faixa configurada para vendedores</h4>
                         <p class="text-muted">Crie sua primeira faixa de comissão para vendedores</p>
-                        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-primary mt-2">
+                        <a href="{{ url_for('criar_faixa_comissao') }}" class="btn btn-primary-clean mt-2">
                             <i class="bi bi-plus-circle"></i> Criar Primeira Faixa
                         </a>
                     </div>

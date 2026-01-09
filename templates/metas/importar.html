@@ -5,12 +5,15 @@
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Cabeçalho -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="page-title mb-0">
-            <i class="bi bi-upload"></i> Importar Metas via Excel
-        </h1>
-        <a href="{{ url_for('lista_metas') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar
+    <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title-clean mb-1">
+                <i class="bi bi-upload me-2"></i>Importar Metas via Excel
+            </h2>
+            <p class="page-subtitle-clean mb-0">Envie a planilha no formato indicado abaixo</p>
+        </div>
+        <a href="{{ url_for('lista_metas') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
         </a>
     </div>
 
@@ -43,8 +46,8 @@
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="bi bi-upload"></i> Importar Metas
+                            <button type="submit" class="btn btn-primary-clean">
+                                <i class="bi bi-upload me-2"></i>Importar Metas
                             </button>
                         </div>
                     </form>
@@ -62,9 +65,9 @@
                 <div class="card-body">
                     <p class="mb-3">Baixe o template oficial para garantir que sua planilha está no formato correto:</p>
                     <a href="{{ url_for('static', filename='templates_excel/template_metas.xlsx') }}"
-                       class="btn btn-success btn-lg w-100"
+                       class="btn btn-secondary-clean w-100"
                        download>
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Template de Metas
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Baixar Template de Metas
                     </a>
                 </div>
             </div>

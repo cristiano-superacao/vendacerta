@@ -6,13 +6,16 @@
 <div class="row justify-content-center">
     <div class="col-lg-8">
         <!-- Cabeçalho -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="page-title mb-0">
-                <i class="bi bi-person-{% if usuario %}gear{% else %}plus-fill{% endif %}"></i>
-                {% if usuario %}Editar Usuário{% else %}Novo Usuário{% endif %}
-            </h1>
-            <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Voltar
+        <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="page-title-clean mb-1">
+                    <i class="bi bi-person-{% if usuario %}gear{% else %}plus-fill{% endif %} me-2"></i>
+                    {% if usuario %}Editar Usuário{% else %}Novo Usuário{% endif %}
+                </h2>
+                <p class="page-subtitle-clean mb-0">Gerencie dados e permissões do usuário</p>
+            </div>
+            <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-secondary-clean">
+                <i class="bi bi-arrow-left me-2"></i>Voltar
             </a>
         </div>
 
@@ -399,10 +402,10 @@
                     <!-- Botões -->
                     <hr class="my-4">
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> Cancelar
+                        <a href="{{ url_for('super_admin_usuarios') }}" class="btn btn-secondary-clean">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
                         </a>
-                        {{ form.submit(class="btn btn-primary") }}
+                        {{ form.submit(class="btn btn-primary-clean") }}
                     </div>
                 </form>
             </div>

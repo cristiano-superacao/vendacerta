@@ -5,14 +5,14 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Cabeçalho -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-1">
+            <h2 class="page-title-clean mb-1">
                 <i class="bi bi-bullseye text-primary me-2"></i>Configurar Metas Avançadas
             </h2>
-            <p class="text-muted mb-0">Crie metas de valor ou volume com balanceamento automático</p>
+            <p class="page-subtitle-clean mb-0">Crie metas de valor ou volume com balanceamento automático</p>
         </div>
-        <a href="{{ url_for('relatorio_metas_avancado') }}" class="btn btn-outline-primary">
+        <a href="{{ url_for('relatorio_metas_avancado') }}" class="btn btn-secondary-clean">
             <i class="bi bi-graph-up me-2"></i>Ver Relatório
         </a>
     </div>
@@ -109,7 +109,7 @@
 
                                 <!-- Botões -->
                                 <div class="d-grid gap-2">
-                                    <button type="submit" name="calcular" class="btn btn-primary">
+                                    <button type="submit" name="calcular" class="btn btn-primary-clean">
                                         <i class="bi bi-calculator me-2"></i>Calcular Meta
                                     </button>
                                 </div>
@@ -194,7 +194,7 @@
 
                                 <!-- Botão Salvar -->
                                 <div class="d-grid">
-                                    <button type="submit" name="salvar" class="btn btn-success btn-lg">
+                                    <button type="submit" name="salvar" class="btn btn-primary-clean">
                                         <i class="bi bi-save me-2"></i>Salvar Meta
                                     </button>
                                 </div>
@@ -284,7 +284,7 @@
                                 </div>
 
                                 <div class="d-grid gap-2">
-                                    <button type="submit" name="calcular" class="btn btn-info text-white">
+                                    <button type="submit" name="calcular" class="btn btn-primary-clean">
                                         <i class="bi bi-calculator me-2"></i>Calcular Meta
                                     </button>
                                 </div>
@@ -325,7 +325,7 @@
                                 </div>
 
                                 <div class="d-grid">
-                                    <button type="submit" name="salvar" class="btn btn-info btn-lg text-white">
+                                    <button type="submit" name="salvar" class="btn btn-primary-clean">
                                         <i class="bi bi-save me-2"></i>Salvar Meta
                                     </button>
                                 </div>
