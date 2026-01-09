@@ -8042,9 +8042,15 @@ def importar_clientes():
                         error_msg = str(commit_error)
                         if isinstance(commit_error, IntegrityError):
                             if 'cpf' in error_msg.lower():
-                                erros.append(f"Linha {index + 2}: CPF {cpf} já cadastrado nesta empresa")
+                                if cpf:
+                                    erros.append(f"Linha {index + 2}: CPF {cpf} já cadastrado nesta empresa")
+                                else:
+                                    erros.append(f"Linha {index + 2}: CPF já cadastrado nesta empresa")
                             elif 'cnpj' in error_msg.lower():
-                                erros.append(f"Linha {index + 2}: CNPJ {cnpj} já cadastrado nesta empresa")
+                                if cnpj:
+                                    erros.append(f"Linha {index + 2}: CNPJ {cnpj} já cadastrado nesta empresa")
+                                else:
+                                    erros.append(f"Linha {index + 2}: CNPJ já cadastrado nesta empresa")
                             elif 'codigo_cliente' in error_msg:
                                 erros.append(f"Linha {index + 2}: Código de cliente duplicado nesta empresa")
                             else:

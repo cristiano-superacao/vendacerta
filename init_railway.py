@@ -105,6 +105,42 @@ try:
         db.session.execute(text("SELECT 1"))
         db.session.commit()
         print("✅ Conexão OK")
+
+        # Garantir unicidade por empresa em 'clientes' (corrige índices legados globais)
+        try:
+            if db_url and 'postgres' in db_url:
+                print("\n🔧 Verificando unicidade por empresa em 'clientes'...")
+                DROP_INDEXES = [
+                    'ix_clientes_cpf',
+                    'ix_clientes_cnpj',
+                    'ix_clientes_codigo_cliente',
+                    'clientes_cpf_key',
+                    'clientes_cnpj_key',
+                    'clientes_codigo_cliente_key',
+                ]
+                for idx in DROP_INDEXES:
+                    try:
+                        db.session.execute(text(f'DROP INDEX IF EXISTS {idx}'))
+                    except Exception as e:
+                        print(f"   ⚠️  Não foi possível remover {idx}: {e}")
+                db.session.commit()
+
+                CREATE_UNIQUE = [
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_cliente_empresa_cpf ON clientes (empresa_id, cpf)",
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_cliente_empresa_cnpj ON clientes (empresa_id, cnpj)",
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_cliente_empresa_codigo ON clientes (empresa_id, codigo_cliente)",
+                ]
+                for create_sql in CREATE_UNIQUE:
+                    try:
+                        db.session.execute(text(create_sql))
+                    except Exception as e:
+                        print(f"   ❌ Erro ao criar índice: {e}")
+                db.session.commit()
+                print("✅ Unicidade por empresa garantida")
+            else:
+                print("ℹ️  Unicidade por empresa: verificação automática focada em PostgreSQL. Pulando...")
+        except Exception as e:
+            print(f"⚠️  Verificação de unicidade por empresa falhou: {e}")
         
 except Exception as e:
     print(f"⚠️ Aviso: {e}")
