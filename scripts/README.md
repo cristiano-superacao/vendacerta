@@ -17,7 +17,7 @@ Esta pasta contém scripts de utilidade para desenvolvimento, testes e manutenç
 |--------|-----------|-----|
 | `criar_teste.py` | Cria dados de teste | `python scripts/criar_teste.py` |
 | `test_registro.py` | Testa funcionalidade de registro | `python scripts/test_registro.py` |
-| `duplicar_clientes_para_empresa.py` | Duplica clientes para empresa alvo | `python scripts/duplicar_clientes_para_empresa.py [--dry-run]` |
+| `duplicar_clientes_para_empresa.py` | Duplica clientes para empresa alvo (multi-empresa) | `python scripts/duplicar_clientes_para_empresa.py [--dry-run] [--empresa-alvo NOME]` |
 
 ### ⚙️ Utilitários
 
@@ -34,42 +34,71 @@ Esta pasta contém scripts de utilidade para desenvolvimento, testes e manutenç
 
 **Script**: `duplicar_clientes_para_empresa.py`
 
-**Descrição**: Duplica todos os clientes (incluindo inativos) de outras empresas para a empresa "Teste 001".
+**Descrição**: Duplica todos os clientes (incluindo inativos) de outras empresas para a empresa alvo. Suporta operação multi-empresa com detecção avançada de duplicatas.
 
 **Características**:
-- ✅ Respeita unicidade por empresa (CPF/CNPJ/código)
-- ✅ Gera códigos únicos automaticamente por cidade/empresa
-- ✅ Mapeia vendedor/supervisor por e-mail
-- ✅ Idempotente (pula duplicatas)
-- ✅ Transação segura com rollback
-- ✅ Suporta dry-run para simulação
+- ✅ **Multi-empresa**: Respeita unicidade por empresa (CPF/CNPJ/código)
+- ✅ **Geração automática**: Códigos únicos por cidade/empresa
+- ✅ **Mapeamento inteligente**: Vendedor/supervisor por e-mail
+- ✅ **Idempotência total**: Detecta duplicatas por múltiplas chaves
+  - CPF/CNPJ (prioridade 1)
+  - codigo_bp (prioridade 2)
+  - email (prioridade 3)
+  - nome + telefone/celular (prioridade 4)
+  - nome isolado (fallback)
+- ✅ **Segurança**: Transação com savepoint por cliente
+- ✅ **Dry-run**: Simulação sem persistir alterações
 
 **Uso**:
 ```bash
-# Simulação (não persiste alterações)
+# Simulação (não persiste alterações) - empresa padrão "Teste 001"
 python scripts/duplicar_clientes_para_empresa.py --dry-run
 
-# Execução real
+# Execução real para empresa padrão
 python scripts/duplicar_clientes_para_empresa.py
+
+# Especificar empresa alvo diferente
+python scripts/duplicar_clientes_para_empresa.py --empresa-alvo "Outra Empresa"
+
+# Listar empresas disponíveis no banco
+python scripts/duplicar_clientes_para_empresa.py --listar-empresas
+
+# Executar contra banco específico (Railway/Postgres)
+python scripts/duplicar_clientes_para_empresa.py \
+  --database-url "postgresql://user:pass@host:port/db" \
+  --empresa-alvo "Teste 001"
 ```
 
 **Pré-requisitos**:
-- Empresa "Teste 001" deve existir no banco
+- Empresa alvo deve existir no banco
 - Conexão ativa com banco de dados
+- (Opcional) Migração de unicidade por empresa aplicada
 
 **Saída esperada**:
 ```
 📦 Duplicação de clientes para a empresa: Teste 001 (ID=2)
 
-Encontrados 150 clientes de origem para processar.
+Encontrados 46 clientes de origem para processar.
 
 ✅ Dados persistidos com sucesso.
 
 Resumo da operação:
-  • Processados: 150
-  • Inseridos:  142
-  • Pulados por documento (CPF/CNPJ): 6
-  • Erros:      2
+  • Processados: 46
+  • Inseridos:  46
+  • Pulados por chave (doc/codigo_bp/email/contato): 0
+  • Erros:      0
+```
+
+**Idempotência - Reexecução**:
+```
+# Executar novamente após clonagem bem-sucedida
+python scripts/duplicar_clientes_para_empresa.py --dry-run
+
+Resumo da operação:
+  • Processados: 46
+  • Inseridos:  0
+  • Pulados por chave (doc/codigo_bp/email/contato): 46
+  • Erros:      0
 ```
 
 ---

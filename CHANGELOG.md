@@ -1,5 +1,48 @@
 # 📝 Changelog - Sistema de Gestão de Metas e Comissões
 
+## [2.9.1] - 2026-01-09
+
+### 🔧 Melhorias Técnicas e Infraestrutura Multi-Empresa
+
+#### Migração de Unicidade por Empresa
+- **BANCO DE DADOS**: Aplicada migração completa de unicidade
+  - ✅ Removida unicidade global de CPF/CNPJ/codigo_cliente
+  - ✅ Criados índices únicos compostos por empresa_id
+  - ✅ Suporte completo para operação multi-empresa
+  - ✅ Script de migração: `migrations_scripts/migrar_unicidade_por_empresa.py`
+
+#### Script de Duplicação de Clientes - Melhorias
+- **DETECÇÃO AVANÇADA DE DUPLICATAS**: Algoritmo melhorado para idempotência
+  - Prioridade 1: CPF/CNPJ (quando existir)
+  - Prioridade 2: codigo_bp (quando existir)
+  - Prioridade 3: email (quando existir)
+  - Prioridade 4: nome + (celular/telefone) (quando existir)
+  - Prioridade 5: apenas nome (fallback final)
+  
+- **SEGURANÇA EM SCRIPTS**: Infraestrutura aprimorada
+  - Flag `SKIP_DB_INIT_ON_START` para evitar init/seed/reset em imports
+  - Transações com savepoint individual por cliente
+  - Sessão SQLAlchemy limpa antes de transação manual
+  - Substituição de `Query.get()` (legacy) por `Session.get()` (SQLAlchemy 2.x)
+
+- **IDEMPOTÊNCIA TOTAL**: Script pode ser reexecutado sem riscos
+  - Detecta clientes já clonados por múltiplas chaves
+  - Relatório detalhado: pulados por chave (doc/codigo_bp/email/contato)
+  - Zero duplicatas mesmo em múltiplas execuções
+
+#### Infraestrutura da Aplicação
+- **APP.PY**: Nova flag de controle para scripts
+  - `SKIP_DB_INIT_ON_START=1`: Desativa init/backup em scripts de manutenção
+  - Produção não afetada (comportamento default inalterado)
+  - Evita efeitos colaterais (ex.: reset senha admin) durante scripts
+
+#### Resultado da Operação
+- ✅ **46 clientes clonados** para empresa "Teste 001" (Railway/Postgres)
+- ✅ Zero erros na execução
+- ✅ Script validado como idempotente (reexecução = 46 pulados, 0 inseridos)
+
+---
+
 ## [2.9.0] - 2026-01-09
 
 ### 🎨 Padronização Completa da Interface do Usuário
