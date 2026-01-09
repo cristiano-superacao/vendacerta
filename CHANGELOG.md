@@ -11,6 +11,18 @@
   - ✅ Suporte completo para operação multi-empresa
   - ✅ Script de migração: `migrations_scripts/migrar_unicidade_por_empresa.py`
 
+#### Script de Duplicação de Produtos - NOVO
+- **FERRAMENTA**: `scripts/duplicar_produtos_para_empresa.py`
+  - Duplica todos os produtos (ativos/inativos) entre empresas
+  - Detecção avançada de duplicatas por múltiplas chaves:
+    - codigo_barra (prioridade 1)
+    - referencia (prioridade 2)
+    - nome (fallback)
+  - Geração automática de códigos únicos por empresa
+  - Preserva todos os dados: estoque, preços, categorias, etc
+  - Idempotente: execuções múltiplas não duplicam produtos
+  - Resultado: **94 produtos clonados** para "Teste 001"
+
 #### Script de Duplicação de Clientes - Melhorias
 - **DETECÇÃO AVANÇADA DE DUPLICATAS**: Algoritmo melhorado para idempotência
   - Prioridade 1: CPF/CNPJ (quando existir)
@@ -36,10 +48,11 @@
   - Produção não afetada (comportamento default inalterado)
   - Evita efeitos colaterais (ex.: reset senha admin) durante scripts
 
-#### Resultado da Operação
+#### Resultado das Operações
 - ✅ **46 clientes clonados** para empresa "Teste 001" (Railway/Postgres)
-- ✅ Zero erros na execução
-- ✅ Script validado como idempotente (reexecução = 46 pulados, 0 inseridos)
+- ✅ **94 produtos clonados** para empresa "Teste 001" (Railway/Postgres)
+- ✅ Zero erros na execução de ambos scripts
+- ✅ Scripts validados como 100% idempotentes
 
 ---
 
