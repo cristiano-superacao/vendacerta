@@ -5689,6 +5689,21 @@ def novo_cliente():
             # Determinar vendedor_id
             vendedor_id = form.vendedor_id.data
 
+            # Regra padrão: cliente pertence à mesma empresa do vendedor selecionado
+            supervisor_id_resolvido = None
+            if vendedor_id:
+                vendedor_sel = Vendedor.query.get(vendedor_id)
+                if not vendedor_sel:
+                    raise Exception("Vendedor selecionado não existe.")
+                # Bloqueia associação entre empresas diferentes
+                if (
+                    not current_user.is_super_admin and
+                    vendedor_sel.empresa_id != current_user.empresa_id
+                ):
+                    raise Exception("Vendedor de outra empresa não pode ser associado ao cliente.")
+                # Supervisor do cliente segue o supervisor do vendedor
+                supervisor_id_resolvido = vendedor_sel.supervisor_id
+
             # Limpar CPF, CNPJ e telefones
             cpf_limpo = (
                 re.sub(r"\D", "", form.cpf.data) if form.cpf.data else None
@@ -5769,6 +5784,7 @@ def novo_cliente():
                 municipio=municipio,
                 cep=cep_limpo,
                 bairro=form.bairro.data.strip() if form.bairro.data else None,
+                estado=(form.estado.data.strip() if form.estado.data else None),
                 cidade=municipio,  # Mantém compatibilidade
                 ponto_referencia=(
                     form.ponto_referencia.data.strip()
@@ -5802,6 +5818,7 @@ def novo_cliente():
                     else None
                 ),
                 empresa_id=current_user.empresa_id,
+                supervisor_id=supervisor_id_resolvido,
                 ativo=form.ativo.data if form.ativo.data is not None else True,
             )
 

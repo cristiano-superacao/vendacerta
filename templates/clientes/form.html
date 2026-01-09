@@ -50,6 +50,36 @@
             margin-bottom: 0.5rem;
         }
     }
+    /* Skeleton loading para campos preenchidos via API */
+    .skeleton {
+        position: relative;
+        color: transparent !important;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    .skeleton::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -150px;
+        height: 100%;
+        width: 150px;
+        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
+        animation: shimmer 1.2s infinite;
+    }
+    @keyframes shimmer {
+        0% { left: -150px; }
+        100% { left: 100%; }
+    }
+/* Respeitar preferência de reduzir movimento */
+@media (prefers-reduced-motion: reduce) {
+    .btn-group .btn-outline-primary:hover,
+    .btn:hover,
+    .card:hover {
+        transform: none;
+        transition: none;
+    }
+}
 </style>
 
 <div class="container-fluid">
@@ -102,7 +132,7 @@
                         <label class="form-label fw-bold">
                             <i class="bi bi-person-check text-info me-2"></i>Supervisor
                         </label>
-                        {{ form.supervisor_nome(class="form-control bg-light", placeholder="Será preenchido automaticamente") }}
+                        {{ form.supervisor_nome(class="form-control bg-light", placeholder="Será preenchido automaticamente", title="Supervisor preenchido automaticamente") }}
                     </div>
                 </div>
 
@@ -133,7 +163,7 @@
                             <i class="bi bi-credit-card text-primary me-2"></i>CPF
                             <span class="text-danger" id="cpfObrigatorio">*</span>
                         </label>
-                        {{ form.cpf(class="form-control" + (" is-invalid" if form.cpf.errors else ""), placeholder="000.000.000-00", id="cpf") }}
+                        {{ form.cpf(class="form-control" + (" is-invalid" if form.cpf.errors else ""), placeholder="000.000.000-00", id="cpf", inputmode="numeric", autocomplete="off") }}
                         {% if form.cpf.errors %}
                             <div class="invalid-feedback">
                                 {% for error in form.cpf.errors %}{{ error }}{% endfor %}
@@ -146,7 +176,7 @@
                             <i class="bi bi-building text-primary me-2"></i>CNPJ
                             <span class="text-danger" id="cnpjObrigatorio">*</span>
                         </label>
-                        {{ form.cnpj(class="form-control" + (" is-invalid" if form.cnpj.errors else ""), placeholder="00.000.000/0000-00", id="cnpj") }}
+                        {{ form.cnpj(class="form-control" + (" is-invalid" if form.cnpj.errors else ""), placeholder="00.000.000/0000-00", id="cnpj", inputmode="numeric", autocomplete="off") }}
                         {% if form.cnpj.errors %}
                             <div class="invalid-feedback">
                                 {% for error in form.cnpj.errors %}{{ error }}{% endfor %}
@@ -232,7 +262,7 @@
                         <label class="form-label fw-bold">
                             <i class="bi bi-mailbox text-primary me-2"></i>CEP
                         </label>
-                        {{ form.cep(class="form-control", placeholder="00000-000", id="cep") }}
+                        {{ form.cep(class="form-control", placeholder="00000-000", id="cep", inputmode="numeric", autocomplete="postal-code") }}
                     </div>
                 </div>
 
@@ -254,28 +284,28 @@
                         <label class="form-label fw-bold">
                             <i class="bi bi-telephone text-primary me-2"></i>Fone (1)
                         </label>
-                        {{ form.telefone(class="form-control", placeholder="(00) 0000-0000", id="telefone") }}
+                        {{ form.telefone(class="form-control", placeholder="(00) 0000-0000", id="telefone", inputmode="tel", autocomplete="tel") }}
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label fw-bold">
                             <i class="bi bi-telephone text-primary me-2"></i>Fone (2)
                         </label>
-                        {{ form.telefone2(class="form-control", placeholder="(00) 0000-0000", id="telefone2") }}
+                        {{ form.telefone2(class="form-control", placeholder="(00) 0000-0000", id="telefone2", inputmode="tel", autocomplete="tel") }}
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label fw-bold">
                             <i class="bi bi-phone text-success me-2"></i>Cel (1)
                         </label>
-                        {{ form.celular(class="form-control", placeholder="(00) 00000-0000", id="celular") }}
+                        {{ form.celular(class="form-control", placeholder="(00) 00000-0000", id="celular", inputmode="tel", autocomplete="tel") }}
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label fw-bold">
                             <i class="bi bi-phone text-success me-2"></i>Cel (2)
                         </label>
-                        {{ form.celular2(class="form-control", placeholder="(00) 00000-0000", id="celular2") }}
+                        {{ form.celular2(class="form-control", placeholder="(00) 00000-0000", id="celular2", inputmode="tel", autocomplete="tel") }}
                     </div>
                 </div>
 
@@ -302,7 +332,7 @@
                         <label class="form-label fw-bold">
                             <i class="bi bi-arrows-move text-danger me-2"></i>Longitude
                         </label>
-                        {{ form.coordenada_x(class="form-control", placeholder="-38.5014") }}
+                        {{ form.coordenada_x(class="form-control", placeholder="-38.5014", inputmode="decimal") }}
                         <small class="text-muted">Coordenada X (Longitude)</small>
                     </div>
 
@@ -310,7 +340,7 @@
                         <label class="form-label fw-bold">
                             <i class="bi bi-arrows-move text-danger me-2"></i>Latitude
                         </label>
-                        {{ form.coordenada_y(class="form-control", placeholder="-12.9714") }}
+                        {{ form.coordenada_y(class="form-control", placeholder="-12.9714", inputmode="decimal") }}
                         <small class="text-muted">Coordenada Y (Latitude)</small>
                     </div>
                 </div>
@@ -502,21 +532,35 @@ document.addEventListener('DOMContentLoaded', function() {
     mascaraTelefone(document.getElementById('celular'));
     mascaraTelefone(document.getElementById('celular2'));
 
-    // Buscar supervisor quando vendedor é selecionado
+    // Buscar supervisor quando vendedor é selecionado (UX com skeleton)
     const vendedorSelect = document.getElementById('vendedor_id');
     if (vendedorSelect) {
         vendedorSelect.addEventListener('change', function() {
             const vendedorId = this.value;
+            const supervisorInput = document.querySelector('input[name="supervisor_nome"]');
+            if (supervisorInput) {
+                supervisorInput.classList.add('skeleton');
+                supervisorInput.value = 'Carregando...';
+            }
             if (vendedorId) {
                 fetch(`/api/vendedor/${vendedorId}/supervisor`)
                     .then(response => response.json())
                     .then(data => {
-                        const supervisorInput = document.querySelector('input[name="supervisor_nome"]');
-                        if (supervisorInput && data.supervisor) {
-                            supervisorInput.value = data.supervisor;
+                        if (supervisorInput) {
+                            supervisorInput.classList.remove('skeleton');
+                            supervisorInput.value = data.supervisor || 'Nenhum';
                         }
                     })
-                    .catch(error => console.error('Erro ao buscar supervisor:', error));
+                    .catch(error => {
+                        console.error('Erro ao buscar supervisor:', error);
+                        if (supervisorInput) {
+                            supervisorInput.classList.remove('skeleton');
+                            supervisorInput.value = 'Nenhum';
+                        }
+                    });
+            } else if (supervisorInput) {
+                supervisorInput.classList.remove('skeleton');
+                supervisorInput.value = '';
             }
         });
     }
@@ -545,6 +589,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const nomeInput = document.getElementById('nome');
     const textoLabelNome = document.getElementById('textoLabelNome');
     const razaoSocialObrigatorio = document.getElementById('razaoSocialObrigatorio');
+    const cpfObrigatorio = document.getElementById('cpfObrigatorio');
+    const cnpjObrigatorio = document.getElementById('cnpjObrigatorio');
 
     // Função para alternar entre PF e PJ
     function alternarTipoCadastro(tipo) {
@@ -564,6 +610,11 @@ document.addEventListener('DOMContentLoaded', function() {
             textoLabelNome.textContent = 'Nome Completo';
             nomeInput.placeholder = 'Nome completo da pessoa';
             cpfInput.setAttribute('required', 'required');
+            cnpjInput.removeAttribute('required');
+            razaoSocialInput.removeAttribute('required');
+            // Indicadores visuais de obrigatoriedade
+            if (cpfObrigatorio) cpfObrigatorio.style.display = 'inline';
+            if (cnpjObrigatorio) cnpjObrigatorio.style.display = 'none';
 
         } else if (tipo === 'pj') {
             // Pessoa Jurídica
@@ -580,6 +631,10 @@ document.addEventListener('DOMContentLoaded', function() {
             razaoSocialObrigatorio.style.display = 'inline';
             cnpjInput.setAttribute('required', 'required');
             razaoSocialInput.setAttribute('required', 'required');
+            cpfInput.removeAttribute('required');
+            // Indicadores visuais de obrigatoriedade
+            if (cpfObrigatorio) cpfObrigatorio.style.display = 'none';
+            if (cnpjObrigatorio) cnpjObrigatorio.style.display = 'inline';
         }
     }
 
@@ -654,6 +709,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('⚠️ Razão Social é obrigatória para Pessoa Jurídica!');
                 razaoSocialInput.focus();
                 return false;
+            }
+
+            // Evitar múltiplos envios acidentais
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
             }
         });
     }
