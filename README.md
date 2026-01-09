@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Status](https://img.shields.io/badge/status-Produção-success?style=for-the-badge)
-![Versão](https://img.shields.io/badge/versão-2.0.0-blue?style=for-the-badge)
+![Versão](https://img.shields.io/badge/versão-2.9.0-blue?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0.0-000000?style=for-the-badge&logo=flask&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-316192?style=for-the-badge&logo=postgresql&logoColor=white)
@@ -687,7 +687,7 @@ A documentação inclui:
 
 | Componente | Status | Versão |
 |------------|--------|--------|
-| **Sistema** | ✅ Produção | v2.0.0 |
+| **Sistema** | ✅ Produção | v2.9.0 |
 | **URL** | ✅ Ativo | [vendacerta.up.railway.app](https://vendacerta.up.railway.app) |
 | **Banco de Dados** | ✅ PostgreSQL | 15 (Railway) |
 | **Deploy** | ✅ Automático | Railway + GitHub |
@@ -695,7 +695,64 @@ A documentação inclui:
 | **Rotas** | ✅ 119 endpoints | Mapeadas e testadas |
 | **Templates** | ✅ 64 HTML | Bootstrap 5.3.3 |
 | **Models** | ✅ 16 tabelas | SQLAlchemy |
+| **UI Patterns** | ✅ Padronizado | Design System Completo |
 | **Documentação** | ✅ Completa | 100% atualizada |
+
+---
+
+## 🎨 Design System
+
+### Interface Padronizada
+
+O VendaCerta implementa um **Design System completo** para garantir consistência visual em todos os módulos:
+
+**Classes Globais** (em `static/css/custom.css`):
+- `.page-header-clean`: Header limpo e profissional
+- `.page-title-clean`: Título padronizado com ícone
+- `.page-subtitle-clean`: Subtítulo em maiúsculas
+- `.btn-primary-clean`: Botão primário consistente
+- `.btn-secondary-clean`: Botão secundário consistente
+
+**Módulos Padronizados**:
+- ✅ Clientes (relatórios, visualização, detalhes)
+- ✅ Estoque (produtos, movimentações, dashboard)
+- ✅ Configurações (comissões, metas)
+- ✅ Relatórios (metas avançado)
+- ✅ Mensagens (caixa de entrada, enviadas)
+- ✅ Super Admin (backup, usuários)
+
+**Benefícios**:
+- 🎯 **Consistência**: Design uniforme em todas as páginas
+- 📱 **Responsividade**: Layout adaptativo mantido
+- 🎨 **Profissionalismo**: Visual limpo e moderno
+- 🔧 **Manutenibilidade**: Classes reutilizáveis centralizadas
+
+📖 **Documentação completa**: [docs/UI_PATTERNS.md](docs/UI_PATTERNS.md)
+
+---
+
+## 🔄 Ferramentas e Scripts
+
+### Duplicação de Clientes Entre Empresas
+
+O sistema inclui um script seguro para duplicar clientes entre empresas:
+
+```bash
+# Simulação (dry-run)
+python scripts/duplicar_clientes_para_empresa.py --dry-run
+
+# Execução real
+python scripts/duplicar_clientes_para_empresa.py
+```
+
+**Características**:
+- 🔒 Seguro: Transação única com rollback
+- 🔄 Idempotente: Pode ser executado múltiplas vezes
+- 📊 Relatório: Contagem detalhada de operações
+- 🎯 Inteligente: Regenera código em caso de colisão
+- ⚡ Rápido: Processamento em lote otimizado
+
+**Mais scripts disponíveis**: [scripts/README.md](scripts/README.md)
 
 ---
 
@@ -767,8 +824,8 @@ Para dúvidas, sugestões ou problemas, abra uma [issue no GitHub](https://githu
 
 <div align="center">
 
-**VendaCerta v2.0.0** | Desenvolvido com ❤️ usando Python/Flask e Bootstrap  
-📅 Última atualização: Dezembro 2024
+**VendaCerta v2.9.0** | Desenvolvido com ❤️ usando Python/Flask e Bootstrap  
+📅 Última atualização: Janeiro 2026
 
 [⬆️ Voltar ao topo](#-vendacerta---sistema-de-gestão-de-vendas-metas-e-comissões)
 

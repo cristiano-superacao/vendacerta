@@ -1,7 +1,7 @@
 # 📚 ÍNDICE COMPLETO DE DOCUMENTAÇÃO - VENDA CERTA
 
 **Sistema de Gestão de Vendas, Metas e Comissões**  
-**Última atualização**: 3 de janeiro de 2026
+**Última atualização**: 9 de janeiro de 2026
 
 ---
 
