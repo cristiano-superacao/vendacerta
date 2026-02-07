@@ -189,7 +189,7 @@
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle me-2 d-flex align-items-center justify-content-center">
-                                        <span class="text-primary fw-bold">{{ meta.vendedor.nome[0] }}</span>
+                                        <span class="text-primary fw-bold">{{ (meta.vendedor.nome or '—')[:1] }}</span>
                                     </div>
                                     <strong>{{ meta.vendedor.nome }}</strong>
                                 </div>
@@ -208,14 +208,14 @@
                             <td>{{ "%02d"|format(meta.mes) }}/{{ meta.ano }}</td>
                             <td class="text-end">
                                 {% if meta.tipo_meta == 'valor' %}
-                                    R$ {{ "%.2f"|format(meta.valor_meta) }}
+                                    R$ {{ "%.2f"|format(meta.valor_meta or 0) }}
                                 {% else %}
                                     {{ meta.volume_meta }} vendas
                                 {% endif %}
                             </td>
                             <td class="text-end">
                                 {% if meta.tipo_meta == 'valor' %}
-                                    R$ {{ "%.2f"|format(meta.receita_alcancada) }}
+                                    R$ {{ "%.2f"|format(meta.receita_alcancada or 0) }}
                                 {% else %}
                                     {{ meta.volume_alcancado }} vendas
                                 {% endif %}
@@ -283,7 +283,7 @@
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle me-2 d-flex align-items-center justify-content-center">
-                                        <span class="text-primary fw-bold">{{ s.nome[0] }}</span>
+                                        <span class="text-primary fw-bold">{{ (s.nome or '—')[:1] }}</span>
                                     </div>
                                     <strong>{{ s.nome }}</strong>
                                 </div>

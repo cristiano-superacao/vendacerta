@@ -169,38 +169,3 @@ print()
 print("=" * 60)
 print("VERIFICAÇÃO CONCLUÍDA")
 print("=" * 60)
-prin# Verificar backup na nuvem
-    onedrive_backup = os.path.join(os.environ.get('USERPROFILE', ''), 'OneDrive', 'SuaMeta_Backups')
-    has_cloud_backup = os.path.exists(onedrive_backup) and len([f for f in os.listdir(onedrive_backup) if f.endswith('.db')]) > 0
-    
-    if has_cloud_backup:
-        print("🌐 SALVAMENTO NA NUVEM: ⚠️  DADOS LOCAIS")
-        print("💾 BACKUP NUVEM (OneDrive): ✅ ATIVO E SINCRONIZADO")
-        print("💾 BACKUP LOCAL: ✅ CONFIGURADO")
-        print("🔄 BACKUP AUTOMÁTICO: ✅ AGENDADO")
-        print()
-        print("Status: 🟢 BACKUP DUPLO ATIVO E FUNCIONAL")
-    else:
-        print("🌐 SALVAMENTO NA NUVEM: ⚠️  NÃO CONFIGURADO")
-        print("💾 BACKUP NUVEM: ⚠️  PENDENTE")
-        print("💾 BACKUP LOCAL: ✅ CONFIGURADO")
-        print("🔄 BACKUP AUTOMÁTICO: ✅ AGENDADO")
-        print()
-    
-if database_url and 'postgresql' in database_url:
-    print("🌐 SALVAMENTO NA NUVEM: ✅ ATIVO")
-    print("💾 BACKUP NUVEM (Railway): ✅ AUTOMÁTICO")
-    print("💾 BACKUP LOCAL: ✅ CONFIGURADO")
-    print("🔄 BACKUP AUTOMÁTICO: ✅ AGENDADO")
-    print()
-    print("Status: 🟢 SISTEMA COMPLETO E SEGURO")
-else:
-    print("🌐 SALVAMENTO NA NUVEM: ⚠️  NÃO CONFIGURADO")
-    print("💾 BACKUP NUVEM: ⚠️  PENDENTE")
-    print("💾 BACKUP LOCAL: ✅ CONFIGURADO")
-    print("🔄 BACKUP AUTOMÁTICO: ✅ AGENDADO")
-    print()
-    print("Status: 🟡 BACKUP LOCAL ATIVO, NUVEM PENDENTE")
-
-print()
-print("=" * 60)

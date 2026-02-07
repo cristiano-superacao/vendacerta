@@ -8742,38 +8742,38 @@ def lista_metas():
     per_page = 20
 
     # Filtrar metas por empresa (exceto super admin)
-    if current_user.is_super_admin:
-        query = Meta.query.filter_by(mes=mes, ano=ano).join(Vendedor)
-    else:
-        query = (
-            Meta.query.filter_by(mes=mes, ano=ano)
-            .join(Vendedor)
-            .filter(Vendedor.empresa_id == current_user.empresa_id)
-        )
+    query = Meta.query.filter_by(mes=mes, ano=ano).join(Vendedor)
+    if not current_user.is_super_admin:
+        query = query.filter(Vendedor.empresa_id == current_user.empresa_id)
 
-    # Aplicar ordenação
+    metas_todas = query.all()
+
+    # Aplicar ordenação (suporta metas de valor e volume)
     if ordenar == "vendas":
-        # Ordenar por receita alcançada (maior primeiro)
-        metas_ordenadas = query.order_by(Meta.receita_alcancada.desc()).all()
+        def _chave_vendas(m):
+            if getattr(m, "tipo_meta", "valor") == "volume":
+                return int(m.volume_alcancado or 0)
+            return float(m.receita_alcancada or 0.0)
+        metas_ordenadas = sorted(metas_todas, key=_chave_vendas, reverse=True)
     elif ordenar == "manutencao":
-        # Ordenar por percentual de alcance (maior primeiro)
-        metas_todas = query.all()
         metas_ordenadas = sorted(
             metas_todas,
-            key=lambda m: (
-                (m.receita_alcancada / m.valor_meta * 100)
-                if m.valor_meta > 0
-                else 0
-            ),
+            key=lambda m: float(m.percentual_alcance or 0.0),
             reverse=True,
         )
     else:
-        metas_ordenadas = query.all()
+        metas_ordenadas = metas_todas
 
-    # Calcular totais globais (todas as metas do período)
-    total_meta = sum(m.valor_meta for m in metas_ordenadas)
-    total_receita = sum(m.receita_alcancada for m in metas_ordenadas)
-    total_comissao = sum(m.comissao_total for m in metas_ordenadas)
+    # Calcular totais globais (mantém cards monetários coerentes; metas de volume não somam em R$)
+    total_meta = sum(
+        float(m.valor_meta or 0.0) if getattr(m, "tipo_meta", "valor") == "valor" else 0.0
+        for m in metas_ordenadas
+    )
+    total_receita = sum(
+        float(m.receita_alcancada or 0.0) if getattr(m, "tipo_meta", "valor") == "valor" else 0.0
+        for m in metas_ordenadas
+    )
+    total_comissao = sum(float(m.comissao_total or 0.0) for m in metas_ordenadas)
 
     # Paginação em memória (lista já está ordenada)
     total_registros = len(metas_ordenadas)
@@ -10433,33 +10433,23 @@ def relatorio_metas_avancado():
     ano = request.args.get("ano", datetime.now().year, type=int)
     mes = request.args.get("mes", type=int)
 
-    # Query base
-    query = Meta.query
+    # Query base (garante que meta.vendedor exista para o template)
+    query = Meta.query.join(Vendedor)
 
     # Aplicar filtros de permissão
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
-        query = query.join(Vendedor).filter(
-            Meta.vendedor_id == current_user.vendedor_id
-        )
+        query = query.filter(Meta.vendedor_id == current_user.vendedor_id)
     elif current_user.cargo == "supervisor":
-        vendedores_ids = [
-            v.id
-            for v in Vendedor.query.filter_by(
-                supervisor_id=current_user.id, ativo=True
-            ).all()
-        ]
-        query = query.filter(Meta.vendedor_id.in_(vendedores_ids))
+        query = query.filter(Vendedor.supervisor_id == current_user.id, Vendedor.ativo.is_(True))
     elif not current_user.is_super_admin:
-        query = query.join(Vendedor).filter(
-            Vendedor.empresa_id == current_user.empresa_id
-        )
+        query = query.filter(Vendedor.empresa_id == current_user.empresa_id)
 
     # Aplicar filtros adicionais
     if vendedor_id:
         query = query.filter(Meta.vendedor_id == vendedor_id)
     # Filtro por supervisor (quando fornecido ou quando visão é supervisor)
     if supervisor_id:
-        query = query.join(Vendedor).filter(Vendedor.supervisor_id == supervisor_id)
+        query = query.filter(Vendedor.supervisor_id == supervisor_id)
     if tipo_meta:
         query = query.filter(Meta.tipo_meta == tipo_meta)
     if ano:
@@ -10473,11 +10463,17 @@ def relatorio_metas_avancado():
     # Recalcular comissões se necessário
     for meta in metas:
         if meta.comissao_total is None or meta.comissao_total == 0:
-            meta.calcular_comissao()
+            try:
+                meta.calcular_comissao()
+            except Exception as e:
+                app.logger.warning(
+                    f"Falha ao recalcular comissão para Meta id={getattr(meta, 'id', None)}: {e}",
+                    exc_info=True,
+                )
 
     # Estatísticas gerais (independente da visão)
     total_metas = len(metas)
-    metas_atingidas = sum(1 for m in metas if m.percentual_alcance >= 100)
+    metas_atingidas = sum(1 for m in metas if (m.percentual_alcance or 0) >= 100)
     taxa_sucesso = (
         (metas_atingidas / total_metas * 100) if total_metas > 0 else 0
     )
