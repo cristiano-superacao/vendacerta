@@ -16,11 +16,12 @@ source .venv/bin/activate
 export SKIP_INIT="${SKIP_INIT:-1}"
 export SKIP_DB_INIT_ON_START="${SKIP_DB_INIT_ON_START:-1}"
 export RUN_DB_INIT_ON_START="${RUN_DB_INIT_ON_START:-0}"
+export SKIP_DB_BOOT_CHECK="${SKIP_DB_BOOT_CHECK:-1}"
 
 export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
 
 exec gunicorn wsgi:app \
-    --bind 0.0.0.0:${PORT} \
+    --bind 0.0.0.0:${PORT:-8080} \
     --workers ${GUNICORN_WORKERS:-2} \
     --threads ${GUNICORN_THREADS:-4} \
     --timeout ${GUNICORN_TIMEOUT:-120} \
