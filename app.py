@@ -304,17 +304,20 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 try:
     db.init_app(app)
     print("[OK] Database inicializado com sucesso")
-    
-    # Testar conexão com o banco
-    with app.app_context():
-        try:
-            from sqlalchemy import text
-            with db.engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            print("[OK] Conexão com banco de dados estabelecida")
-        except Exception as db_err:
-            print(f"[ERRO] Falha ao conectar ao banco: {db_err}")
-            print("[AVISO] Sistema continuará, mas pode ter problemas")
+
+    # Evitar bloqueio do boot em produção: teste de DB é opcional.
+    if os.environ.get("SKIP_DB_BOOT_CHECK", "1") == "1":
+        print("[INFO] Teste de conexao com DB no boot foi ignorado (SKIP_DB_BOOT_CHECK=1)")
+    else:
+        with app.app_context():
+            try:
+                from sqlalchemy import text
+                with db.engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                print("[OK] Conexão com banco de dados estabelecida")
+            except Exception as db_err:
+                print(f"[ERRO] Falha ao conectar ao banco: {db_err}")
+                print("[AVISO] Sistema continuará, mas pode ter problemas")
 except Exception as e:
     print(f"[ERRO] Falha na inicialização do banco: {e}")
     print("[AVISO] Sistema pode não funcionar corretamente")
