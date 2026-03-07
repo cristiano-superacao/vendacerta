@@ -305,17 +305,6 @@ body {
     transform: translateY(-2px);
 }
 
-/* ===== SECTION TITLES ===== */
-
-.section-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #2d3748;
-    padding-bottom: 0.75rem;
-    border-bottom: 3px solid #007bff;
-    margin-bottom: 1.5rem;
-}
-
 /* ===== BOTÕES CUSTOMIZADOS ===== */
 
 .shortcut-btn {
@@ -441,26 +430,6 @@ body {
 
 .category-icon {
     transition: transform 0.6s ease;
-}
-
-/* ===== ACCORDION CUSTOMIZADO ===== */
-
-.accordion-button:not(.collapsed) {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.125);
-}
-
-.accordion-item {
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    margin-bottom: 0.5rem;
-    border-radius: 8px !important;
-    overflow: hidden;
-}
-
-.accordion-button {
-    font-weight: 600;
-    padding: 1.25rem;
 }
 
 /* ===== FAQ ITEMS ===== */
@@ -1080,6 +1049,7 @@ body {
     font-size: 0.8125rem;
     font-weight: 600;
     border-radius: 8px;
+    transition: width 0.6s ease;
 }
 
 .badge-status {
@@ -1154,12 +1124,6 @@ body {
 
 .progress-small {
     height: 8px;
-}
-
-/* ===== ANIMAÇÕES DE PROGRESSO ===== */
-
-.progress-bar {
-    transition: width 0.6s ease;
 }
 
 /* ===== UTILITÁRIOS VENDACERTA (RESPONSIVO) ===== */

@@ -7,8 +7,10 @@ Identifica código duplicado, funções não utilizadas e imports desnecessário
 
 import re
 import ast
+import hashlib
 from pathlib import Path
 from collections import defaultdict, Counter
+
 
 class AnalisadorDuplicacoes:
     def __init__(self):
@@ -62,26 +64,26 @@ class AnalisadorDuplicacoes:
             app_path = self.base_path / 'app.py'
             with open(app_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
-            # Extrair imports
-            import_pattern = r'^(?:from\s+\S+\s+)?import\s+(.+)$'
-            imports = []
-            
-            for linha in content.split('\n'):
-                if match := re.match(import_pattern, linha.strip()):
-                    imports_linha = match.group(1).split(',')
-                    for imp in imports_linha:
-                        imp_limpo = imp.strip().split(' as ')[0].strip()
-                        if imp_limpo:
-                            imports.append(imp_limpo)
-            
-            # Verificar quais são usados (simplificado)
-            nao_usados = []
-            for imp in set(imports):
-                # Contar ocorrências (além do próprio import)
-                ocorrencias = len(re.findall(r'\b' + re.escape(imp) + r'\b', content))
-                if ocorrencias <= 1:  # Aparece só no import
-                    nao_usados.append(imp)
+
+            tree = ast.parse(content)
+
+            # Apenas imports de nível de módulo (evita falsos positivos de imports locais)
+            imports_top_level = set()
+            for node in tree.body:
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        imports_top_level.add(alias.asname or alias.name.split('.')[0])
+                elif isinstance(node, ast.ImportFrom):
+                    for alias in node.names:
+                        if alias.name != '*':
+                            imports_top_level.add(alias.asname or alias.name)
+
+            usados = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                    usados.add(node.id)
+
+            nao_usados = sorted(name for name in imports_top_level if name not in usados)
             
             if nao_usados:
                 print(f"   ⚠️  Possíveis imports não utilizados: {len(nao_usados)}")
@@ -89,7 +91,7 @@ class AnalisadorDuplicacoes:
                     print(f"      - {imp}")
                 self.relatorio['imports_nao_usados'] = nao_usados
             else:
-                print(f"   ✅ Todos os imports parecem estar em uso")
+                print("   ✅ Todos os imports parecem estar em uso")
             
             return len(nao_usados)
             
@@ -106,11 +108,34 @@ class AnalisadorDuplicacoes:
             with open(css_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Extrair seletores CSS
-            seletores = re.findall(r'([^\{\}]+)\s*\{', content)
-            seletores_limpos = [s.strip() for s in seletores if s.strip()]
-            
-            # Contar duplicados
+            # Extrair seletores de primeiro nível (fora de @media)
+            lines = content.splitlines()
+            seletores_limpos = []
+            depth = 0
+            media_depth = 0
+
+            for raw_line in lines:
+                line = raw_line.strip()
+                if not line or line.startswith('/*'):
+                    depth += raw_line.count('{') - raw_line.count('}')
+                    continue
+
+                if depth == 0 and line.startswith('@media') and line.endswith('{'):
+                    media_depth += 1
+
+                if media_depth == 0 and '{' in line and not line.startswith('@'):
+                    selector = line.split('{', 1)[0].strip()
+                    if selector:
+                        seletores_limpos.append(selector)
+
+                opens = raw_line.count('{')
+                closes = raw_line.count('}')
+                depth += opens - closes
+
+                if media_depth > 0 and closes > 0 and depth == 0:
+                    media_depth = 0
+
+            # Contar duplicados apenas no mesmo escopo (top-level)
             selector_counts = Counter(seletores_limpos)
             duplicados = {sel: count for sel, count in selector_counts.items() if count > 1}
             
@@ -120,7 +145,7 @@ class AnalisadorDuplicacoes:
                     print(f"      - {sel}: {count}x")
                 self.relatorio['css_duplicados'] = list(duplicados.keys())
             else:
-                print(f"   ✅ Nenhum seletor CSS duplicado")
+                print("   ✅ Nenhum seletor CSS duplicado")
             
             return len(duplicados)
             
@@ -129,29 +154,36 @@ class AnalisadorDuplicacoes:
             return 0
     
     def analisar_templates_duplicados(self):
-        """Analisa templates HTML duplicados ou muito similares"""
+        """Analisa templates com conteúdo idêntico"""
         print("\n📝 Analisando templates duplicados...")
         
         try:
             templates_dir = self.base_path / 'templates'
             templates = list(templates_dir.rglob('*.html'))
             
-            # Procurar arquivos com nomes similares
-            nomes = [t.name for t in templates]
-            nome_counts = Counter(nomes)
-            duplicados = {nome: count for nome, count in nome_counts.items() if count > 1}
-            
+            hashes = defaultdict(list)
+            for template in templates:
+                try:
+                    data = template.read_bytes()
+                    digest = hashlib.md5(data).hexdigest()
+                    hashes[digest].append(template)
+                except Exception:
+                    continue
+
+            duplicados = [paths for paths in hashes.values() if len(paths) > 1]
+
             if duplicados:
-                print(f"   ⚠️  Encontrados {len(duplicados)} nomes de template duplicados:")
-                for nome, count in duplicados.items():
-                    print(f"      - {nome}: {count}x")
-                    # Listar onde estão
-                    for t in templates:
-                        if t.name == nome:
-                            print(f"         * {t.relative_to(self.base_path)}")
-                self.relatorio['templates_duplicados'] = list(duplicados.keys())
+                print(f"   ⚠️  Encontrados {len(duplicados)} grupos de templates com conteúdo idêntico:")
+                for grupo in duplicados:
+                    print("      - Grupo:")
+                    for t in grupo:
+                        print(f"         * {t.relative_to(self.base_path)}")
+                self.relatorio['templates_duplicados'] = [
+                    [str(t.relative_to(self.base_path)) for t in grupo]
+                    for grupo in duplicados
+                ]
             else:
-                print(f"   ✅ Nenhum template com nome duplicado (total: {len(templates)})")
+                print(f"   ✅ Nenhum template com conteúdo duplicado (total: {len(templates)})")
             
             return len(duplicados)
             
@@ -163,7 +195,7 @@ class AnalisadorDuplicacoes:
         """Procura arquivos temporários, backup, old, etc"""
         print("\n🗑️  Procurando arquivos temporários...")
         
-        padroes = ['*old*', '*backup*', '*temp*', '*copy*', '*.bak', '*~']
+        padroes = ['*.bak', '*~', '*.old', '*.tmp', '*.temp', '*.copy']
         arquivos_temp = []
         
         for padrao in padroes:
@@ -172,6 +204,8 @@ class AnalisadorDuplicacoes:
         # Filtrar pastas específicas que são válidas
         arquivos_temp_reais = []
         for arq in arquivos_temp:
+            if arq.is_dir():
+                continue
             # Ignorar arquivos em node_modules, venv, __pycache__, .git
             if any(parte in str(arq) for parte in ['node_modules', '.venv', '__pycache__', '.git', 'instance/backups']):
                 continue
@@ -182,7 +216,7 @@ class AnalisadorDuplicacoes:
             for arq in arquivos_temp_reais[:20]:  # Primeiros 20
                 print(f"      - {arq.relative_to(self.base_path)}")
         else:
-            print(f"   ✅ Nenhum arquivo temporário encontrado")
+            print("   ✅ Nenhum arquivo temporário encontrado")
         
         return len(arquivos_temp_reais)
     
@@ -195,7 +229,7 @@ class AnalisadorDuplicacoes:
         print(f"\n✅ Rotas duplicadas: {len(self.relatorio['rotas_duplicadas'])}")
         print(f"✅ Imports possivelmente não usados: {len(self.relatorio['imports_nao_usados'])}")
         print(f"✅ Seletores CSS duplicados: {len(self.relatorio['css_duplicados'])}")
-        print(f"✅ Templates com nome duplicado: {len(self.relatorio['templates_duplicados'])}")
+        print(f"✅ Templates com conteúdo duplicado: {len(self.relatorio['templates_duplicados'])}")
         
         # Salvar relatório
         relatorio_path = self.base_path / 'docs' / 'RELATORIO_DUPLICACOES.md'
@@ -226,12 +260,14 @@ class AnalisadorDuplicacoes:
             
             f.write("\n## Templates Duplicados\n\n")
             if self.relatorio['templates_duplicados']:
-                for temp in self.relatorio['templates_duplicados']:
-                    f.write(f"- `{temp}`\n")
+                for grupo in self.relatorio['templates_duplicados']:
+                    f.write("- Grupo:\n")
+                    for temp in grupo:
+                        f.write(f"  - `{temp}`\n")
             else:
                 f.write("✅ Nenhum template duplicado encontrado.\n")
         
-        print(f"\n📄 Relatório detalhado salvo em: docs/RELATORIO_DUPLICACOES.md")
+        print("\n📄 Relatório detalhado salvo em: docs/RELATORIO_DUPLICACOES.md")
         print("\n" + "=" * 80 + "\n")
     
     def executar(self):
@@ -247,6 +283,7 @@ class AnalisadorDuplicacoes:
         self.analisar_arquivos_temporarios()
         
         self.gerar_relatorio()
+
 
 if __name__ == '__main__':
     analisador = AnalisadorDuplicacoes()

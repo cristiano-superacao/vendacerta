@@ -83,22 +83,9 @@ from calculo_projecao import calcular_projecao_mes, formatar_moeda
 
 # Importar helpers reutilizáveis
 from helpers import (
-    limpar_cpf,
-    limpar_cnpj,
-    limpar_telefone,
-    formatar_cpf,
-    formatar_cnpj,
-    formatar_telefone,
-    flash_sucesso,
-    flash_erro,
-    flash_aviso,
-    flash_info,
     filtrar_vendedores_por_escopo,
     filtrar_clientes_por_escopo,
-    paginar_query,
     validar_email,
-    gerar_codigo_cliente,
-    calcular_porcentagem,
     pode_importar,
     pode_exportar,
     get_cargos_permitidos_importacao,
