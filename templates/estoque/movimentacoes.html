@@ -92,6 +92,8 @@
                             <th>Motivo</th>
                             <th>Produto</th>
                             <th class="text-center">Quantidade</th>
+                            <th class="text-center">Saldo Atual</th>
+                            <th class="text-center">Saldo Após Movimentação</th>
                             {% if current_user.pode_ver_custos or current_user.cargo == 'admin' %}
                             <th class="text-end">Valor Unit.</th>
                             <th class="text-end">Valor Total</th>
@@ -111,11 +113,11 @@
                             </td>
                             <td>
                                 {% if mov.tipo == 'entrada' %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                <span class="badge bg-success text-white rounded-pill px-3 py-2">
                                     <i class="bi bi-arrow-down"></i> Entrada
                                 </span>
                                 {% else %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+                                <span class="badge bg-danger text-white rounded-pill px-3 py-2">
                                     <i class="bi bi-arrow-up"></i> Saída
                                 </span>
                                 {% endif %}
@@ -142,6 +144,16 @@
                             <td class="text-center">
                                 <span class="badge {{ 'bg-success-subtle text-success border border-success-subtle' if mov.tipo == 'entrada' else 'bg-danger-subtle text-danger border border-danger-subtle' }} rounded-pill">
                                     {{ mov.quantidade }} {{ mov.produto.unidade }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border rounded-pill">
+                                    {{ '%.2f'|format(mov.produto.estoque_atual or 0) }} {{ mov.produto.unidade }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">
+                                    {{ '%.2f'|format(saldo_apos_movimentacao.get(mov.id, 0)) }} {{ mov.produto.unidade }}
                                 </span>
                             </td>
                             {% if current_user.pode_ver_custos or current_user.cargo == 'admin' %}

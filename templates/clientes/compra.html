@@ -67,7 +67,13 @@
 
                         {% if produtos %}
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted">Produtos em estoque: {{ produtos|length }}</small>
+                            <small class="text-muted">
+                                {% if current_user.cargo == 'vendedor' %}
+                                Produtos disponíveis para venda: {{ produtos|length }}
+                                {% else %}
+                                Produtos cadastrados: {{ produtos|length }}
+                                {% endif %}
+                            </small>
                             <div class="input-group input-group-sm vc-input-group-narrow">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                                 <input type="text" class="form-control" id="filtro-produtos" placeholder="Buscar por nome ou código...">
@@ -81,13 +87,21 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Produto</th>
-                                        <th class="text-center d-none d-md-table-cell">Estoque</th>
+                                        <th class="text-center d-none d-md-table-cell">Saldo</th>
                                         <th class="text-end">Preço</th>
+                                        <th class="text-center d-none d-lg-table-cell">Status</th>
                                         <th class="text-end vc-col-qtd">Qtd.</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for produto in produtos %}
+                                    {% set saldo_atual = (produto.estoque_atual or 0)|float %}
+                                    {% set preco_venda = (produto.preco_venda or 0)|float %}
+                                    {% set estoque_minimo = (produto.estoque_minimo or 0)|float %}
+                                    {% set sem_estoque = saldo_atual <= 0 %}
+                                    {% set estoque_baixo = (not sem_estoque) and ((estoque_minimo > 0 and saldo_atual <= estoque_minimo) or saldo_atual <= 10) %}
+                                    {% set sem_preco = preco_venda <= 0 %}
+                                    {% set bloqueado_venda = sem_estoque or sem_preco %}
                                     <tr data-produto-linha="1"
                                         data-nome="{{ produto.nome|lower }}"
                                         data-codigo="{{ (produto.codigo or '')|lower }}"
@@ -98,20 +112,34 @@
                                             <small class="text-muted">Cód: {{ produto.codigo }}</small>
                                         </td>
                                         <td class="text-center d-none d-md-table-cell">
-                                            <span class="badge bg-light text-dark border">{{ produto.estoque_atual|int }}</span>
+                                            <span class="badge bg-light text-dark border">{{ saldo_atual|int }}</span>
                                         </td>
                                         <td class="text-end">
-                                            R$ {{ "%.2f"|format(produto.preco_venda or 0) }}
+                                            {% if sem_preco %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Sem preço</span>
+                                            {% else %}
+                                            R$ {{ "%.2f"|format(preco_venda) }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center d-none d-lg-table-cell">
+                                            {% if sem_estoque %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">🔴 Sem estoque</span>
+                                            {% elif estoque_baixo %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">🟡 Baixo estoque</span>
+                                            {% else %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">🟢 Disponível</span>
+                                            {% endif %}
                                         </td>
                                         <td class="text-end">
                                             <input type="number"
                                                    min="0"
-                                                   max="{{ produto.estoque_atual|int }}"
+                                                   max="{{ saldo_atual|int }}"
                                                    step="1"
                                                    inputmode="numeric"
                                                    class="form-control form-control-sm text-end produto-quantidade"
-                                                   data-preco="{{ produto.preco_venda or 0 }}"
+                                                   data-preco="{{ preco_venda }}"
                                                    name="produto_{{ produto.id }}"
+                                                   {% if bloqueado_venda %}disabled{% endif %}
                                                    placeholder="0"
                                                    aria-label="Quantidade do produto {{ produto.nome }}">
                                         </td>
@@ -121,7 +149,7 @@
                             </table>
                         </div>
 
-                        <small class="text-muted d-block mb-2">A quantidade máxima de cada item é limitada ao estoque disponível.</small>
+                        <small class="text-muted d-block mb-2">A quantidade máxima de cada item é limitada ao saldo disponível. Produtos sem preço de venda ou sem estoque ficam bloqueados.</small>
 
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <small class="text-muted">Total dos produtos selecionados</small>
@@ -130,7 +158,11 @@
                         {% else %}
                         <div class="alert alert-info small">
                             <i class="bi bi-info-circle me-1"></i>
+                            {% if current_user.cargo == 'vendedor' %}
+                            Nenhum produto disponível para venda no momento. Verifique saldo de estoque e preço de venda cadastrado.
+                            {% else %}
                             Nenhum produto de estoque cadastrado para esta empresa.
+                            {% endif %}
                         </div>
                         {% endif %}
 
@@ -335,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (termo) {
                 visivel = nome.includes(termo) || codigo.includes(termo);
             } else {
-                visivel = mostrados < 10; // mostra apenas os 10 primeiros sem filtro
+                visivel = true;
             }
 
             if (visivel) {
@@ -351,8 +383,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 infoListagem.textContent = `Mostrando ${mostrados} produto(s) encontrados para "${termoBruto}".`;
             } else {
                 const total = linhasProdutos.length;
-                const limite = Math.min(10, total);
-                infoListagem.textContent = `Mostrando ${limite} de ${total} produto(s). Use a busca para localizar outros itens.`;
+                infoListagem.textContent = `Mostrando ${total} produto(s), ordenados por disponibilidade e histórico de vendas.`;
             }
         }
     }
@@ -365,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
         filtroInput.addEventListener('input', aplicarFiltro);
     }
 
-    aplicarFiltro(); // aplica a regra inicial de mostrar só 10
+    aplicarFiltro();
 
     if (formCompra && resumoModal) {
         formCompra.addEventListener('submit', function (e) {

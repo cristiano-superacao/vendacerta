@@ -28,7 +28,7 @@ from flask_login import (
     current_user,
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -6193,9 +6193,9 @@ def registrar_compra(id):
     """Registrar compra do cliente"""
     cliente = Cliente.query.get_or_404(id)
 
-    # Produtos de estoque disponíveis para venda (mesma empresa)
-    # Exibe apenas os 10 mais vendidos para simplificar a escolha do vendedor
-    from sqlalchemy import func, desc
+    # Produtos de estoque para venda (mesma empresa)
+    # Para vendedor, aplica regra estrita: só exibe itens com saldo e preço válidos.
+    from sqlalchemy import func, desc, case
 
     vendas_subq = (
         db.session.query(
@@ -6211,11 +6211,26 @@ def registrar_compra(id):
         .subquery()
     )
 
+    produtos_query = Produto.query.filter_by(
+        empresa_id=cliente.empresa_id,
+        ativo=True,
+    )
+
+    if current_user.cargo == "vendedor":
+        produtos_query = produtos_query.filter(
+            Produto.estoque_atual > 0,
+            Produto.preco_venda > 0,
+        )
+
     produtos = (
-        Produto.query.filter_by(empresa_id=cliente.empresa_id, ativo=True)
+        produtos_query
         .outerjoin(vendas_subq, Produto.id == vendas_subq.c.produto_id)
-        .order_by(desc(vendas_subq.c.total_vendido), Produto.nome)
-        .limit(10)
+        .order_by(
+            case((Produto.estoque_atual > 0, 0), else_=1),
+            desc(func.coalesce(vendas_subq.c.total_vendido, 0)),
+            desc(Produto.estoque_atual),
+            Produto.nome.asc(),
+        )
         .all()
     )
 
@@ -6277,15 +6292,20 @@ def registrar_compra(id):
                 if not produto:
                     continue
 
-                estoque_disponivel = float(produto.estoque_atual or 0)
-                if estoque_disponivel <= 0:
-                    continue
-
-                quantidade_utilizada = min(qtd, estoque_disponivel)
-                if quantidade_utilizada <= 0:
-                    continue
-
                 preco_unitario = float(produto.preco_venda or 0)
+                if preco_unitario <= 0:
+                    raise ValueError(
+                        "Produto sem preço de venda cadastrado. Atualize o cadastro do produto."
+                    )
+
+                estoque_disponivel = float(produto.estoque_atual or 0)
+                if qtd > estoque_disponivel:
+                    raise ValueError(
+                        "Estoque insuficiente para esta venda. "
+                        f"Saldo disponível: {estoque_disponivel:g}"
+                    )
+
+                quantidade_utilizada = qtd
                 subtotal = quantidade_utilizada * preco_unitario
                 valor_total_itens += subtotal
 
@@ -6376,6 +6396,9 @@ def registrar_compra(id):
             flash("Compra registrada com sucesso!", "success")
             return redirect(url_for("ver_cliente", id=cliente.id))
 
+        except ValueError as e:
+            db.session.rollback()
+            flash(str(e), "danger")
         except Exception as e:
             db.session.rollback()
             flash(f"Erro ao registrar compra: {str(e)}", "danger")
@@ -11781,8 +11804,27 @@ def nova_movimentacao():
 
             if form.tipo.data == "saida":
                 if form.quantidade.data > produto.estoque_atual:
+                    if form.motivo.data == "venda":
+                        msg_estoque = (
+                            "Estoque insuficiente para esta venda. "
+                            f"Saldo disponível: {produto.estoque_atual:g}"
+                        )
+                    else:
+                        msg_estoque = (
+                            "Quantidade insuficiente para esta movimentação. "
+                            f"Saldo disponível: {produto.estoque_atual:g}"
+                        )
                     flash(
-                        f"Quantidade insuficiente! Estoque atual: {produto.estoque_atual}",
+                        msg_estoque,
+                        "danger",
+                    )
+                    return render_template(
+                        "estoque/movimentacao_form.html", form=form
+                    )
+
+                if form.motivo.data == "venda" and float(produto.preco_venda or 0) <= 0:
+                    flash(
+                        "Produto sem preço de venda cadastrado. Atualize o cadastro do produto.",
                         "danger",
                     )
                     return render_template(
@@ -11897,11 +11939,22 @@ def lista_movimentacoes():
     if motivo:
         query = query.filter_by(motivo=motivo)
     if produto_id:
-        query = query.filter_by(produto_id=produto_id)
+        try:
+            query = query.filter_by(produto_id=int(produto_id))
+        except ValueError:
+            flash("Filtro de produto inválido.", "warning")
     if data_inicio:
-        query = query.filter(EstoqueMovimento.data_movimento >= data_inicio)
+        try:
+            data_inicio_dt = datetime.strptime(data_inicio, "%Y-%m-%d")
+            query = query.filter(EstoqueMovimento.data_movimento >= data_inicio_dt)
+        except ValueError:
+            flash("Data início inválida. Use o formato correto.", "warning")
     if data_fim:
-        query = query.filter(EstoqueMovimento.data_movimento <= data_fim)
+        try:
+            data_fim_dt = datetime.strptime(data_fim, "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(EstoqueMovimento.data_movimento < data_fim_dt)
+        except ValueError:
+            flash("Data fim inválida. Use o formato correto.", "warning")
 
     movimentacoes = query.order_by(
         EstoqueMovimento.data_movimento.desc()
@@ -11913,10 +11966,44 @@ def lista_movimentacoes():
         .all()
     )
 
+    # Reconstrói saldo após cada movimentação considerando todo o histórico
+    # dos produtos exibidos, mesmo quando a lista está filtrada.
+    saldo_apos_movimentacao = {}
+    if movimentacoes:
+        produto_ids_movimentados = {mov.produto_id for mov in movimentacoes}
+        saldos_correntes = {
+            produto.id: float(produto.estoque_atual or 0)
+            for produto in produtos
+            if produto.id in produto_ids_movimentados
+        }
+        ids_visiveis = {mov.id for mov in movimentacoes}
+
+        movimentos_historico = (
+            EstoqueMovimento.query.filter_by(empresa_id=current_user.empresa_id)
+            .filter(EstoqueMovimento.produto_id.in_(produto_ids_movimentados))
+            .order_by(EstoqueMovimento.data_movimento.desc(), EstoqueMovimento.id.desc())
+            .all()
+        )
+
+        for mov in movimentos_historico:
+            saldo_apos = saldos_correntes.get(
+                mov.produto_id,
+                float((mov.produto.estoque_atual if mov.produto else 0) or 0),
+            )
+
+            if mov.id in ids_visiveis:
+                saldo_apos_movimentacao[mov.id] = saldo_apos
+
+            if mov.tipo == "entrada":
+                saldos_correntes[mov.produto_id] = saldo_apos - float(mov.quantidade or 0)
+            else:
+                saldos_correntes[mov.produto_id] = saldo_apos + float(mov.quantidade or 0)
+
     return render_template(
         "estoque/movimentacoes.html",
         movimentacoes=movimentacoes,
         produtos=produtos,
+        saldo_apos_movimentacao=saldo_apos_movimentacao,
         filtros={
             "tipo": tipo,
             "motivo": motivo,
