@@ -57,28 +57,31 @@ try:
         print("[OK] Health check disponível em: /ping")
         print("=" * 70)
 
-        # Dispara correção do banco em background para não bloquear healthcheck
-        try:
-            import threading
-            def _corrigir_banco_bg():
-                try:
-                    print("🔧 (BG) Iniciando correção de banco em background...")
-                    fix_module = os.path.join(os.path.dirname(__file__), "fix_database_railway.py")
-                    if not os.path.exists(fix_module):
-                        print("ℹ️ (BG) fix_database_railway.py indisponível no container. Pulando correção automática.")
-                        return
+        # Correção opcional em background (desativada por padrão para reduzir ruído).
+        if os.environ.get("ENABLE_BG_DB_FIX", "0") == "1":
+            try:
+                import threading
 
-                    from fix_database_railway import fix_database
-                    ok = fix_database()
-                    if ok:
-                        print("✅ (BG) Banco verificado/corrigido")
-                    else:
-                        print("ℹ️ (BG) Correção não aplicada (variáveis insuficientes ou já ok)")
-                except Exception as e:
-                    print(f"ℹ️ (BG) Correção automática indisponível: {e}")
-            threading.Thread(target=_corrigir_banco_bg, daemon=True).start()
-        except Exception as e:
-            print(f"⚠️ Aviso: não foi possível iniciar correção em background: {e}")
+                def _corrigir_banco_bg():
+                    try:
+                        print("🔧 (BG) Iniciando correção de banco em background...")
+                        fix_module = os.path.join(os.path.dirname(__file__), "fix_database_railway.py")
+                        if not os.path.exists(fix_module):
+                            print("ℹ️ (BG) fix_database_railway.py indisponível no container. Pulando correção automática.")
+                            return
+
+                        from fix_database_railway import fix_database
+                        ok = fix_database()
+                        if ok:
+                            print("✅ (BG) Banco verificado/corrigido")
+                        else:
+                            print("ℹ️ (BG) Correção não aplicada (variáveis insuficientes ou já ok)")
+                    except Exception as e:
+                        print(f"ℹ️ (BG) Correção automática indisponível: {e}")
+
+                threading.Thread(target=_corrigir_banco_bg, daemon=True).start()
+            except Exception as e:
+                print(f"⚠️ Aviso: não foi possível iniciar correção em background: {e}")
     
     # Exporta a aplicação para o Gunicorn
     application = app
