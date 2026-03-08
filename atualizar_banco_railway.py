@@ -238,6 +238,51 @@ def atualizar_banco_railway():
                 adicionar_coluna_se_nao_existe(conn, 'clientes', 'empresa_id', 'INTEGER')
                 adicionar_coluna_se_nao_existe(conn, 'clientes', 'ativo', 'BOOLEAN', 'TRUE')
 
+            # Criar tabela de pedidos (itens de venda) para exportação/integração
+            print("\n" + "-"*80)
+            print("CRIANDO/ATUALIZANDO TABELA: pedidos")
+            print("-"*80)
+
+            ddl_pedidos = """
+            CREATE TABLE pedidos (
+                id SERIAL PRIMARY KEY,
+                numero_pedido VARCHAR(50) NOT NULL,
+                data_pedido TIMESTAMP NOT NULL,
+                codigo_cliente VARCHAR(50) NULL,
+                nome_cliente VARCHAR(200) NULL,
+                codigo_vendedor VARCHAR(50) NULL,
+                nome_vendedor VARCHAR(200) NULL,
+                canal VARCHAR(50) NULL,
+                codigo_produto VARCHAR(50) NULL,
+                produto VARCHAR(200) NULL,
+                quantidade DOUBLE PRECISION NOT NULL DEFAULT 0,
+                preco_unitario DOUBLE PRECISION NOT NULL DEFAULT 0,
+                valor_total DOUBLE PRECISION NOT NULL DEFAULT 0,
+                status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
+                data_criacao TIMESTAMP NOT NULL DEFAULT NOW(),
+                empresa_id INTEGER NULL
+            )
+            """
+
+            criar_tabela_se_nao_existe(conn, 'pedidos', ddl_pedidos)
+            criar_indice_se_nao_existe(conn, 'index_pedidos_cliente', 'pedidos', 'codigo_cliente')
+            criar_indice_se_nao_existe(conn, 'index_pedidos_vendedor', 'pedidos', 'codigo_vendedor')
+            criar_indice_se_nao_existe(conn, 'index_pedidos_data', 'pedidos', 'data_pedido')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_numero', 'pedidos', 'numero_pedido')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_status', 'pedidos', 'status')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_empresa', 'pedidos', 'empresa_id')
+
+            if 'empresas' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='pedidos',
+                    nome_fk='fk_pedidos_empresa_id',
+                    coluna='empresa_id',
+                    tabela_ref='empresas',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
+
             # Criar tabela de dias extras liberados por vendedor
             print("\n" + "-"*80)
             print("CRIANDO/ATUALIZANDO TABELA: vendedor_dias_liberados")
@@ -303,6 +348,9 @@ def atualizar_banco_railway():
                 ("idx_clientes_codigo", "clientes", "codigo_cliente"),
                 ("idx_clientes_vendedor", "clientes", "vendedor_id"),
                 ("idx_metas_vendedor", "metas", "vendedor_id"),
+                ("index_pedidos_cliente", "pedidos", "codigo_cliente"),
+                ("index_pedidos_vendedor", "pedidos", "codigo_vendedor"),
+                ("index_pedidos_data", "pedidos", "data_pedido"),
                 ("idx_vendedor_dias_liberados_vendedor", "vendedor_dias_liberados", "vendedor_id"),
                 ("idx_vendedor_dias_liberados_dia", "vendedor_dias_liberados", "dia_visita"),
             ]

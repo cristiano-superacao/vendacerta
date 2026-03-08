@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+  {% if page_header_clean is defined %}
+    {{ page_header_clean('Visualizar pedido', 'Detalhes e itens do pedido.') }}
+  {% else %}
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h3 class="mb-0">Visualizar pedido</h3>
+        <small class="text-muted">Detalhes e itens do pedido.</small>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{{ url_for('lista_pedidos') }}" class="btn btn-outline-secondary">Voltar</a>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted small">Nº Pedido</div>
+          <div class="h4 mb-2">{{ pedido.numero_pedido }}</div>
+
+          <div class="text-muted small">Data</div>
+          <div class="mb-2">{{ pedido.data_pedido.strftime('%d/%m/%Y') if pedido.data_pedido else '' }}</div>
+
+          <div class="text-muted small">Status</div>
+          <div class="mb-0">
+            {% if pedido.status == 'Pendente' %}
+              <span class="badge text-bg-warning">Pendente</span>
+            {% elif pedido.status == 'Exportado' %}
+              <span class="badge text-bg-success">Exportado</span>
+            {% else %}
+              <span class="badge text-bg-secondary">{{ pedido.status }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted small">Cliente</div>
+          <div class="fw-semibold">{{ pedido.nome_cliente or '' }}</div>
+          <div class="text-muted small mb-3">{{ pedido.codigo_cliente or '' }}</div>
+
+          <div class="text-muted small">Vendedor</div>
+          <div class="fw-semibold">{{ pedido.nome_vendedor or '' }}</div>
+          <div class="text-muted small">{{ pedido.codigo_vendedor or '' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted small">Canal</div>
+          <div class="mb-3">{{ pedido.canal or '' }}</div>
+
+          <div class="text-muted small">Total</div>
+          <div class="h4 mb-0">R$ {{ '%.2f'|format(total or 0) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th class="text-end">Qtd</th>
+              <th class="text-end">Preço</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in itens %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ i.produto or '' }}</div>
+                  <div class="text-muted small">{{ i.codigo_produto or '' }}</div>
+                </td>
+                <td class="text-end">{{ i.quantidade or 0 }}</td>
+                <td class="text-end">R$ {{ '%.2f'|format(i.preco_unitario or 0) }}</td>
+                <td class="text-end">R$ {{ '%.2f'|format(i.valor_total or 0) }}</td>
+              </tr>
+            {% endfor %}
+            {% if itens|length == 0 %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">Nenhum item encontrado.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -37,3 +37,21 @@ def gerar_pdf_metas_wrapper(metas, mes: int, ano: int) -> Tuple[bool, BytesIO | 
         return True, buffer, None
     except Exception as e:
         return False, None, str(e)
+
+
+def gerar_planilha_pedidos(pedidos: List[dict]) -> Tuple[bool, BytesIO | None, str | None]:
+    """Gera um arquivo XLSX em memória com a lista de pedidos (para integração).
+
+    Espera uma lista de dicts com as colunas finais do export.
+    """
+    try:
+        import pandas as pd
+
+        df = pd.DataFrame(pedidos)
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Pedidos")
+        buffer.seek(0)
+        return True, buffer, None
+    except Exception as e:
+        return False, None, str(e)

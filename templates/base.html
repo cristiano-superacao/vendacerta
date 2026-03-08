@@ -531,6 +531,16 @@
                 </a>
             </li>
 
+            {% if current_user.cargo in ['admin', 'super_admin', 'gerente'] %}
+            <li>
+                <a href="{{ url_for('lista_pedidos') }}"
+                   class="{% if request.endpoint in ['lista_pedidos', 'visualizar_pedido', 'exportar_pedidos_excel'] %}active{% endif %}">
+                    <i class="bi bi-receipt"></i>
+                    <span>Pedidos</span>
+                </a>
+            </li>
+            {% endif %}
+
             <!-- Seção Comissões -->
             {% if current_user.cargo in ['admin', 'super_admin', 'gerente'] %}
             <li class="nav-divider"></li>

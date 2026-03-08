@@ -90,6 +90,8 @@ def main() -> int:
             "/ping": {200},
             "/login": {200},
             "/api/ranking": {200, 302, 401, 403},
+            "/pedidos": {200, 302, 401, 403},
+            "/pedidos/visualizar/1": {200, 302, 401, 403},
         }
         for path, ok_status in checks.items():
             status = _http_status(f"{base_url}{path}")
@@ -114,12 +116,33 @@ def main() -> int:
             "vendedores",
             "metas",
             "vendedor_dias_liberados",
+            "pedidos",
         }
         missing = sorted(required - tables)
         if missing:
             return _fail(f"Tabelas faltando no Postgres: {missing}")
 
+        # Validação mínima do schema de pedidos
+        pedidos_cols = {c["name"] for c in insp.get_columns("pedidos")}
+        pedidos_required_cols = {
+            "id",
+            "numero_pedido",
+            "data_pedido",
+            "status",
+            "empresa_id",
+            "produto",
+            "quantidade",
+            "preco_unitario",
+            "valor_total",
+        }
+        pedidos_missing_cols = sorted(pedidos_required_cols - pedidos_cols)
+        if pedidos_missing_cols:
+            return _fail(f"Tabela 'pedidos' sem colunas esperadas: {pedidos_missing_cols}")
+
         with engine.connect() as conn:
+            # Consulta simples (não deve falhar) para garantir que a tabela existe e é consultável
+            conn.execute(text("SELECT COUNT(*) FROM pedidos")).scalar()
+
             row = conn.execute(
                 text(
                     """

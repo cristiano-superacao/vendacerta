@@ -45,6 +45,7 @@ from models import (
     Usuario,
     Vendedor,
     VendedorDiaLiberado,
+    Pedido,
     Meta,
     Equipe,
     Empresa,
@@ -80,6 +81,7 @@ from forms import (
     OrdemServicoAvaliacaoForm,
     UsuarioForm,
     AdminVendedoresDiasLiberadosForm,
+    PedidosExportForm,
 )
 from calculo_projecao import calcular_projecao_mes, formatar_moeda
 
@@ -6306,12 +6308,46 @@ def registrar_compra(id):
             db.session.add(compra)
             db.session.flush()  # garante ID para relacionar nos movimentos de estoque
 
+            # Criar pedidos (itens) para conferência/exportação
+            numero_pedido = f"{compra.id:06d}"
+            canal = (request.form.get("canal") or "Sistema").strip() or "Sistema"
+            codigo_cliente = (
+                (cliente.codigo_cliente or "").strip()
+                or (cliente.codigo_bp or "").strip()
+                or str(cliente.id)
+            )
+            nome_cliente = (cliente.nome or "").strip() if cliente.nome else ""
+            codigo_vendedor = str(cliente.vendedor_id) if cliente.vendedor_id else ""
+            nome_vendedor = (
+                (cliente.vendedor.nome or "").strip() if getattr(cliente, "vendedor", None) else ""
+            )
+            data_pedido = compra.data_compra or datetime.utcnow()
+
             # Registrar movimentos de estoque para cada item da venda
             for item in itens_venda:
                 produto = item["produto"]
                 quantidade = item["quantidade"]
                 preco_unitario = item["preco_unitario"]
                 subtotal = item["subtotal"]
+
+                db.session.add(
+                    Pedido(
+                        numero_pedido=numero_pedido,
+                        data_pedido=data_pedido,
+                        codigo_cliente=codigo_cliente,
+                        nome_cliente=nome_cliente,
+                        codigo_vendedor=codigo_vendedor,
+                        nome_vendedor=nome_vendedor,
+                        canal=canal,
+                        codigo_produto=(produto.codigo or "") if hasattr(produto, "codigo") else "",
+                        produto=(produto.nome or "") if hasattr(produto, "nome") else "",
+                        quantidade=float(quantidade or 0),
+                        preco_unitario=float(preco_unitario or 0),
+                        valor_total=float(subtotal or 0),
+                        status="Pendente",
+                        empresa_id=cliente.empresa_id,
+                    )
+                )
 
                 # Atualizar estoque atual do produto
                 estoque_atual = float(produto.estoque_atual or 0)
@@ -6668,6 +6704,270 @@ def relatorio_vendas():
             "bairro": bairro,
             "status": status,
         },
+    )
+
+
+# ============================================================================
+# PEDIDOS (EXPORTAÇÃO / INTEGRAÇÃO)
+# ============================================================================
+
+
+def _parse_date_yyyy_mm_dd(value: str):
+    """Parse de input type=date (YYYY-MM-DD). Retorna date ou None."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _pedidos_base_query():
+    query = Pedido.query
+    if not current_user.is_super_admin:
+        query = query.filter(Pedido.empresa_id == current_user.empresa_id)
+    return query
+
+
+def _require_admin_for_pedidos():
+    if current_user.cargo not in ["admin", "super_admin", "gerente"] and not current_user.is_super_admin:
+        flash("Acesso negado! Apenas Admin pode acessar.", "danger")
+        return False
+    return True
+
+
+@app.route("/pedidos")
+@login_required
+def lista_pedidos():
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+
+    # Filtros (GET)
+    data_inicio = (request.args.get("data_inicio") or "").strip()
+    data_fim = (request.args.get("data_fim") or "").strip()
+    vendedor_id = (request.args.get("vendedor") or "").strip()
+    cliente = (request.args.get("cliente") or "").strip()
+    status = (request.args.get("status") or "").strip()
+    canal = (request.args.get("canal") or "").strip()
+    produto = (request.args.get("produto") or "").strip()
+    numero_pedido = (request.args.get("numero_pedido") or "").strip()
+
+    export_form = PedidosExportForm()
+
+    query = _pedidos_base_query()
+
+    di = _parse_date_yyyy_mm_dd(data_inicio)
+    df = _parse_date_yyyy_mm_dd(data_fim)
+    if di:
+        query = query.filter(Pedido.data_pedido >= datetime.combine(di, datetime.min.time()))
+    if df:
+        query = query.filter(Pedido.data_pedido <= datetime.combine(df, datetime.max.time()))
+
+    if vendedor_id:
+        query = query.filter(Pedido.codigo_vendedor == str(vendedor_id))
+
+    if cliente:
+        query = query.filter(
+            db.or_(
+                Pedido.codigo_cliente.ilike(f"%{cliente}%"),
+                Pedido.nome_cliente.ilike(f"%{cliente}%"),
+            )
+        )
+
+    if status and status != "Todos":
+        query = query.filter(Pedido.status == status)
+
+    if canal:
+        query = query.filter(Pedido.canal.ilike(f"%{canal}%"))
+
+    if produto:
+        query = query.filter(
+            db.or_(
+                Pedido.produto.ilike(f"%{produto}%"),
+                Pedido.codigo_produto.ilike(f"%{produto}%"),
+            )
+        )
+
+    if numero_pedido:
+        query = query.filter(Pedido.numero_pedido.ilike(f"%{numero_pedido}%"))
+
+    query = query.order_by(Pedido.data_pedido.desc(), Pedido.id.desc())
+
+    page = request.args.get("page", 1, type=int)
+    pagination = query.paginate(page=page, per_page=20, error_out=False)
+    pedidos = pagination.items
+
+    # Dados para selects
+    vendedores_query = Vendedor.query.filter_by(ativo=True)
+    if not current_user.is_super_admin:
+        vendedores_query = vendedores_query.filter_by(empresa_id=current_user.empresa_id)
+    vendedores = vendedores_query.order_by(Vendedor.nome).all()
+
+    # Estatísticas rápidas (hoje) - escopo por empresa
+    hoje = datetime.utcnow().date()
+    inicio_hoje = datetime.combine(hoje, datetime.min.time())
+    fim_hoje = datetime.combine(hoje, datetime.max.time())
+    base_stats_q = _pedidos_base_query().filter(Pedido.data_pedido.between(inicio_hoje, fim_hoje))
+    pedidos_hoje = base_stats_q.with_entities(db.func.count(db.func.distinct(Pedido.numero_pedido))).scalar() or 0
+    valor_total_hoje = base_stats_q.with_entities(db.func.coalesce(db.func.sum(Pedido.valor_total), 0)).scalar() or 0
+    clientes_hoje = base_stats_q.with_entities(db.func.count(db.func.distinct(Pedido.codigo_cliente))).scalar() or 0
+
+    return render_template(
+        "pedidos/lista.html",
+        pedidos=pedidos,
+        pagination=pagination,
+        export_form=export_form,
+        vendedores=vendedores,
+        # filtros
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        vendedor_filtro=vendedor_id,
+        cliente_filtro=cliente,
+        status_filtro=status,
+        canal_filtro=canal,
+        produto_filtro=produto,
+        numero_pedido_filtro=numero_pedido,
+        # stats
+        pedidos_hoje=pedidos_hoje,
+        valor_total_hoje=valor_total_hoje,
+        clientes_hoje=clientes_hoje,
+    )
+
+
+@app.route("/pedidos/exportar", methods=["POST"])
+@login_required
+def exportar_pedidos_excel():
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+
+    form = PedidosExportForm()
+    if not form.validate_on_submit():
+        flash("Falha de validação do formulário de exportação.", "danger")
+        return redirect(url_for("lista_pedidos"))
+
+    # Capturar filtros (hidden inputs)
+    data_inicio = (request.form.get("data_inicio") or "").strip()
+    data_fim = (request.form.get("data_fim") or "").strip()
+    vendedor_id = (request.form.get("vendedor") or "").strip()
+    cliente = (request.form.get("cliente") or "").strip()
+    canal = (request.form.get("canal") or "").strip()
+    produto = (request.form.get("produto") or "").strip()
+    numero_pedido = (request.form.get("numero_pedido") or "").strip()
+
+    query = _pedidos_base_query().filter(Pedido.status == "Pendente")
+
+    di = _parse_date_yyyy_mm_dd(data_inicio)
+    df = _parse_date_yyyy_mm_dd(data_fim)
+    if di:
+        query = query.filter(Pedido.data_pedido >= datetime.combine(di, datetime.min.time()))
+    if df:
+        query = query.filter(Pedido.data_pedido <= datetime.combine(df, datetime.max.time()))
+
+    if vendedor_id:
+        query = query.filter(Pedido.codigo_vendedor == str(vendedor_id))
+
+    if cliente:
+        query = query.filter(
+            db.or_(
+                Pedido.codigo_cliente.ilike(f"%{cliente}%"),
+                Pedido.nome_cliente.ilike(f"%{cliente}%"),
+            )
+        )
+
+    if canal:
+        query = query.filter(Pedido.canal.ilike(f"%{canal}%"))
+
+    if produto:
+        query = query.filter(
+            db.or_(
+                Pedido.produto.ilike(f"%{produto}%"),
+                Pedido.codigo_produto.ilike(f"%{produto}%"),
+            )
+        )
+
+    if numero_pedido:
+        query = query.filter(Pedido.numero_pedido.ilike(f"%{numero_pedido}%"))
+
+    rows = query.order_by(Pedido.data_pedido.asc(), Pedido.id.asc()).all()
+    if not rows:
+        flash("Nenhum pedido pendente para exportar com os filtros informados.", "info")
+        return redirect(
+            url_for(
+                "lista_pedidos",
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                vendedor=vendedor_id,
+                cliente=cliente,
+                status="Pendente",
+                canal=canal,
+                produto=produto,
+                numero_pedido=numero_pedido,
+            )
+        )
+
+    export_data = []
+    for p in rows:
+        export_data.append(
+            {
+                "Pedido": p.numero_pedido,
+                "Data": p.data_pedido.strftime("%d/%m/%Y") if p.data_pedido else "",
+                "Cliente": p.codigo_cliente or "",
+                "Vendedor": p.nome_vendedor or "",
+                "Produto": p.produto or "",
+                "Quantidade": p.quantidade or 0,
+                "Preço": p.preco_unitario or 0,
+                "Total": p.valor_total or 0,
+                "Canal": p.canal or "",
+            }
+        )
+
+    try:
+        from modules.export_service import gerar_planilha_pedidos
+
+        ok, buffer, err = gerar_planilha_pedidos(export_data)
+        if not ok or not buffer:
+            raise RuntimeError(err or "Falha ao gerar planilha")
+
+        # Marcar exportados para evitar duplicidade
+        for p in rows:
+            p.status = "Exportado"
+        db.session.commit()
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="pedidos_exportacao.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao exportar pedidos: {str(e)}", "danger")
+        return redirect(url_for("lista_pedidos"))
+
+
+@app.route("/pedidos/visualizar/<int:id>")
+@login_required
+def visualizar_pedido(id):
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+
+    pedido = Pedido.query.get_or_404(id)
+    if not current_user.is_super_admin and pedido.empresa_id != current_user.empresa_id:
+        flash("Acesso negado.", "danger")
+        return redirect(url_for("lista_pedidos"))
+
+    itens = (
+        Pedido.query.filter_by(numero_pedido=pedido.numero_pedido)
+        .order_by(Pedido.id.asc())
+        .all()
+    )
+    total = sum(float(i.valor_total or 0) for i in itens)
+
+    return render_template(
+        "pedidos/visualizar.html",
+        pedido=pedido,
+        itens=itens,
+        total=total,
     )
 
 

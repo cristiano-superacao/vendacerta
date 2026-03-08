@@ -1206,6 +1206,50 @@ class CompraCliente(db.Model):
             'observacoes': self.observacoes
         }
 
+
+class Pedido(db.Model):
+    """Tabela de pedidos (itens de venda) para conferência/exportação."""
+
+    __tablename__ = 'pedidos'
+
+    __table_args__ = (
+        db.Index('index_pedidos_cliente', 'codigo_cliente'),
+        db.Index('index_pedidos_vendedor', 'codigo_vendedor'),
+        db.Index('index_pedidos_data', 'data_pedido'),
+        db.Index('idx_pedidos_numero', 'numero_pedido'),
+        db.Index('idx_pedidos_status', 'status'),
+        db.Index('idx_pedidos_empresa_data', 'empresa_id', 'data_pedido'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    numero_pedido = db.Column(db.String(50), nullable=False, index=True)
+    data_pedido = db.Column(db.DateTime, nullable=False, index=True)
+
+    codigo_cliente = db.Column(db.String(50), index=True)
+    nome_cliente = db.Column(db.String(200))
+
+    codigo_vendedor = db.Column(db.String(50), index=True)
+    nome_vendedor = db.Column(db.String(200))
+
+    canal = db.Column(db.String(50))
+
+    codigo_produto = db.Column(db.String(50), index=True)
+    produto = db.Column(db.String(200), index=True)
+
+    quantidade = db.Column(db.Float, nullable=False, default=0.0)
+    preco_unitario = db.Column(db.Float, nullable=False, default=0.0)
+    valor_total = db.Column(db.Float, nullable=False, default=0.0)
+
+    status = db.Column(db.String(20), nullable=False, default='Pendente', index=True)
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True, index=True)
+    empresa = db.relationship('Empresa', backref='pedidos')
+
+    def __repr__(self):
+        return f'<Pedido {self.numero_pedido} {self.status}>'
+
 # ============================================================================
 # MÓDULO DE ESTOQUE E MANUTENÇÃO
 # ============================================================================

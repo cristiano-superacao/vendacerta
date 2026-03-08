@@ -577,6 +577,12 @@ class AdminVendedoresDiasLiberadosForm(FlaskForm):
 
     submit = SubmitField('Salvar alterações')
 
+
+class PedidosExportForm(FlaskForm):
+    """Form para exportação de pedidos (CSRF) na página /pedidos."""
+
+    submit = SubmitField('Exportar Excel')
+
 # ============================================================================
 # FORMULÁRIOS DE ESTOQUE E MANUTENÇÃO
 # ============================================================================

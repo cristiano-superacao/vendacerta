@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+  {% if page_header_clean is defined %}
+    {{ page_header_clean('Pedidos', 'Centralize vendas, filtre e exporte pendentes.') }}
+  {% else %}
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h3 class="mb-0">Pedidos</h3>
+        <small class="text-muted">Centralize vendas, filtre e exporte pendentes.</small>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+      {% if stats_card_clean is defined %}
+        {{ stats_card_clean('Pedidos hoje', pedidos_hoje, 'Pedidos distintos (nº pedido)') }}
+      {% else %}
+        <div class="card">
+          <div class="card-body">
+            <div class="text-muted small">Pedidos hoje</div>
+            <div class="h4 mb-0">{{ pedidos_hoje }}</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-md-4">
+      {% if stats_card_clean is defined %}
+        {{ stats_card_clean('Clientes hoje', clientes_hoje, 'Clientes distintos') }}
+      {% else %}
+        <div class="card">
+          <div class="card-body">
+            <div class="text-muted small">Clientes hoje</div>
+            <div class="h4 mb-0">{{ clientes_hoje }}</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-md-4">
+      {% if stats_card_clean is defined %}
+        {{ stats_card_clean('Total hoje', (valor_total_hoje or 0), 'Soma dos itens') }}
+      {% else %}
+        <div class="card">
+          <div class="card-body">
+            <div class="text-muted small">Total hoje</div>
+            <div class="h4 mb-0">R$ {{ '%.2f'|format(valor_total_hoje or 0) }}</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="GET" action="{{ url_for('lista_pedidos') }}" class="row g-2 align-items-end">
+        <div class="col-12 col-md-2">
+          <label class="form-label">Data início</label>
+          <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control" />
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label">Data fim</label>
+          <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control" />
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Vendedor</label>
+          <select name="vendedor" class="form-select">
+            <option value="">Todos</option>
+            {% for v in vendedores %}
+              <option value="{{ v.codigo }}" {% if vendedor_filtro and vendedor_filtro|string == v.codigo|string %}selected{% endif %}>
+                {{ v.nome }} ({{ v.codigo }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Cliente (código/nome)</label>
+          <input type="text" name="cliente" value="{{ cliente_filtro }}" class="form-control" placeholder="Ex.: 123 / Mercado" />
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <option value="" {% if not status_filtro %}selected{% endif %}>Todos</option>
+            <option value="Pendente" {% if status_filtro == 'Pendente' %}selected{% endif %}>Pendente</option>
+            <option value="Exportado" {% if status_filtro == 'Exportado' %}selected{% endif %}>Exportado</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-2">
+          <label class="form-label">Canal</label>
+          <input type="text" name="canal" value="{{ canal_filtro }}" class="form-control" placeholder="Ex.: Sistema" />
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Produto (código/nome)</label>
+          <input type="text" name="produto" value="{{ produto_filtro }}" class="form-control" placeholder="Ex.: 789 / ARROZ" />
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label">Nº Pedido</label>
+          <input type="text" name="numero_pedido" value="{{ numero_pedido_filtro }}" class="form-control" placeholder="Ex.: 000123" />
+        </div>
+
+        <div class="col-12 col-md-5 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-grow-1">Filtrar</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('lista_pedidos') }}">Limpar</a>
+        </div>
+      </form>
+
+      <hr class="my-3" />
+
+      <form method="POST" action="{{ url_for('exportar_pedidos_excel') }}" class="d-flex flex-wrap gap-2 align-items-center">
+        {{ export_form.hidden_tag() }}
+        <!-- Preserva filtros na exportação -->
+        <input type="hidden" name="data_inicio" value="{{ data_inicio }}" />
+        <input type="hidden" name="data_fim" value="{{ data_fim }}" />
+        <input type="hidden" name="vendedor" value="{{ vendedor_filtro }}" />
+        <input type="hidden" name="cliente" value="{{ cliente_filtro }}" />
+        <input type="hidden" name="canal" value="{{ canal_filtro }}" />
+        <input type="hidden" name="produto" value="{{ produto_filtro }}" />
+        <input type="hidden" name="numero_pedido" value="{{ numero_pedido_filtro }}" />
+        <button type="submit" class="btn btn-success">Exportar pendentes (Excel)</button>
+        <div class="text-muted small">A exportação marca como <strong>Exportado</strong>.</div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Nº Pedido</th>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Vendedor</th>
+              <th>Produto</th>
+              <th class="text-end">Qtd</th>
+              <th class="text-end">Preço</th>
+              <th class="text-end">Total</th>
+              <th>Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pedidos %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ p.numero_pedido }}</div>
+                  <div class="text-muted small">{{ p.canal or '' }}</div>
+                </td>
+                <td>{{ p.data_pedido.strftime('%d/%m/%Y') if p.data_pedido else '' }}</td>
+                <td>
+                  <div class="fw-semibold">{{ p.nome_cliente or '' }}</div>
+                  <div class="text-muted small">{{ p.codigo_cliente or '' }}</div>
+                </td>
+                <td>
+                  <div class="fw-semibold">{{ p.nome_vendedor or '' }}</div>
+                  <div class="text-muted small">{{ p.codigo_vendedor or '' }}</div>
+                </td>
+                <td>
+                  <div class="fw-semibold">{{ p.produto or '' }}</div>
+                  <div class="text-muted small">{{ p.codigo_produto or '' }}</div>
+                </td>
+                <td class="text-end">{{ p.quantidade or 0 }}</td>
+                <td class="text-end">R$ {{ '%.2f'|format(p.preco_unitario or 0) }}</td>
+                <td class="text-end">R$ {{ '%.2f'|format(p.valor_total or 0) }}</td>
+                <td>
+                  {% if p.status == 'Pendente' %}
+                    <span class="badge text-bg-warning">Pendente</span>
+                  {% elif p.status == 'Exportado' %}
+                    <span class="badge text-bg-success">Exportado</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">{{ p.status }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('visualizar_pedido', id=p.id) }}">Ver</a>
+                </td>
+              </tr>
+            {% endfor %}
+            {% if pedidos|length == 0 %}
+              <tr>
+                <td colspan="10" class="text-center text-muted py-4">Nenhum pedido encontrado.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if pagination and pagination.pages > 1 %}
+        <nav aria-label="Paginação" class="d-flex justify-content-center">
+          <ul class="pagination mb-0">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('lista_pedidos', page=pagination.prev_num, data_inicio=data_inicio, data_fim=data_fim, vendedor=vendedor_filtro, cliente=cliente_filtro, status=status_filtro, canal=canal_filtro, produto=produto_filtro, numero_pedido=numero_pedido_filtro) }}">Anterior</a>
+            </li>
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+              {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                  <a class="page-link" href="{{ url_for('lista_pedidos', page=p, data_inicio=data_inicio, data_fim=data_fim, vendedor=vendedor_filtro, cliente=cliente_filtro, status=status_filtro, canal=canal_filtro, produto=produto_filtro, numero_pedido=numero_pedido_filtro) }}">{{ p }}</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+              {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('lista_pedidos', page=pagination.next_num, data_inicio=data_inicio, data_fim=data_fim, vendedor=vendedor_filtro, cliente=cliente_filtro, status=status_filtro, canal=canal_filtro, produto=produto_filtro, numero_pedido=numero_pedido_filtro) }}">Próxima</a>
+            </li>
+          </ul>
+        </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
