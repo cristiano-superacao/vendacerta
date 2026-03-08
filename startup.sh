@@ -1,31 +1,46 @@
 #!/bin/bash
-# startup.sh - startup resiliente para Railway
+# startup.sh - SCRIPT DE TESTE PARA ISOLAR O ERRO
 
-set -eu
+# Falhar em caso de erro
+set -e
 
-cd /app
+echo "======================================================================"
+echo "🚀 INICIANDO SCRIPT DE STARTUP (MODO DE DIAGNÓSTICO)"
+echo "======================================================================"
 
-if [ ! -d ".venv" ]; then
-    echo "[ERRO] Ambiente virtual .venv nao encontrado"
+# 1. Ativar Virtual Environment
+if [ -d ".venv" ]; then
+    echo "📦 Ativando ambiente virtual (.venv)..."
+    source .venv/bin/activate
+else
+    echo "❌ ERRO: Ambiente virtual .venv não encontrado!"
     exit 1
 fi
 
-source .venv/bin/activate
+# 2. Configurar bibliotecas do sistema (essencial para Pandas)
+echo "🔧 Configurando LD_LIBRARY_PATH para libstdc++..."
+LIBSTDC=$(find /nix/store -name libstdc++.so.6 -printf '%h\n' 2>/dev/null | head -n 1)
+if [ -n "$LIBSTDC" ]; then
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBSTDC
+    echo "✅ LD_LIBRARY_PATH atualizado para: $LD_LIBRARY_PATH"
+else
+    echo "⚠️  Aviso: libstdc++.so.6 não encontrada automaticamente."
+fi
 
-# Evita inicializacoes pesadas/sincronas no import do app para liberar o healthcheck rapido.
-export SKIP_INIT="${SKIP_INIT:-1}"
-export SKIP_DB_INIT_ON_START="${SKIP_DB_INIT_ON_START:-1}"
-export RUN_DB_INIT_ON_START="${RUN_DB_INIT_ON_START:-0}"
-export SKIP_DB_BOOT_CHECK="${SKIP_DB_BOOT_CHECK:-1}"
+# 3. Adicionar diretório do projeto ao PYTHONPATH
+echo "🐍 Adicionando diretório atual ao PYTHONPATH..."
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+echo "✅ PYTHONPATH atualizado."
 
-export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
+# 4. Iniciar Gunicorn diretamente para teste
+echo "⚡ Iniciando servidor Gunicorn diretamente para diagnóstico..."
+echo "   Os scripts de inicialização do banco foram ignorados temporariamente."
+echo "======================================================================"
 
+# Usar exec para que o Gunicorn assuma o PID 1
 exec gunicorn wsgi:app \
-    --bind 0.0.0.0:${PORT:-8080} \
-    --workers ${GUNICORN_WORKERS:-2} \
-    --threads ${GUNICORN_THREADS:-4} \
-    --timeout ${GUNICORN_TIMEOUT:-120} \
-    --keep-alive ${GUNICORN_KEEP_ALIVE:-5} \
-    --log-level ${GUNICORN_LOG_LEVEL:-info} \
+    --bind 0.0.0.0:$PORT \
+    --workers 1 \
+    --log-level debug \
     --access-logfile - \
     --error-logfile -

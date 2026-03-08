@@ -1,11 +1,11 @@
-# app.py - Sistema VendaCerta - GestÃ£o Completa de Vendas, Clientes e Metas
+# app.py - Sistema VendaCerta - Gestão Completa de Vendas, Clientes e Metas
 import os
 import sys
 import re
 from io import BytesIO
 from dotenv import load_dotenv
 
-# Carregar variÃ¡veis de ambiente do arquivo .env
+# Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
 from flask import (
@@ -28,7 +28,7 @@ from flask_login import (
     current_user,
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -38,11 +38,6 @@ import time
 import secrets
 import shutil
 import atexit
-
-try:
-    from zoneinfo import ZoneInfo
-except Exception:
-    ZoneInfo = None
 
 from config import config
 from models import (
@@ -86,24 +81,24 @@ from forms import (
 )
 from calculo_projecao import calcular_projecao_mes, formatar_moeda
 
-
-def now_brasilia():
-    """Retorna datetime atual no fuso de Brasilia (naive para compatibilidade com DB)."""
-    if ZoneInfo is None:
-        return datetime.now()
-    tz_name = os.environ.get("APP_TIMEZONE", "America/Sao_Paulo")
-    return datetime.now(ZoneInfo(tz_name)).replace(tzinfo=None)
-
-
-def today_brasilia():
-    return now_brasilia().date()
-
-
-# Importar helpers reutilizaveis
+# Importar helpers reutilizáveis
 from helpers import (
+    limpar_cpf,
+    limpar_cnpj,
+    limpar_telefone,
+    formatar_cpf,
+    formatar_cnpj,
+    formatar_telefone,
+    flash_sucesso,
+    flash_erro,
+    flash_aviso,
+    flash_info,
     filtrar_vendedores_por_escopo,
     filtrar_clientes_por_escopo,
+    paginar_query,
     validar_email,
+    gerar_codigo_cliente,
+    calcular_porcentagem,
     pode_importar,
     pode_exportar,
     get_cargos_permitidos_importacao,
@@ -112,14 +107,12 @@ from helpers import (
     verificar_excel_disponivel,
 )
 try:
-    # FunÃ§Ãµes de backup (opcional em produÃ§Ã£o/Railway)
+    # Funções de backup (opcional em produção/Railway)
     from backup_helper import criar_backup_db, listar_backups, restaurar_backup, deletar_backup
 except Exception as e:
-    # Evita falha de inicializaÃ§Ã£o caso o mÃ³dulo nÃ£o esteja disponÃ­vel no ambiente.
-    # Em produÃ§Ã£o, manter fallback silencioso para reduzir ruÃ­do de logs.
-    if os.environ.get("FLASK_ENV") == "development":
-        print(f"[AVISO] Modulo 'backup_helper' indisponivel: {e}")
-        print("[INFO] Recursos de backup desativados neste ambiente.")
+    # Evita falha de inicialização caso o módulo não esteja disponível no ambiente
+    print(f"[AVISO] Módulo 'backup_helper' indisponível: {e}")
+    print("[INFO] Recursos de backup serão desativados, mantendo o app online.")
     def criar_backup_db(*args, **kwargs):
         return None
     def listar_backups(*args, **kwargs):
@@ -138,12 +131,12 @@ if ENABLE_EXCEL_CHECK:
         from openpyxl.styles import Font, PatternFill, Alignment
         EXCEL_AVAILABLE = True
         EXCEL_ERROR_MESSAGE = None
-        print("âœ… Bibliotecas Excel carregadas com sucesso")
+        print("✅ Bibliotecas Excel carregadas com sucesso")
     except ImportError as e:
         EXCEL_AVAILABLE = False
         EXCEL_ERROR_MESSAGE = str(e)
-        print(f"âš ï¸  Aviso: Bibliotecas Excel nÃ£o disponÃ­veis: {e}")
-        print("ðŸ’¡ Instale com: pip install pandas openpyxl")
+        print(f"⚠️  Aviso: Bibliotecas Excel não disponíveis: {e}")
+        print("💡 Instale com: pip install pandas openpyxl")
         # Criar placeholders para evitar erros
         pd = None
         Workbook = None
@@ -151,21 +144,21 @@ if ENABLE_EXCEL_CHECK:
         EXCEL_AVAILABLE = False
         EXCEL_ERROR_MESSAGE = str(e)
         error_str = str(e)
-        print(f"âš ï¸  Erro ao importar bibliotecas Excel: {e}")
+        print(f"⚠️  Erro ao importar bibliotecas Excel: {e}")
         
         # Detectar erro de biblioteca compartilhada
         if "libstdc++" in error_str or ".so" in error_str:
-            print("ðŸ”§ SOLUÃ‡ÃƒO: Erro de biblioteca do sistema detectado!")
+            print("🔧 SOLUÇÃO: Erro de biblioteca do sistema detectado!")
             print("   No Railway/Nixpacks, adicione ao nixpacks.toml:")
             print('   nixPkgs = ["stdenv.cc.cc.lib", "openblas", "libgfortran"]')
         elif "cannot open shared object" in error_str:
-            print("ðŸ”§ SOLUÃ‡ÃƒO: Falta biblioteca compartilhada do sistema")
-            print("   Verifique as dependÃªncias nativas no nixpacks.toml")
+            print("🔧 SOLUÇÃO: Falta biblioteca compartilhada do sistema")
+            print("   Verifique as dependências nativas no nixpacks.toml")
         
         pd = None
         Workbook = None
 else:
-    # Desabilitado por padrÃ£o em produÃ§Ã£o para evitar ruÃ­do nos logs
+    # Desabilitado por padrão em produção para evitar ruído nos logs
     EXCEL_AVAILABLE = False
     EXCEL_ERROR_MESSAGE = None
     pd = None
@@ -173,9 +166,9 @@ else:
 
 # Tentativa de (re)carregar libs Excel sob demanda
 def ensure_excel_available():
-    """Garante que pandas/openpyxl estejam carregados em tempo de requisiÃ§Ã£o.
+    """Garante que pandas/openpyxl estejam carregados em tempo de requisição.
 
-    Retorna True quando disponÃ­veis; em caso de falha mantÃ©m mensagem em
+    Retorna True quando disponíveis; em caso de falha mantém mensagem em
     EXCEL_ERROR_MESSAGE e retorna False.
     """
     global EXCEL_AVAILABLE, EXCEL_ERROR_MESSAGE, pd, Workbook, Font, PatternFill, Alignment
@@ -189,7 +182,7 @@ def ensure_excel_available():
         from openpyxl import Workbook as _WB
         from openpyxl.styles import Font as _Font, PatternFill as _PatternFill, Alignment as _Alignment
         
-        # Atualizar referÃªncias globais
+        # Atualizar referências globais
         pd = pandas
         Workbook = _WB
         Font = _Font
@@ -197,20 +190,20 @@ def ensure_excel_available():
         Alignment = _Alignment
         EXCEL_AVAILABLE = True
         EXCEL_ERROR_MESSAGE = None
-        print("âœ… Excel libs habilitadas por lazy-load")
+        print("✅ Excel libs habilitadas por lazy-load")
         return True
     except Exception as e:
         EXCEL_AVAILABLE = False
         EXCEL_ERROR_MESSAGE = str(e)
-        print(f"âŒ Falha ao habilitar Excel por lazy-load: {e}")
+        print(f"❌ Falha ao habilitar Excel por lazy-load: {e}")
         
-        # Debug avanÃ§ado para logs do Railway
+        # Debug avançado para logs do Railway
         import os
-        print(f"ðŸ” DEBUG ENV:")
+        print(f"🔍 DEBUG ENV:")
         print(f"   LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH', 'N/A')}")
         print(f"   PATH: {os.environ.get('PATH', 'N/A')}")
         try:
-            # Tentar listar bibliotecas disponÃ­veis (apenas Linux)
+            # Tentar listar bibliotecas disponíveis (apenas Linux)
             if os.path.exists('/usr/lib'):
                 print(f"   /usr/lib exists")
             if os.path.exists('/nix/store'):
@@ -220,32 +213,32 @@ def ensure_excel_available():
             
         return False
 
-# (endpoints de status movidos para depois da inicializaÃ§Ã£o do app)
+# (endpoints de status movidos para depois da inicialização do app)
 
-# Flag para evitar imports pesados durante inicializaÃ§Ã£o do banco
+# Flag para evitar imports pesados durante inicialização do banco
 INIT_DB_ONLY = os.environ.get("INIT_DB_ONLY", "0") == "1"
 
-# Importar compressÃ£o se disponÃ­vel
+# Importar compressão se disponível
 try:
     from flask_compress import Compress
 
     COMPRESS_AVAILABLE = True
 except ImportError:
     COMPRESS_AVAILABLE = False
-    print("Aviso: flask-compress nÃ£o disponÃ­vel.")
+    print("Aviso: flask-compress não disponível.")
     print("Instale com: pip install flask-compress")
 
-# Importar cache se disponÃ­vel
+# Importar cache se disponível
 try:
     from flask_caching import Cache
 
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
-    print("Aviso: flask-caching nÃ£o disponÃ­vel.")
+    print("Aviso: flask-caching não disponível.")
     print("Instale com: pip install flask-caching")
 
-# Importar gerador de PDF (exceto durante inicializaÃ§Ã£o do DB)
+# Importar gerador de PDF (exceto durante inicialização do DB)
 if not INIT_DB_ONLY:
     try:
         from pdf_generator import gerar_pdf_metas, gerar_pdf_dashboard, gerar_pdf_metas_supervisor
@@ -253,16 +246,16 @@ if not INIT_DB_ONLY:
         print(f"Aviso: Erro ao importar pdf_generator: {e}")
 
         def gerar_pdf_metas(*args, **kwargs):
-            raise RuntimeError("PDF generator nÃ£o disponÃ­vel")
+            raise RuntimeError("PDF generator não disponível")
 
         def gerar_pdf_dashboard(*args, **kwargs):
-            raise RuntimeError("PDF generator nÃ£o disponÃ­vel")
+            raise RuntimeError("PDF generator não disponível")
 
         def gerar_pdf_metas_supervisor(*args, **kwargs):
-            raise RuntimeError("PDF generator nÃ£o disponÃ­vel")
+            raise RuntimeError("PDF generator não disponível")
 
 else:
-    # Placeholders quando INIT_DB_ONLY estÃ¡ ativo
+    # Placeholders quando INIT_DB_ONLY está ativo
     def gerar_pdf_metas(*args, **kwargs):
         raise RuntimeError("PDF generator desabilitado")
 
@@ -272,14 +265,14 @@ else:
     def gerar_pdf_metas_supervisor(*args, **kwargs):
         raise RuntimeError("PDF generator desabilitado")
 
-# InicializaÃ§Ã£o do aplicativo Flask
+# Inicialização do aplicativo Flask
 app = Flask(__name__)
 
-# Carregar configuraÃ§Ãµes
+# Carregar configurações
 env = os.environ.get("FLASK_ENV", "development")
 app.config.from_object(config[env])
 
-# Configurar compressÃ£o Gzip (reduz tamanho das respostas em 70-90%)
+# Configurar compressão Gzip (reduz tamanho das respostas em 70-90%)
 if COMPRESS_AVAILABLE:
     app.config["COMPRESS_MIMETYPES"] = [
         "text/html",
@@ -289,17 +282,17 @@ if COMPRESS_AVAILABLE:
         "application/javascript",
         "text/javascript",
     ]
-    # NÃ­vel de compressÃ£o (1-9, 6 Ã© bom balanÃ§o)
+    # Nível de compressão (1-9, 6 é bom balanço)
     app.config["COMPRESS_LEVEL"] = 6
     # Comprimir apenas respostas > 500 bytes
     app.config["COMPRESS_MIN_SIZE"] = 500
     Compress(app)
     print("[OK] Compressao Gzip ativada - Respostas serao 70-90% menores")
 
-# Configurar cache (acelera relatÃ³rios e dashboards em 40-60%)
+# Configurar cache (acelera relatórios e dashboards em 40-60%)
 cache = None
 if CACHE_AVAILABLE:
-    app.config["CACHE_TYPE"] = "SimpleCache"  # MemÃ³ria local
+    app.config["CACHE_TYPE"] = "SimpleCache"  # Memória local
     app.config["CACHE_DEFAULT_TIMEOUT"] = 300  # 5 minutos
     cache = Cache(app)
     print("[OK] Cache ativado - Relatorios e dashboards 40-60% mais rapidos")
@@ -307,54 +300,51 @@ if CACHE_AVAILABLE:
 # Configurar ProxyFix para confiar nos headers do Railway
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
-# Inicializar extensÃµes com tratamento de erro
+# Inicializar extensões com tratamento de erro
 try:
     db.init_app(app)
     print("[OK] Database inicializado com sucesso")
-
-    # Evitar bloqueio do boot em produÃ§Ã£o: teste de DB Ã© opcional.
-    if os.environ.get("SKIP_DB_BOOT_CHECK", "1") == "1":
-        print("[INFO] Teste de conexao com DB no boot foi ignorado (SKIP_DB_BOOT_CHECK=1)")
-    else:
-        with app.app_context():
-            try:
-                from sqlalchemy import text
-                with db.engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-                print("[OK] ConexÃ£o com banco de dados estabelecida")
-            except Exception as db_err:
-                print(f"[ERRO] Falha ao conectar ao banco: {db_err}")
-                print("[AVISO] Sistema continuarÃ¡, mas pode ter problemas")
+    
+    # Testar conexão com o banco
+    with app.app_context():
+        try:
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            print("[OK] Conexão com banco de dados estabelecida")
+        except Exception as db_err:
+            print(f"[ERRO] Falha ao conectar ao banco: {db_err}")
+            print("[AVISO] Sistema continuará, mas pode ter problemas")
 except Exception as e:
-    print(f"[ERRO] Falha na inicializaÃ§Ã£o do banco: {e}")
-    print("[AVISO] Sistema pode nÃ£o funcionar corretamente")
+    print(f"[ERRO] Falha na inicialização do banco: {e}")
+    print("[AVISO] Sistema pode não funcionar corretamente")
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
-login_manager.login_message = "Por favor, faÃ§a login para acessar esta pÃ¡gina."
+login_manager.login_message = "Por favor, faça login para acessar esta página."
 login_manager.login_message_category = "info"
 
-# ===== SISTEMA DE BACKUP AUTOMÃTICO =====
+# ===== SISTEMA DE BACKUP AUTOMÁTICO =====
 
-# VariÃ¡vel global para armazenar configuraÃ§Ãµes de backup
+# Variável global para armazenar configurações de backup
 backup_config = {
     "enabled": True,
     "frequency": "daily",  # daily, weekly, monthly
-    "time": "02:00",  # HorÃ¡rio (formato HH:MM)
-    "keep_last": 7,  # Manter Ãºltimos N backups
+    "time": "02:00",  # Horário (formato HH:MM)
+    "keep_last": 7,  # Manter últimos N backups
     "auto_cleanup": True,  # Limpar backups antigos automaticamente
 }
 
 def criar_backup_automatico():
-    """Cria backup automÃ¡tico do banco de dados"""
+    """Cria backup automático do banco de dados"""
     with app.app_context():
         try:
             uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
 
             # Pular se for PostgreSQL (Railway gerencia)
             if "postgresql" in uri:
-                msg = "Backup automÃ¡tico: PostgreSQL gerenciado"
+                msg = "Backup automático: PostgreSQL gerenciado"
                 app.logger.info(msg)
                 return
 
@@ -393,11 +383,11 @@ def criar_backup_automatico():
                     msg = "Modulo backup_nuvem nao encontrado"
                     app.logger.warning(f"[AVISO] {msg}")
                 except Exception as e:
-                    msg = f"Erro na sincronizaÃ§Ã£o: {str(e)}"
+                    msg = f"Erro na sincronização: {str(e)}"
                     app.logger.error(f"{msg}")
             else:
                 app.logger.error(
-                    "Banco de dados nÃ£o encontrado para backup"
+                    "Banco de dados não encontrado para backup"
                 )
 
         except Exception as e:
@@ -406,7 +396,7 @@ def criar_backup_automatico():
 def limpar_backups_antigos(backup_dir):
     """Remove backups antigos mantendo apenas os N mais recentes"""
     try:
-        # Listar todos os backups automÃ¡ticos
+        # Listar todos os backups automáticos
         backups = []
         for filename in os.listdir(backup_dir):
             is_backup = filename.startswith(
@@ -436,16 +426,16 @@ def limpar_backups_antigos(backup_dir):
 scheduler = BackgroundScheduler()
 
 def iniciar_backup_automatico():
-    """Inicia o agendamento de backups automÃ¡ticos"""
+    """Inicia o agendamento de backups automáticos"""
     try:
         if not backup_config["enabled"]:
-            app.logger.info("Backup automÃ¡tico desabilitado")
+            app.logger.info("Backup automático desabilitado")
             return
 
-        # Converter horÃ¡rio configurado
+        # Converter horário configurado
         hora, minuto = map(int, backup_config["time"].split(":"))
 
-        # Configurar trigger baseado na frequÃªncia
+        # Configurar trigger baseado na frequência
         if backup_config["frequency"] == "daily":
             trigger = CronTrigger(hour=hora, minute=minuto)
         elif backup_config["frequency"] == "weekly":
@@ -453,7 +443,7 @@ def iniciar_backup_automatico():
         elif backup_config["frequency"] == "monthly":
             trigger = CronTrigger(day=1, hour=hora, minute=minuto)
         else:
-            trigger = CronTrigger(hour=hora, minute=minuto)  # PadrÃ£o: diÃ¡rio
+            trigger = CronTrigger(hour=hora, minute=minuto)  # Padrão: diário
 
 # (bloco de endpoints de status movido para depois do scheduler)
 
@@ -462,11 +452,11 @@ def iniciar_backup_automatico():
             func=criar_backup_automatico,
             trigger=trigger,
             id="backup_automatico",
-            name="Backup AutomÃ¡tico do Sistema",
+            name="Backup Automático do Sistema",
             replace_existing=True,
         )
 
-        # Iniciar scheduler apenas se nÃ£o estiver rodando
+        # Iniciar scheduler apenas se não estiver rodando
         if not scheduler.running:
             scheduler.start()
             freq = backup_config["frequency"]
@@ -488,12 +478,12 @@ def shutdown_scheduler():
 
 atexit.register(shutdown_scheduler)
 
-# Headers de seguranÃ§a
+# Headers de segurança
 
 @app.before_request
 def force_https():
-    """ForÃ§a HTTPS em produÃ§Ã£o"""
-    # Permitir trÃ¡fego HTTP para health checks (Railway)
+    """Força HTTPS em produção"""
+    # Permitir tráfego HTTP para health checks (Railway)
     if request.path in ['/ping', '/health']:
         return None
 
@@ -503,19 +493,19 @@ def force_https():
 
 @app.after_request
 def set_security_headers(response):
-    """Adiciona headers de seguranÃ§a HTTP e cache otimizado"""
-    # Headers de seguranÃ§a
+    """Adiciona headers de segurança HTTP e cache otimizado"""
+    # Headers de segurança
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     
-    # HSTS - ForÃ§a HTTPS por 1 ano
+    # HSTS - Força HTTPS por 1 ano
     if not app.debug:
         hsts = "max-age=31536000; includeSubDomains"
         response.headers["Strict-Transport-Security"] = hsts
     
     # Content Security Policy (CSP) - Previne XSS
-    # Adicionado suporte para Google Translate e serviÃ§os externos comuns
+    # Adicionado suporte para Google Translate e serviços externos comuns
     csp_directives = [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net https://translate.googleapis.com https://translate.google.com",
@@ -531,7 +521,7 @@ def set_security_headers(response):
     
     # Cache headers para performance
     if request.path.startswith('/static/'):
-        # Cache de 1 ano para arquivos estÃ¡ticos (imutÃ¡veis)
+        # Cache de 1 ano para arquivos estáticos (imutáveis)
         response.cache_control.max_age = 31536000
         response.cache_control.public = True
         response.cache_control.immutable = True
@@ -547,7 +537,7 @@ def set_security_headers(response):
     
     return response
 
-# Inicializar Rate Limiter para proteÃ§Ã£o contra ataques
+# Inicializar Rate Limiter para proteção contra ataques
 try:
     from flask_limiter import Limiter
     from flask_limiter.util import get_remote_address
@@ -563,15 +553,15 @@ try:
         strategy="fixed-window"
     )
     RATE_LIMIT_AVAILABLE = True
-    app.logger.info("[OK] Rate limiting ativado - ProteÃ§Ã£o contra brute force")
+    app.logger.info("[OK] Rate limiting ativado - Proteção contra brute force")
 except ImportError:
     RATE_LIMIT_AVAILABLE = False
     limiter = None
-    app.logger.warning("[AVISO] Flask-Limiter nÃ£o disponÃ­vel - Instale com: pip install Flask-Limiter")
+    app.logger.warning("[AVISO] Flask-Limiter não disponível - Instale com: pip install Flask-Limiter")
 
-# Decorador para aplicar rate limit em rotas sensÃ­veis
+# Decorador para aplicar rate limit em rotas sensíveis
 def rate_limit(limit_string):
-    """Decorador de rate limit se disponÃ­vel"""
+    """Decorador de rate limit se disponível"""
     def decorator(f):
         if RATE_LIMIT_AVAILABLE and limiter:
             return limiter.limit(limit_string)(f)
@@ -583,7 +573,7 @@ def super_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            msg = "Por favor, faÃ§a login para acessar esta pÃ¡gina."
+            msg = "Por favor, faça login para acessar esta página."
             flash(msg, "warning")
             return redirect(url_for("login"))
         if not current_user.is_super_admin:
@@ -594,14 +584,14 @@ def super_admin_required(f):
 
     return decorated_function
 
-# Decorator para verificar permissÃµes especÃ­ficas
+# Decorator para verificar permissões específicas
 def permission_required(permission_name):
-    """Decorator para verificar se o usuÃ¡rio tem uma permissÃ£o especÃ­fica.
+    """Decorator para verificar se o usuário tem uma permissão específica.
 
     Compatibilidade:
     - Aceita nomes singulares usados em algumas rotas (ex.: 'pode_criar_cliente')
       fazendo o mapeamento para os atributos reais no modelo (ex.: 'pode_criar_clientes').
-    - Considera tambÃ©m variaÃ§Ã£o de cargo 'administrador' como equivalente a 'admin'.
+    - Considera também variação de cargo 'administrador' como equivalente a 'admin'.
     """
 
     # Mapeamento de aliases singular -> plural (modelo)
@@ -617,7 +607,7 @@ def permission_required(permission_name):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
-                msg = "Por favor, faÃ§a login para acessar esta pÃ¡gina."
+                msg = "Por favor, faça login para acessar esta página."
                 flash(msg, "warning")
                 return redirect(url_for("login"))
 
@@ -625,26 +615,26 @@ def permission_required(permission_name):
             if current_user.is_super_admin:
                 return f(*args, **kwargs)
 
-            # Admin/Administrador e Gerente sempre tÃªm acesso (cargos com permissÃµes totais)
+            # Admin/Administrador e Gerente sempre têm acesso (cargos com permissões totais)
             if current_user.cargo in ["admin", "administrador", "gerente"]:
                 return f(*args, **kwargs)
 
             # Verificar se o atributo existe (compatibilidade com banco antigo)
             if not hasattr(current_user, normalized_permission):
-                # Se nÃ£o tem o atributo, permitir acesso para cargos de gestÃ£o
+                # Se não tem o atributo, permitir acesso para cargos de gestão
                 if current_user.cargo in ["supervisor"]:
                     return f(*args, **kwargs)
-                # Para vendedores sem atributo, bloquear por seguranÃ§a
+                # Para vendedores sem atributo, bloquear por segurança
                 flash(
-                    "Sistema em atualizaÃ§Ã£o. Entre em contato com o administrador.",
+                    "Sistema em atualização. Entre em contato com o administrador.",
                     "warning",
                 )
                 return redirect(url_for("dashboard"))
 
-            # Verificar se tem a permissÃ£o especÃ­fica
+            # Verificar se tem a permissão específica
             has_perm = getattr(current_user, normalized_permission, False)
             if not has_perm:
-                msg = "VocÃª nÃ£o tem permissÃ£o para acessar este recurso."
+                msg = "Você não tem permissão para acessar este recurso."
                 flash(msg, "danger")
                 return redirect(url_for("dashboard"))
 
@@ -660,7 +650,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            msg = "Por favor, faÃ§a login para acessar esta pÃ¡gina."
+            msg = "Por favor, faça login para acessar esta página."
             flash(msg, "warning")
             return redirect(url_for("login"))
 
@@ -679,7 +669,7 @@ def admin_required(f):
 
     return decorated_function
 
-# ===== FUNÃ‡Ã•ES AUXILIARES =====
+# ===== FUNÇÕES AUXILIARES =====
 
 def atualizar_metas_supervisores():
     """
@@ -699,7 +689,7 @@ def atualizar_metas_supervisores():
             if not vendedores:
                 continue
 
-            # Agrupar metas por mÃªs/ano
+            # Agrupar metas por mês/ano
             metas_agrupadas = {}
 
             for vendedor in vendedores:
@@ -719,10 +709,10 @@ def atualizar_metas_supervisores():
                     metas_agrupadas[chave][rec] += meta.receita_alcancada
 
             # Criar ou atualizar meta do supervisor
-            # Usando vendedor_id do primeiro vendedor como referÃªncia
+            # Usando vendedor_id do primeiro vendedor como referência
             # Nota: Para supervisores, podemos criar um vendedor
             # virtual ou usar outro modelo.
-            # Por simplicidade, vamos apenas calcular mas nÃ£o criar
+            # Por simplicidade, vamos apenas calcular mas não criar
             # registro ainda (isso pode ser expandido no futuro)
 
         db.session.commit()
@@ -732,10 +722,10 @@ def atualizar_metas_supervisores():
 
 @login_manager.user_loader
 def load_user(user_id):
-    """Carrega o usuÃ¡rio pelo ID"""
+    """Carrega o usuário pelo ID"""
     return Usuario.query.get(int(user_id))
 
-# ===== ROTAS DE AUTENTICAÃ‡ÃƒO =====
+# ===== ROTAS DE AUTENTICAÇÃO =====
 
 @app.route("/favicon.ico")
 def favicon():
@@ -748,19 +738,19 @@ def favicon():
 
 @app.route("/health")
 def health_check():
-    """Health check ultrarrÃ¡pido sem tocar no banco para evitar timeouts."""
+    """Health check ultrarrápido sem tocar no banco para evitar timeouts."""
     return jsonify({"status": "ok"}), 200
 
 @app.route("/status")
 def public_status():
-    """Status pÃºblico detalhado do sistema (sem autenticaÃ§Ã£o)"""
+    """Status público detalhado do sistema (sem autenticação)"""
     status_info = {
         "app": "VendaCerta",
         "status": "online",
         "timestamp": datetime.now().isoformat(),
     }
     
-    # Verificar conexÃ£o com banco
+    # Verificar conexão com banco
     try:
         from sqlalchemy import text
         with db.engine.connect() as conn:
@@ -775,7 +765,7 @@ def public_status():
             "error": str(e)
         }
     
-    # Verificar variÃ¡veis de ambiente crÃ­ticas
+    # Verificar variáveis de ambiente críticas
     env_vars = {
         "DATABASE_URL": bool(os.environ.get("DATABASE_URL")),
         "PGHOST": bool(os.environ.get("PGHOST")),
@@ -811,7 +801,7 @@ def status_excel():
 
 
 def _check_db_engine(bind_name=None):
-    """Verifica conectividade com o banco (default ou bind especÃ­fico)."""
+    """Verifica conectividade com o banco (default ou bind específico)."""
     try:
         from sqlalchemy import text
         engine = db.get_engine(app, bind=bind_name) if bind_name else db.engine
@@ -848,8 +838,8 @@ def status_db():
 @app.route("/status/env")
 @login_required
 def status_env():
-    """Endpoint JSON para auditar variÃ¡veis crÃ­ticas de configuraÃ§Ã£o.
-    NÃ£o expÃµe valores sensÃ­veis; apenas presenÃ§a.
+    """Endpoint JSON para auditar variáveis críticas de configuração.
+    Não expõe valores sensíveis; apenas presença.
     """
     if (
         current_user.cargo not in ["admin", "supervisor", "gerente"]
@@ -873,20 +863,20 @@ def status_env():
     presence = {name: bool(os.environ.get(name)) for name in expected}
     return jsonify({"env": presence}), 200
 
-# FunÃ§Ã£o para inicializar o banco de dados automaticamente
+# Função para inicializar o banco de dados automaticamente
 def init_database():
-    """Inicializa o banco de dados criando todas as tabelas necessÃ¡rias"""
+    """Inicializa o banco de dados criando todas as tabelas necessárias"""
     with app.app_context():
         try:
             app.logger.info("[PROC] Verificando estrutura do banco de dados...")
             
-            # Garantir que o diretÃ³rio instance existe (para SQLite)
+            # Garantir que o diretório instance existe (para SQLite)
             instance_dir = os.path.join(os.path.dirname(__file__), 'instance')
             if not os.path.exists(instance_dir):
                 os.makedirs(instance_dir)
                 app.logger.info(f"[OK] Diretorio criado: {instance_dir}")
             
-            # Criar todas as tabelas se nÃ£o existirem
+            # Criar todas as tabelas se não existirem
             db.create_all()
             
             # Verificar e garantir acesso de admin (Auto-Recovery)
@@ -906,16 +896,16 @@ def init_database():
                     app.logger.info(f"[OK] Admin {email} recuperado/resetado para senha 'admin123'")
                     admin_found = True
             
-            # Se nenhum dos dois existir, criar o padrÃ£o
+            # Se nenhum dos dois existir, criar o padrão
             if not admin_found:
                 app.logger.info("[PROC] Criando usuario admin padrao...")
                 from werkzeug.security import generate_password_hash
                 
-                # Criar empresa padrÃ£o se necessÃ¡rio
+                # Criar empresa padrão se necessário
                 empresa_padrao = Empresa.query.filter_by(cnpj='00000000000000').first()
                 if not empresa_padrao:
                     empresa_padrao = Empresa(
-                        nome='Empresa PadrÃ£o',
+                        nome='Empresa Padrão',
                         cnpj='00000000000000',
                         email='contato@empresa.com',
                         plano='enterprise',
@@ -944,14 +934,14 @@ def init_database():
             app.logger.error(f"Erro ao inicializar banco de dados: {e}")
             return False
 
-# InicializaÃ§Ã£o do banco: resiliente e nÃ£o bloqueante em produÃ§Ã£o
-# ObservaÃ§Ã£o: alguns scripts de manutenÃ§Ã£o importam o app apenas para ter
-# acesso ao contexto/ORM e nÃ£o devem disparar init/seed/reset em import.
+# Inicialização do banco: resiliente e não bloqueante em produção
+# Observação: alguns scripts de manutenção importam o app apenas para ter
+# acesso ao contexto/ORM e não devem disparar init/seed/reset em import.
 RUN_DB_INIT_ON_START = os.environ.get("RUN_DB_INIT_ON_START", "0") == "1"
 SKIP_DB_INIT_ON_START = os.environ.get("SKIP_DB_INIT_ON_START", "0") == "1"
 
 def _init_db_background(max_attempts: int = 3, delay_seconds: int = 5):
-    # Pequeno atraso inicial para permitir correÃ§Ã£o de schema (fix_database_railway)
+    # Pequeno atraso inicial para permitir correção de schema (fix_database_railway)
     time.sleep(10)
     attempts = 0
     while attempts < max_attempts:
@@ -960,31 +950,31 @@ def _init_db_background(max_attempts: int = 3, delay_seconds: int = 5):
             with app.app_context():
                 ok = init_database()
                 if ok:
-                    app.logger.info("[OK] InicializaÃ§Ã£o de banco concluÃ­da (background)")
+                    app.logger.info("[OK] Inicialização de banco concluída (background)")
                     return
         except Exception as e:
             app.logger.error(f"[ERRO] Tentativa {attempts}/{max_attempts} de inicializar banco falhou: {e}")
         time.sleep(delay_seconds)
-    app.logger.warning("[AVISO] InicializaÃ§Ã£o de banco nÃ£o concluÃ­da apÃ³s tentativas. Continuando em modo degradado.")
+    app.logger.warning("[AVISO] Inicialização de banco não concluída após tentativas. Continuando em modo degradado.")
 
 if not SKIP_DB_INIT_ON_START:
     if RUN_DB_INIT_ON_START:
-        # Ambiente de desenvolvimento: permitir inicializaÃ§Ã£o sÃ­ncrona
+        # Ambiente de desenvolvimento: permitir inicialização síncrona
         with app.app_context():
             try:
                 init_database()
                 iniciar_backup_automatico()
             except Exception as e:
-                app.logger.error(f"Erro na inicializaÃ§Ã£o: {e}")
+                app.logger.error(f"Erro na inicialização: {e}")
     else:
-        # ProduÃ§Ã£o: executar em background para evitar atrasos na saÃºde do serviÃ§o
+        # Produção: executar em background para evitar atrasos na saúde do serviço
         threading.Thread(target=_init_db_background, daemon=True).start()
-        # Backup automÃ¡tico permanece desativado atÃ© DB ficar OK; pode ser habilitado apÃ³s init_db
+        # Backup automático permanece desativado até DB ficar OK; pode ser habilitado após init_db
 
 @app.route("/login", methods=["GET", "POST"])
-@rate_limit("10 per minute")  # MÃ¡ximo 10 tentativas de login por minuto
+@rate_limit("10 per minute")  # Máximo 10 tentativas de login por minuto
 def login():
-    """PÃ¡gina de login com proteÃ§Ã£o contra brute force"""
+    """Página de login com proteção contra brute force"""
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
@@ -994,7 +984,7 @@ def login():
         if usuario and usuario.check_senha(form.senha.data):
             if not usuario.ativo:
                 msg = (
-                    "Sua conta estÃ¡ inativa. "
+                    "Sua conta está inativa. "
                     "Entre em contato com o administrador."
                 )
                 flash(msg, "warning")
@@ -1003,12 +993,12 @@ def login():
             login_user(usuario)
             flash(f"Bem-vindo(a), {usuario.nome}!", "success")
 
-            # Redirecionar para a pÃ¡gina solicitada ou dashboard adequado
+            # Redirecionar para a página solicitada ou dashboard adequado
             next_page = request.args.get("next")
             if next_page:
                 return redirect(next_page)
             else:
-                # Se for vendedor com vÃ­nculo de vendedor, redirecionar para dashboard mobile do vendedor
+                # Se for vendedor com vínculo de vendedor, redirecionar para dashboard mobile do vendedor
                 if usuario.cargo == "vendedor" and usuario.vendedor_id:
                     return redirect(url_for("vendedor_dashboard"))
                 else:
@@ -1020,7 +1010,7 @@ def login():
 
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
-    """PÃ¡gina de registro de nova empresa e usuÃ¡rio"""
+    """Página de registro de nova empresa e usuário"""
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
@@ -1039,12 +1029,12 @@ def registro():
                 email=form.email.data,  # Email do admin como contato inicial
                 telefone=form.telefone.data,
                 ativo=True,
-                plano="basico",  # Plano padrÃ£o
+                plano="basico",  # Plano padrão
             )
             db.session.add(empresa)
             db.session.commit()  # Commit para gerar ID
 
-            # Criar UsuÃ¡rio Admin da Empresa
+            # Criar Usuário Admin da Empresa
             usuario = Usuario(
                 nome=form.nome.data,
                 email=form.email.data,
@@ -1060,7 +1050,7 @@ def registro():
 
             msg = (
                 "Conta empresarial criada com sucesso! "
-                "FaÃ§a login para comeÃ§ar."
+                "Faça login para começar."
             )
             flash(msg, "success")
             return redirect(url_for("login"))
@@ -1074,18 +1064,18 @@ def registro():
 @app.route("/logout")
 @login_required
 def logout():
-    """Logout do usuÃ¡rio"""
+    """Logout do usuário"""
     logout_user()
-    flash("VocÃª saiu da sua conta.", "info")
+    flash("Você saiu da sua conta.", "info")
     return redirect(url_for("login"))
 
 
 
-# ===== ROTAS PÃšBLICAS =====
+# ===== ROTAS PÚBLICAS =====
 
 @app.route("/recuperar-senha", methods=["GET", "POST"])
 def recuperar_senha():
-    """PÃ¡gina de recuperaÃ§Ã£o de senha"""
+    """Página de recuperação de senha"""
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
@@ -1093,18 +1083,18 @@ def recuperar_senha():
     if form.validate_on_submit():
         usuario = Usuario.query.filter_by(email=form.email.data).first()
         if usuario:
-            # Em produÃ§Ã£o, aqui vocÃª enviaria um email
-            # com link de redefiniÃ§Ã£o. Por enquanto, vamos criar
-            # um token temporÃ¡rio e mostrar na tela
+            # Em produção, aqui você enviaria um email
+            # com link de redefinição. Por enquanto, vamos criar
+            # um token temporário e mostrar na tela
             token = secrets.token_urlsafe(32)
 
-            # Armazenar token temporariamente (em produÃ§Ã£o use Redis ou banco)
+            # Armazenar token temporariamente (em produção use Redis ou banco)
             if not hasattr(app, "reset_tokens"):
                 app.reset_tokens = {}
             app.reset_tokens[token] = usuario.id
 
             msg = (
-                f"InstruÃ§Ãµes de recuperaÃ§Ã£o enviadas! "
+                f"Instruções de recuperação enviadas! "
                 f"Use este link: /redefinir-senha/{token}"
             )
             flash(msg, "success")
@@ -1112,7 +1102,7 @@ def recuperar_senha():
         else:
             msg = (
                 "Se o email estiver cadastrado, "
-                "vocÃª receberÃ¡ instruÃ§Ãµes de recuperaÃ§Ã£o."
+                "você receberá instruções de recuperação."
             )
             flash(msg, "info")
 
@@ -1120,14 +1110,14 @@ def recuperar_senha():
 
 @app.route("/redefinir-senha/<token>", methods=["GET", "POST"])
 def redefinir_senha(token):
-    """PÃ¡gina de redefiniÃ§Ã£o de senha com token"""
+    """Página de redefinição de senha com token"""
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
     # Verificar token
     has_tokens = hasattr(app, "reset_tokens")
     if not has_tokens or token not in app.reset_tokens:
-        flash("Link de recuperaÃ§Ã£o invÃ¡lido ou expirado.", "danger")
+        flash("Link de recuperação inválido ou expirado.", "danger")
         return redirect(url_for("login"))
 
     form = RedefinirSenhaForm()
@@ -1144,7 +1134,7 @@ def redefinir_senha(token):
 
             msg = (
                 "Senha redefinida com sucesso! "
-                "FaÃ§a login com sua nova senha."
+                "Faça login com sua nova senha."
             )
             flash(msg, "success")
             return redirect(url_for("login"))
@@ -1160,7 +1150,7 @@ def ajuda():
 @app.route("/manual")
 @login_required
 def manual():
-    """Servir o manual do usuÃ¡rio"""
+    """Servir o manual do usuário"""
     try:
         manual_path = os.path.join(
             os.path.dirname(__file__), "docs", "guias", "MANUAL_USUARIO.md"
@@ -1184,7 +1174,7 @@ def super_admin_empresas():
     """Lista todas as empresas cadastradas"""
     empresas = Empresa.query.order_by(Empresa.data_criacao.desc()).all()
 
-    # Adicionar estatÃ­sticas
+    # Adicionar estatísticas
     for empresa in empresas:
         empresa.total_usuarios = Usuario.query.filter_by(
             empresa_id=empresa.id
@@ -1292,20 +1282,20 @@ def super_admin_bloquear_empresa(id):
 @app.route("/super-admin/empresas/<int:id>/excluir", methods=["POST"])
 @super_admin_required
 def super_admin_excluir_empresa(id):
-    """Excluir empresa (desativa, nÃ£o remove do banco)"""
+    """Excluir empresa (desativa, não remove do banco)"""
     empresa = Empresa.query.get_or_404(id)
 
-    # Desativar empresa ao invÃ©s de excluir
+    # Desativar empresa ao invés de excluir
     empresa.ativo = False
     empresa.bloqueado = True
-    empresa.motivo_bloqueio = "Empresa excluÃ­da pelo administrador"
+    empresa.motivo_bloqueio = "Empresa excluída pelo administrador"
 
-    # Desativar todos os usuÃ¡rios da empresa
+    # Desativar todos os usuários da empresa
     Usuario.query.filter_by(empresa_id=empresa.id).update({"ativo": False})
 
     db.session.commit()
 
-    flash(f"Empresa {empresa.nome} excluÃ­da com sucesso!", "success")
+    flash(f"Empresa {empresa.nome} excluída com sucesso!", "success")
     return redirect(url_for("super_admin_empresas"))
 
 @app.route("/super-admin/empresas/<int:id>/excluir-definitivamente", methods=["POST"])
@@ -1316,10 +1306,10 @@ def super_admin_excluir_empresa_definitivamente(id):
     empresa = Empresa.query.get_or_404(id)
     
     try:
-        # 1. Excluir MovimentaÃ§Ãµes de Estoque
+        # 1. Excluir Movimentações de Estoque
         EstoqueMovimento.query.filter_by(empresa_id=empresa.id).delete()
         
-        # 2. Excluir Ordens de ServiÃ§o
+        # 2. Excluir Ordens de Serviço
         OrdemServico.query.filter_by(empresa_id=empresa.id).delete()
         
         # 3. Excluir Compras de Clientes
@@ -1336,7 +1326,7 @@ def super_admin_excluir_empresa_definitivamente(id):
         # 6. Excluir Vendedores
         Vendedor.query.filter_by(empresa_id=empresa.id).delete()
         
-        # 7. Excluir TÃ©cnicos
+        # 7. Excluir Técnicos
         Tecnico.query.filter_by(empresa_id=empresa.id).delete()
         
         # 8. Excluir Produtos
@@ -1345,12 +1335,12 @@ def super_admin_excluir_empresa_definitivamente(id):
         # 9. Excluir Equipes
         Equipe.query.filter_by(empresa_id=empresa.id).delete()
         
-        # 10. Excluir Faixas de ComissÃ£o
+        # 10. Excluir Faixas de Comissão
         FaixaComissao.query.filter_by(empresa_id=empresa.id).delete()
         FaixaComissaoVendedor.query.filter_by(empresa_id=empresa.id).delete()
         FaixaComissaoSupervisor.query.filter_by(empresa_id=empresa.id).delete()
         
-        # 11. Excluir Mensagens (Remetente ou DestinatÃ¡rio na empresa)
+        # 11. Excluir Mensagens (Remetente ou Destinatário na empresa)
         usuarios = Usuario.query.filter_by(empresa_id=empresa.id).all()
         usuario_ids = [u.id for u in usuarios]
         if usuario_ids:
@@ -1361,14 +1351,14 @@ def super_admin_excluir_empresa_definitivamente(id):
                 )
             ).delete(synchronize_session=False)
         
-        # 12. Excluir UsuÃ¡rios
+        # 12. Excluir Usuários
         Usuario.query.filter_by(empresa_id=empresa.id).delete()
         
         # 13. Excluir a Empresa
         db.session.delete(empresa)
         
         db.session.commit()
-        flash(f"Empresa {empresa.nome} e TODOS os seus dados foram excluÃ­dos permanentemente!", "success")
+        flash(f"Empresa {empresa.nome} e TODOS os seus dados foram excluídos permanentemente!", "success")
         
     except Exception as e:
         db.session.rollback()
@@ -1401,12 +1391,12 @@ def super_admin_visualizar_empresa(id):
         stats=stats,
     )
 
-# ===== ROTAS DE SUPER ADMIN - GERENCIAMENTO DE USUÃRIOS =====
+# ===== ROTAS DE SUPER ADMIN - GERENCIAMENTO DE USUÁRIOS =====
 
 @app.route("/super-admin/usuarios")
 @super_admin_required
 def super_admin_usuarios():
-    """Lista todos os usuÃ¡rios do sistema"""
+    """Lista todos os usuários do sistema"""
     empresa_filtro = request.args.get("empresa_id", type=int)
 
     if empresa_filtro:
@@ -1418,7 +1408,7 @@ def super_admin_usuarios():
 
     empresas = Empresa.query.all()
 
-    # Enriquecer dados dos usuÃ¡rios com informaÃ§Ãµes adicionais
+    # Enriquecer dados dos usuários com informações adicionais
     usuarios_enriquecidos = []
     for usuario in usuarios:
         # Contar vendedores vinculados (se for supervisor)
@@ -1428,7 +1418,7 @@ def super_admin_usuarios():
                 supervisor_id=usuario.id, ativo=True
             ).count()
 
-        # Buscar nome do gerente/administrador responsÃ¡vel
+        # Buscar nome do gerente/administrador responsável
         gerente_nome = None
         if usuario.gerente_id:
             gerente = Usuario.query.get(usuario.gerente_id)
@@ -1457,7 +1447,7 @@ def super_admin_usuarios():
 @login_required
 def importar_supervisores():
     """Importar supervisores via planilha Excel - Admin, Supervisor e RH"""
-    # Verificar permissÃµes: apenas admin, supervisor e RH podem importar supervisores
+    # Verificar permissões: apenas admin, supervisor e RH podem importar supervisores
     if not pode_importar(current_user, "supervisores"):
         flash(
             "Acesso negado! Apenas Administradores, Supervisores e RH podem importar supervisores.",
@@ -1473,9 +1463,9 @@ def importar_supervisores():
                 flash(erro, "danger")
                 return redirect(request.url)
 
-            # Garantir bibliotecas de Excel disponÃ­veis
+            # Garantir bibliotecas de Excel disponíveis
             if not EXCEL_AVAILABLE and not ensure_excel_available():
-                flash("Erro: Bibliotecas Excel nÃ£o instaladas.", "danger")
+                flash("Erro: Bibliotecas Excel não instaladas.", "danger")
                 return redirect(request.url)
 
             # Ler Excel em DataFrame
@@ -1484,7 +1474,7 @@ def importar_supervisores():
             # Normalizar nomes das colunas
             df.columns = df.columns.str.strip().str.lower()
 
-            # Mapear possÃ­veis nomes de colunas para o padrÃ£o
+            # Mapear possíveis nomes de colunas para o padrão
             colunas_map = {
                 "nome": ["nome", "nome completo", "supervisor", "nome supervisor"],
                 "email": ["email", "e-mail", "e mail"],
@@ -1497,7 +1487,7 @@ def importar_supervisores():
                         df.rename(columns={col: col_padrao}, inplace=True)
                         break
 
-            # Validar colunas obrigatÃ³rias
+            # Validar colunas obrigatórias
             colunas_obrigatorias = ["nome", "email"]
             if current_user.is_super_admin:
                 colunas_obrigatorias.append("empresa_cnpj")
@@ -1508,7 +1498,7 @@ def importar_supervisores():
 
             if colunas_faltando:
                 colunas_exibir = [c.capitalize() for c in colunas_faltando]
-                msg = f'Colunas obrigatÃ³rias faltando: {", ".join(colunas_exibir)}'
+                msg = f'Colunas obrigatórias faltando: {", ".join(colunas_exibir)}'
                 flash(msg, "danger")
                 return redirect(request.url)
 
@@ -1522,14 +1512,14 @@ def importar_supervisores():
                         empresa_cnpj = str(row.get("empresa_cnpj", "")).strip()
                         if not empresa_cnpj:
                             erros.append(
-                                f"Linha {idx + 2}: Coluna 'Empresa CNPJ' obrigatÃ³ria para Super Admin."
+                                f"Linha {idx + 2}: Coluna 'Empresa CNPJ' obrigatória para Super Admin."
                             )
                             continue
 
                         empresa = Empresa.query.filter_by(cnpj=empresa_cnpj).first()
                         if not empresa:
                             erros.append(
-                                f"Linha {idx + 2}: Empresa CNPJ {empresa_cnpj} nÃ£o encontrada."
+                                f"Linha {idx + 2}: Empresa CNPJ {empresa_cnpj} não encontrada."
                             )
                             continue
                         empresa_id = empresa.id
@@ -1541,25 +1531,25 @@ def importar_supervisores():
 
                     if not nome or not email:
                         erros.append(
-                            f"Linha {idx + 2}: Nome e Email sÃ£o obrigatÃ³rios."
+                            f"Linha {idx + 2}: Nome e Email são obrigatórios."
                         )
                         continue
 
                     if not validar_email(email):
                         erros.append(
-                            f"Linha {idx + 2}: Email {email} invÃ¡lido."
+                            f"Linha {idx + 2}: Email {email} inválido."
                         )
                         continue
 
-                    # Verificar se email jÃ¡ existe
+                    # Verificar se email já existe
                     usuario_existente = Usuario.query.filter_by(email=email).first()
                     if usuario_existente:
                         erros.append(
-                            f"Linha {idx + 2}: Email {email} jÃ¡ cadastrado no sistema."
+                            f"Linha {idx + 2}: Email {email} já cadastrado no sistema."
                         )
                         continue
 
-                    # Criar supervisor como usuÃ¡rio do sistema
+                    # Criar supervisor como usuário do sistema
                     supervisor = Usuario(
                         nome=nome,
                         email=email,
@@ -1602,14 +1592,14 @@ def importar_supervisores():
 @app.route("/supervisores/download-template")
 @login_required
 def download_template_supervisores():
-    """Gera e baixa o template Excel para importaÃ§Ã£o de supervisores"""
-    # Verificar permissÃµes
+    """Gera e baixa o template Excel para importação de supervisores"""
+    # Verificar permissões
     if not pode_importar(current_user, "supervisores"):
         flash("Acesso negado!", "danger")
         return redirect(url_for("lista_supervisores"))
 
     if not EXCEL_AVAILABLE and not ensure_excel_available():
-        flash("Erro: Bibliotecas Excel nÃ£o instaladas.", "danger")
+        flash("Erro: Bibliotecas Excel não instaladas.", "danger")
         return redirect(url_for("importar_supervisores"))
 
     try:
@@ -1635,7 +1625,7 @@ def download_template_supervisores():
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                            top=Side(style='thin'), bottom=Side(style='thin'))
 
-        # Escrever cabeÃ§alhos
+        # Escrever cabeçalhos
         for col_num, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col_num, value=header)
             cell.fill = header_fill
@@ -1647,13 +1637,13 @@ def download_template_supervisores():
             ws.column_dimensions[get_column_letter(col_num)].width = 30
 
         # Adicionar exemplo na segunda linha
-        ws.cell(row=2, column=1, value="JoÃ£o da Silva").border = thin_border
+        ws.cell(row=2, column=1, value="João da Silva").border = thin_border
         ws.cell(row=2, column=2, value="joao.silva@email.com").border = thin_border
         
         if current_user.is_super_admin:
             ws.cell(row=2, column=3, value="00.000.000/0001-00").border = thin_border
 
-        # Salvar em memÃ³ria
+        # Salvar em memória
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
@@ -1676,7 +1666,7 @@ def lista_supervisores():
     """Lista todos os supervisores"""
     page = request.args.get("page", 1, type=int)
 
-    # Quantidade de registros por pÃ¡gina
+    # Quantidade de registros por página
     per_page = 20
 
     # Query base por escopo de empresa
@@ -1689,7 +1679,7 @@ def lista_supervisores():
             ativo=True,
         )
 
-    # EstatÃ­sticas globais
+    # Estatísticas globais
     total_supervisores = base_query.count()
     total_vendedores_supervisionados = (
         Vendedor.query.filter(
@@ -1713,13 +1703,13 @@ def lista_supervisores():
         "media_vendedores": media_vendedores,
     }
 
-    # PaginaÃ§Ã£o ordenada por nome
+    # Paginação ordenada por nome
     pagination = base_query.order_by(Usuario.nome).paginate(
         page=page, per_page=per_page, error_out=False
     )
     supervisores_pagina = pagination.items
 
-    # Preparar dados com contagem de vendedores por supervisor apenas da pÃ¡gina
+    # Preparar dados com contagem de vendedores por supervisor apenas da página
     supervisores_data = []
     for supervisor in supervisores_pagina:
         total_vendedores = Vendedor.query.filter_by(
@@ -1745,15 +1735,15 @@ def novo_supervisor():
 
     if form.validate_on_submit():
         if not current_user.is_super_admin and form.empresa_id.data != current_user.empresa_id:
-            flash("VocÃª sÃ³ pode criar supervisores na sua empresa!", "danger")
+            flash("Você só pode criar supervisores na sua empresa!", "danger")
             return redirect(url_for("lista_supervisores"))
 
         if not request.form.get("gerente_id"):
-            flash("Ã‰ obrigatÃ³rio vincular o supervisor a um Gerente ou Administrador!", "danger")
+            flash("É obrigatório vincular o supervisor a um Gerente ou Administrador!", "danger")
         else:
             try:
                 supervisor = _save_supervisor_from_form(form)
-                flash(f"Supervisor {supervisor.nome} criado com sucesso! Senha padrÃ£o: senha123", "success")
+                flash(f"Supervisor {supervisor.nome} criado com sucesso! Senha padrão: senha123", "success")
                 return redirect(url_for("lista_supervisores"))
             except Exception as e:
                 db.session.rollback()
@@ -1773,10 +1763,10 @@ def editar_supervisor(id):
     supervisor = Usuario.query.get_or_404(id)
 
     if supervisor.cargo != "supervisor":
-        flash("Este usuÃ¡rio nÃ£o Ã© um supervisor.", "warning")
+        flash("Este usuário não é um supervisor.", "warning")
         return redirect(url_for("lista_supervisores"))
     if not current_user.is_super_admin and supervisor.empresa_id != current_user.empresa_id:
-        flash("VocÃª nÃ£o tem permissÃ£o para editar este supervisor.", "danger")
+        flash("Você não tem permissão para editar este supervisor.", "danger")
         return redirect(url_for("lista_supervisores"))
 
     form = UsuarioForm(usuario_id=id, obj=supervisor)
@@ -1784,7 +1774,7 @@ def editar_supervisor(id):
 
     if form.validate_on_submit():
         if not request.form.get("gerente_id"):
-            flash("Ã‰ obrigatÃ³rio vincular o supervisor a um Gerente ou Administrador!", "danger")
+            flash("É obrigatório vincular o supervisor a um Gerente ou Administrador!", "danger")
         else:
             try:
                 _save_supervisor_from_form(form, supervisor)
@@ -1808,16 +1798,16 @@ def deletar_supervisor(id):
     """Deletar supervisor (soft delete)"""
     supervisor = Usuario.query.get_or_404(id)
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if not current_user.is_super_admin:
         if supervisor.empresa_id != current_user.empresa_id:
-            msg = "VocÃª nÃ£o tem permissÃ£o " "para deletar este supervisor."
+            msg = "Você não tem permissão " "para deletar este supervisor."
             flash(msg, "danger")
             return redirect(url_for("lista_supervisores"))
 
-    # Verificar se Ã© realmente um supervisor
+    # Verificar se é realmente um supervisor
     if supervisor.cargo != "supervisor":
-        flash("Este usuÃ¡rio nÃ£o Ã© um supervisor.", "warning")
+        flash("Este usuário não é um supervisor.", "warning")
         return redirect(url_for("lista_supervisores"))
 
     # Soft delete
@@ -1834,14 +1824,14 @@ def deletar_supervisor(id):
 @app.route("/supervisores/<int:id>/resetar-senha", methods=["POST"])
 @login_required
 def resetar_senha_supervisor(id):
-    """Resetar senha do supervisor para senha padrÃ£o"""
+    """Resetar senha do supervisor para senha padrão"""
     supervisor = Usuario.query.get_or_404(id)
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if not current_user.is_super_admin:
         if supervisor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para resetar a senha deste supervisor.",
+                "Você não tem permissão para resetar a senha deste supervisor.",
                 "danger",
             )
             return redirect(url_for("lista_supervisores"))
@@ -1854,12 +1844,12 @@ def resetar_senha_supervisor(id):
             )
             return redirect(url_for("lista_supervisores"))
 
-    # Verificar se Ã© realmente um supervisor
+    # Verificar se é realmente um supervisor
     if supervisor.cargo != "supervisor":
-        flash("Este usuÃ¡rio nÃ£o Ã© um supervisor.", "warning")
+        flash("Este usuário não é um supervisor.", "warning")
         return redirect(url_for("lista_supervisores"))
 
-    # Obter nova senha do formulÃ¡rio ou usar padrÃ£o
+    # Obter nova senha do formulário ou usar padrão
     nova_senha = request.form.get("nova_senha", "senha123")
 
     # Resetar senha
@@ -1878,11 +1868,11 @@ def definir_senha_supervisor(id):
     """Definir/alterar senha do supervisor"""
     supervisor = Usuario.query.get_or_404(id)
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if not current_user.is_super_admin:
         if supervisor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para alterar a senha deste supervisor.",
+                "Você não tem permissão para alterar a senha deste supervisor.",
                 "danger",
             )
             return redirect(url_for("lista_supervisores"))
@@ -1895,16 +1885,16 @@ def definir_senha_supervisor(id):
             )
             return redirect(url_for("lista_supervisores"))
 
-    # Verificar se Ã© realmente um supervisor
+    # Verificar se é realmente um supervisor
     if supervisor.cargo != "supervisor":
-        flash("Este usuÃ¡rio nÃ£o Ã© um supervisor.", "warning")
+        flash("Este usuário não é um supervisor.", "warning")
         return redirect(url_for("lista_supervisores"))
 
     if request.method == "POST":
         nova_senha = request.form.get("nova_senha", "").strip()
         confirmar_senha = request.form.get("confirmar_senha", "").strip()
 
-        # ValidaÃ§Ãµes
+        # Validações
         if not nova_senha:
             flash("Por favor, informe a nova senha.", "warning")
             return render_template(
@@ -1912,13 +1902,13 @@ def definir_senha_supervisor(id):
             )
 
         if len(nova_senha) < 6:
-            flash("A senha deve ter no mÃ­nimo 6 caracteres.", "warning")
+            flash("A senha deve ter no mínimo 6 caracteres.", "warning")
             return render_template(
                 "supervisores/definir_senha.html", supervisor=supervisor
             )
 
         if nova_senha != confirmar_senha:
-            flash("As senhas nÃ£o conferem!", "danger")
+            flash("As senhas não conferem!", "danger")
             return render_template(
                 "supervisores/definir_senha.html", supervisor=supervisor
             )
@@ -1937,14 +1927,14 @@ def definir_senha_supervisor(id):
         "supervisores/definir_senha.html", supervisor=supervisor
     )
 
-# ===== FUNÃ‡Ã•ES AUXILIARES PARA SUPERVISORES =====
+# ===== FUNÇÕES AUXILIARES PARA SUPERVISORES =====
 
 def _prepare_supervisor_form(form, supervisor=None):
-    """Prepara o formulÃ¡rio de supervisor.
+    """Prepara o formulário de supervisor.
 
     - Restringe o cargo para "supervisor".
-    - Popula a lista de empresas conforme o escopo do usuÃ¡rio.
-    - Retorna a lista de gerentes/administradores disponÃ­veis
+    - Popula a lista de empresas conforme o escopo do usuário.
+    - Retorna a lista de gerentes/administradores disponíveis
       para vincular ao supervisor.
     """
 
@@ -1953,7 +1943,7 @@ def _prepare_supervisor_form(form, supervisor=None):
     if not form.cargo.data:
         form.cargo.data = "supervisor"
 
-    # Empresas disponÃ­veis
+    # Empresas disponíveis
     if current_user.is_super_admin:
         empresas = Empresa.query.filter_by(ativo=True).order_by(Empresa.nome).all()
     else:
@@ -1971,14 +1961,14 @@ def _prepare_supervisor_form(form, supervisor=None):
     elif not supervisor and not current_user.is_super_admin and current_user.empresa_id:
         form.empresa_id.data = current_user.empresa_id
 
-    # Valores padrÃ£o de status para novo cadastro
+    # Valores padrão de status para novo cadastro
     if not supervisor:
         if form.ativo.data is None:
             form.ativo.data = 1
         if form.bloqueado.data is None:
             form.bloqueado.data = 0
 
-    # Gerentes/administradores disponÃ­veis para vincular
+    # Gerentes/administradores disponíveis para vincular
     if current_user.is_super_admin:
         gerentes_query = Usuario.query.filter(
             Usuario.ativo.is_(True),
@@ -1996,44 +1986,44 @@ def _prepare_supervisor_form(form, supervisor=None):
 
 
 def _save_supervisor_from_form(form, supervisor=None):
-    """Cria ou atualiza um supervisor a partir do formulÃ¡rio.
+    """Cria ou atualiza um supervisor a partir do formulário.
 
-    Retorna a instÃ¢ncia de Usuario correspondente ao supervisor.
+    Retorna a instância de Usuario correspondente ao supervisor.
     """
 
     empresa_id = form.empresa_id.data
     empresa = Empresa.query.get(empresa_id)
     if not empresa:
-        raise ValueError("Empresa nÃ£o encontrada.")
+        raise ValueError("Empresa não encontrada.")
 
-    # Garantir que usuÃ¡rio comum sÃ³ gerencie supervisores da prÃ³pria empresa
+    # Garantir que usuário comum só gerencie supervisores da própria empresa
     if not current_user.is_super_admin and empresa_id != current_user.empresa_id:
-        raise PermissionError("VocÃª sÃ³ pode gerenciar supervisores da sua empresa.")
+        raise PermissionError("Você só pode gerenciar supervisores da sua empresa.")
 
-    # Gerente responsÃ¡vel (campo vem do formulÃ¡rio HTML)
+    # Gerente responsável (campo vem do formulário HTML)
     gerente_id_raw = request.form.get("gerente_id")
     if not gerente_id_raw:
-        raise ValueError("Ã‰ obrigatÃ³rio vincular o supervisor a um Gerente ou Administrador.")
+        raise ValueError("É obrigatório vincular o supervisor a um Gerente ou Administrador.")
 
     try:
         gerente_id = int(gerente_id_raw)
     except ValueError:
-        raise ValueError("Gerente/Administrador selecionado Ã© invÃ¡lido.")
+        raise ValueError("Gerente/Administrador selecionado é inválido.")
 
     gerente = Usuario.query.get(gerente_id)
     if not gerente or gerente.cargo not in ["admin", "gerente"]:
-        raise ValueError("Gerente/Administrador responsÃ¡vel nÃ£o encontrado ou invÃ¡lido.")
+        raise ValueError("Gerente/Administrador responsável não encontrado ou inválido.")
 
     if (
         not current_user.is_super_admin
         and gerente.empresa_id != current_user.empresa_id
     ):
         raise PermissionError(
-            "VocÃª sÃ³ pode vincular supervisores a gerentes da sua empresa."
+            "Você só pode vincular supervisores a gerentes da sua empresa."
         )
 
     if supervisor is None:
-        # CriaÃ§Ã£o de novo supervisor
+        # Criação de novo supervisor
         supervisor = Usuario(
             nome=form.nome.data,
             email=form.email.data,
@@ -2047,7 +2037,7 @@ def _save_supervisor_from_form(form, supervisor=None):
         supervisor.set_senha("senha123")
         db.session.add(supervisor)
     else:
-        # AtualizaÃ§Ã£o de supervisor existente
+        # Atualização de supervisor existente
         supervisor.nome = form.nome.data
         supervisor.email = form.email.data
         supervisor.empresa_id = empresa_id
@@ -2059,12 +2049,12 @@ def _save_supervisor_from_form(form, supervisor=None):
     db.session.commit()
     return supervisor
 
-# ===== CONTINUAÃ‡ÃƒO - ROTAS DE SUPER ADMIN - USUÃRIOS =====
+# ===== CONTINUAÇÃO - ROTAS DE SUPER ADMIN - USUÁRIOS =====
 
 @app.route("/super-admin/usuarios/criar", methods=["GET", "POST"])
 @super_admin_required
 def super_admin_criar_usuario():
-    """Criar novo usuÃ¡rio"""
+    """Criar novo usuário"""
 
     form = UsuarioForm()
 
@@ -2086,10 +2076,10 @@ def super_admin_criar_usuario():
         else:
             usuario.motivo_bloqueio = None
 
-        # Senha padrÃ£o
+        # Senha padrão
         usuario.set_senha("senha123")
 
-        # PermissÃµes padrÃ£o especÃ­ficas para cargo auxiliar
+        # Permissões padrão específicas para cargo auxiliar
         if usuario.cargo == "auxiliar":
             usuario.pode_enviar_mensagens = True
             usuario.pode_acessar_os = True
@@ -2113,18 +2103,18 @@ def super_admin_criar_usuario():
         db.session.add(usuario)
         db.session.commit()
 
-        msg = f"UsuÃ¡rio {usuario.nome} criado! Senha padrÃ£o: senha123"
+        msg = f"Usuário {usuario.nome} criado! Senha padrão: senha123"
         flash(msg, "success")
         return redirect(url_for("super_admin_usuarios"))
 
     return render_template(
-        "super_admin/usuario_form.html", form=form, titulo="Criar Novo UsuÃ¡rio"
+        "super_admin/usuario_form.html", form=form, titulo="Criar Novo Usuário"
     )
 
 @app.route("/super-admin/usuarios/<int:id>/editar", methods=["GET", "POST"])
 @super_admin_required
 def super_admin_editar_usuario(id):
-    """Editar usuÃ¡rio existente"""
+    """Editar usuário existente"""
 
     try:
         usuario = Usuario.query.get_or_404(id)
@@ -2160,7 +2150,7 @@ def super_admin_editar_usuario(id):
                 else:
                     usuario.gerente_id = None
 
-                # Atualizar permissÃµes
+                # Atualizar permissões
                 usuario.pode_ver_dashboard = (
                     "pode_ver_dashboard" in request.form
                 )
@@ -2190,19 +2180,19 @@ def super_admin_editar_usuario(id):
                 )
 
                 db.session.commit()
-                flash(f"UsuÃ¡rio {usuario.nome} atualizado!", "success")
+                flash(f"Usuário {usuario.nome} atualizado!", "success")
                 return redirect(url_for("super_admin_usuarios"))
             except Exception as e:
                 db.session.rollback()
-                flash(f"Erro ao atualizar usuÃ¡rio: {str(e)}", "danger")
+                flash(f"Erro ao atualizar usuário: {str(e)}", "danger")
                 return render_template(
                     "super_admin/usuario_form.html",
                     form=form,
                     usuario=usuario,
-                    titulo="Editar UsuÃ¡rio",
+                    titulo="Editar Usuário",
                 )
 
-        # Buscar gerentes e administradores disponÃ­veis
+        # Buscar gerentes e administradores disponíveis
         gerentes_disponiveis = Usuario.query.filter(
             Usuario.cargo.in_(["gerente", "admin"]),
             Usuario.id != usuario.id,
@@ -2214,16 +2204,16 @@ def super_admin_editar_usuario(id):
             form=form,
             usuario=usuario,
             gerentes_disponiveis=gerentes_disponiveis,
-            titulo="Editar UsuÃ¡rio",
+            titulo="Editar Usuário",
         )
     except Exception as e:
-        flash(f"Erro ao carregar usuÃ¡rio: {str(e)}", "danger")
+        flash(f"Erro ao carregar usuário: {str(e)}", "danger")
         return redirect(url_for("super_admin_usuarios"))
 
 @app.route("/super-admin/usuarios/<int:id>/bloquear", methods=["POST"])
 @super_admin_required
 def super_admin_bloquear_usuario(id):
-    """Bloquear/desbloquear usuÃ¡rio"""
+    """Bloquear/desbloquear usuário"""
     usuario = Usuario.query.get_or_404(id)
 
     motivo = request.form.get("motivo", "")
@@ -2231,12 +2221,12 @@ def super_admin_bloquear_usuario(id):
     if usuario.bloqueado:
         usuario.bloqueado = False
         usuario.motivo_bloqueio = None
-        msg = f"UsuÃ¡rio {usuario.nome} desbloqueado!"
+        msg = f"Usuário {usuario.nome} desbloqueado!"
         flash(msg, "success")
     else:
         usuario.bloqueado = True
         usuario.motivo_bloqueio = motivo
-        flash(f"UsuÃ¡rio {usuario.nome} bloqueado!", "warning")
+        flash(f"Usuário {usuario.nome} bloqueado!", "warning")
 
     db.session.commit()
     return redirect(url_for("super_admin_usuarios"))
@@ -2244,11 +2234,11 @@ def super_admin_bloquear_usuario(id):
 @app.route("/super-admin/usuarios/<int:id>/deletar", methods=["POST"])
 @super_admin_required
 def super_admin_deletar_usuario(id):
-    """Deletar usuÃ¡rio"""
+    """Deletar usuário"""
     usuario = Usuario.query.get_or_404(id)
 
     if usuario.is_super_admin:
-        msg = "NÃ£o Ã© possÃ­vel deletar um super administrador!"
+        msg = "Não é possível deletar um super administrador!"
         flash(msg, "danger")
         return redirect(url_for("super_admin_usuarios"))
 
@@ -2256,21 +2246,21 @@ def super_admin_deletar_usuario(id):
     db.session.delete(usuario)
     db.session.commit()
 
-    flash(f"UsuÃ¡rio {nome} deletado!", "success")
+    flash(f"Usuário {nome} deletado!", "success")
     return redirect(url_for("super_admin_usuarios"))
 
-# ===== ROTA DE MIGRAÃ‡ÃƒO DE FAIXAS DE COMISSÃƒO =====
+# ===== ROTA DE MIGRAÇÃO DE FAIXAS DE COMISSÃO =====
 
 @app.route("/migrar-faixas-comissao-agora")
 def migrar_faixas_comissao_agora():
     """
-    Rota temporÃ¡ria para criar tabela FaixaComissao e popular dados
+    Rota temporária para criar tabela FaixaComissao e popular dados
     Acesse via: https://vendacerta.up.railway.app/migrar-faixas-comissao-agora
     """
     try:
         from sqlalchemy import text, inspect
 
-        # Verifica se a tabela jÃ¡ existe
+        # Verifica se a tabela já existe
         inspector = inspect(db.engine)
         existing_tables = inspector.get_table_names()
 
@@ -2284,7 +2274,7 @@ def migrar_faixas_comissao_agora():
                 return f"""
                 <html>
                 <head>
-                    <title>Faixas JÃ¡ Criadas</title>
+                    <title>Faixas Já Criadas</title>
                     <meta name="viewport" content="width=device-width, initial-scale=1">
                     <style>
                         body {{
@@ -2328,10 +2318,10 @@ def migrar_faixas_comissao_agora():
                 </head>
                 <body>
                     <div class="container">
-                        <h1>Sistema JÃ¡ Configurado!</h1>
-                        <p class="success">A tabela 'faixa_comissao' jÃ¡ existe com {count} registros.</p>
-                        <p style="text-align: center;">O sistema estÃ¡ pronto para uso!</p>
-                        <a href="/configuracoes/comissoes" class="btn">Ver Faixas de ComissÃ£o</a>
+                        <h1>Sistema Já Configurado!</h1>
+                        <p class="success">A tabela 'faixa_comissao' já existe com {count} registros.</p>
+                        <p style="text-align: center;">O sistema está pronto para uso!</p>
+                        <a href="/configuracoes/comissoes" class="btn">Ver Faixas de Comissão</a>
                     </div>
                 </body>
                 </html>
@@ -2340,7 +2330,7 @@ def migrar_faixas_comissao_agora():
         # Cria a tabela
         db.create_all()
 
-        # Popula com faixas padrÃ£o
+        # Popula com faixas padrão
         faixas_padrao = [
             {
                 "ordem": 1,
@@ -2393,7 +2383,7 @@ def migrar_faixas_comissao_agora():
         return """
         <html>
         <head>
-            <title>MigraÃ§Ã£o ConcluÃ­da</title>
+            <title>Migração Concluída</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
                 body {
@@ -2450,7 +2440,7 @@ def migrar_faixas_comissao_agora():
         </head>
         <body>
             <div class="container">
-                <h1>MigraÃ§Ã£o ConcluÃ­da!</h1>
+                <h1>Migração Concluída!</h1>
                 <p class="success">Tabela 'faixa_comissao' criada e populada com sucesso!</p>
 
                 <h3 style="color: #666; text-align: center; margin: 30px 0 20px;">Faixas Criadas:</h3>
@@ -2476,8 +2466,8 @@ def migrar_faixas_comissao_agora():
                     <span>Taxa: 5%</span>
                 </div>
 
-                <p style="margin-top: 30px;">Agora vocÃª pode criar e editar faixas de comissÃ£o!</p>
-                <a href="/configuracoes/comissoes" class="btn">Ir para ConfiguraÃ§Ãµes</a>
+                <p style="margin-top: 30px;">Agora você pode criar e editar faixas de comissão!</p>
+                <a href="/configuracoes/comissoes" class="btn">Ir para Configurações</a>
             </div>
         </body>
         </html>
@@ -2488,7 +2478,7 @@ def migrar_faixas_comissao_agora():
         return f"""
         <html>
         <head>
-            <title>Erro na MigraÃ§Ã£o</title>
+            <title>Erro na Migração</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
                 body {{
@@ -2527,29 +2517,29 @@ def migrar_faixas_comissao_agora():
         </head>
         <body>
             <div class="container">
-                <h1>Erro na MigraÃ§Ã£o</h1>
+                <h1>Erro na Migração</h1>
                 <div class="error">
                     Ocorreu um erro ao criar a tabela faixa_comissao.
                 </div>
                 <pre>{str(e)}</pre>
-                <p style="text-align: center; color: #666;">Entre em contato com o suporte tÃ©cnico.</p>
+                <p style="text-align: center; color: #666;">Entre em contato com o suporte técnico.</p>
                 <a href="/dashboard" class="btn">Voltar ao Dashboard</a>
             </div>
         </body>
         </html>
         """
 
-# ===== ROTA DE INICIALIZAÃ‡ÃƒO (Setup inicial do sistema) =====
+# ===== ROTA DE INICIALIZAÇÃO (Setup inicial do sistema) =====
 
 @app.route("/setup-inicial-sistema")
 def setup_inicial_sistema():
     """
-    Cria estrutura inicial do sistema (empresa padrÃ£o e super admin)
-    Esta rota pode ser acessada uma Ãºnica vez para configurar o sistema
+    Cria estrutura inicial do sistema (empresa padrão e super admin)
+    Esta rota pode ser acessada uma única vez para configurar o sistema
     """
     try:
-        # Verificar se jÃ¡ existe super admin
-        # (sistema jÃ¡ configurado)
+        # Verificar se já existe super admin
+        # (sistema já configurado)
         super_admin = Usuario.query.filter_by(
             email="superadmin@suameta.com"
         ).first()
@@ -2557,7 +2547,7 @@ def setup_inicial_sistema():
             return """
             <html>
             <head>
-                <title>Sistema JÃ¡ Configurado</title>
+                <title>Sistema Já Configurado</title>
                 <style>
                     body {
                         font-family: 'Segoe UI', Tahoma, Geneva,
@@ -2598,11 +2588,11 @@ def setup_inicial_sistema():
             </head>
             <body>
                 <div class="container">
-                    <h1>Sistema JÃ¡ Configurado!</h1>
+                    <h1>Sistema Já Configurado!</h1>
                     <p class="success">
-                        O super administrador jÃ¡ existe no sistema.
+                        O super administrador já existe no sistema.
                     </p>
-                    <p>FaÃ§a login com as credenciais:</p>
+                    <p>Faça login com as credenciais:</p>
                     <p><strong>Email:</strong> superadmin@suameta.com</p>
                     <p><strong>Senha:</strong> 18042016</p>
                     <a href="/login">Ir para Login</a>
@@ -2611,11 +2601,11 @@ def setup_inicial_sistema():
             </html>
             """
 
-        # Criar empresa padrÃ£o se nÃ£o existir
-        empresa = Empresa.query.filter_by(nome="Empresa PadrÃ£o").first()
+        # Criar empresa padrão se não existir
+        empresa = Empresa.query.filter_by(nome="Empresa Padrão").first()
         if not empresa:
             empresa = Empresa(
-                nome="Empresa PadrÃ£o",
+                nome="Empresa Padrão",
                 cnpj="00.000.000/0000-00",
                 email="contato@empresapadrao.com",
                 telefone="(00) 0000-0000",
@@ -2742,24 +2732,24 @@ def setup_inicial_sistema():
                 <h1>Sistema Configurado com Sucesso!</h1>
 
                 <div class="success">
-                    <strong>ConfiguraÃ§Ã£o Completa</strong><br>
-                    O sistema foi inicializado e estÃ¡ pronto para uso!
+                    <strong>Configuração Completa</strong><br>
+                    O sistema foi inicializado e está pronto para uso!
                 </div>
 
                 <div class="credentials">
-                    <h3>ðŸ‘‘ Super Administrador</h3>
+                    <h3>👑 Super Administrador</h3>
                     <p><strong>Email:</strong> admin@suameta.com.br</p>
                     <p><strong>Senha:</strong> Admin@2025!</p>
                 </div>
 
                 <div class="credentials">
-                    <h3>ðŸ”‘ Gerente da Empresa</h3>
+                    <h3>🔑 Gerente da Empresa</h3>
                     <p><strong>Email:</strong> gerente@suameta.com.br</p>
                     <p><strong>Senha:</strong> Gerente@2025!</p>
                 </div>
 
                 <div class="warning">
-                    âš ï¸ <strong>Importante:</strong> Altere as senhas apÃ³s o primeiro login!
+                    ⚠️ <strong>Importante:</strong> Altere as senhas após o primeiro login!
                 </div>
 
                 <a href="/login">Acessar o Sistema</a>
@@ -2772,7 +2762,7 @@ def setup_inicial_sistema():
         return f"""
         <html>
         <head>
-            <title>Erro na ConfiguraÃ§Ã£o</title>
+            <title>Erro na Configuração</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
                 body {{
@@ -2816,7 +2806,7 @@ def setup_inicial_sistema():
         </head>
         <body>
             <div class="container">
-                <h1>Erro na ConfiguraÃ§Ã£o</h1>
+                <h1>Erro na Configuração</h1>
                 <div class="error">
                     <strong>Erro:</strong><br>
                     <code>{str(e)}</code>
@@ -2827,7 +2817,7 @@ def setup_inicial_sistema():
         </html>
         """
 
-# ===== ROTAS DE BACKUP E RESTAURAÃ‡ÃƒO =====
+# ===== ROTAS DE BACKUP E RESTAURAÇÃO =====
 
 @app.route("/super-admin/backups")
 @super_admin_required
@@ -2841,7 +2831,7 @@ def super_admin_backups():
     if is_postgresql:
         db_info = {
             "tipo": "PostgreSQL",
-            "mensagem": "Backups automÃ¡ticos gerenciados pelo Railway",
+            "mensagem": "Backups automáticos gerenciados pelo Railway",
             "tamanho": 0,
             "ultima_modificacao": datetime.now(),
         }
@@ -2853,7 +2843,7 @@ def super_admin_backups():
         )
 
     # Para SQLite (ambiente local)
-    # Criar pasta de backups se nÃ£o existir
+    # Criar pasta de backups se não existir
     backup_dir = os.path.join(app.instance_path, "backups")
     os.makedirs(backup_dir, exist_ok=True)
 
@@ -2877,7 +2867,7 @@ def super_admin_backups():
                             ),
                             "data": data_modificacao,
                             "data_formatada": data_modificacao.strftime(
-                                "%d/%m/%Y Ã s %H:%M:%S"
+                                "%d/%m/%Y às %H:%M:%S"
                             ),
                             "path": filepath,
                             "tipo": (
@@ -2893,7 +2883,7 @@ def super_admin_backups():
     # Ordenar por data (mais recente primeiro)
     backups.sort(key=lambda x: x["data"], reverse=True)
 
-    # InformaÃ§Ãµes do banco atual
+    # Informações do banco atual
     db_path = uri.replace("sqlite:///", "")
     db_info = None
     if os.path.exists(db_path):
@@ -2921,7 +2911,7 @@ def criar_backup():
 
         if "postgresql" in uri:
             flash(
-                "Backups do PostgreSQL sÃ£o gerenciados automaticamente pelo Railway. Acesse o painel do Railway para gerenciar backups.",
+                "Backups do PostgreSQL são gerenciados automaticamente pelo Railway. Acesse o painel do Railway para gerenciar backups.",
                 "info",
             )
             return redirect(url_for("super_admin_backups"))
@@ -2940,12 +2930,12 @@ def criar_backup():
         db_path = uri.replace("sqlite:///", "")
 
         if not os.path.exists(db_path):
-            flash("Banco de dados nÃ£o encontrado!", "danger")
+            flash("Banco de dados não encontrado!", "danger")
             return redirect(url_for("super_admin_backups"))
 
         shutil.copy2(db_path, backup_path)
 
-        # Sincronizar com nuvem (se mÃ³dulo opcional estiver disponÃ­vel)
+        # Sincronizar com nuvem (se módulo opcional estiver disponível)
         try:
             from backup_nuvem import sincronizar_backup_nuvem
 
@@ -2980,7 +2970,7 @@ def download_backup(nome):
         backup_path = os.path.join(backup_dir, secure_filename(nome))
 
         if not os.path.exists(backup_path):
-            flash("Backup nÃ£o encontrado!", "danger")
+            flash("Backup não encontrado!", "danger")
             return redirect(url_for("super_admin_backups"))
 
         return send_file(backup_path, as_attachment=True, download_name=nome)
@@ -2997,7 +2987,7 @@ def restaurar_backup(nome):
         backup_path = os.path.join(backup_dir, secure_filename(nome))
 
         if not os.path.exists(backup_path):
-            flash("Backup nÃ£o encontrado!", "danger")
+            flash("Backup não encontrado!", "danger")
             return redirect(url_for("super_admin_backups"))
 
         # Criar backup do banco atual antes de restaurar
@@ -3013,7 +3003,7 @@ def restaurar_backup(nome):
         shutil.copy2(backup_path, db_path)
 
         flash(f"Backup {nome} restaurado com sucesso!", "success")
-        msg_info = f"Backup de seguranÃ§a criado: pre_restore_{timestamp}.db"
+        msg_info = f"Backup de segurança criado: pre_restore_{timestamp}.db"
         flash(msg_info, "info")
     except Exception as e:
         flash(f"Erro ao restaurar backup: {str(e)}", "danger")
@@ -3029,7 +3019,7 @@ def deletar_backup(nome):
         backup_path = os.path.join(backup_dir, secure_filename(nome))
 
         if not os.path.exists(backup_path):
-            flash("Backup nÃ£o encontrado!", "danger")
+            flash("Backup não encontrado!", "danger")
             return redirect(url_for("super_admin_backups"))
 
         os.remove(backup_path)
@@ -3055,7 +3045,7 @@ def upload_backup():
             return redirect(url_for("super_admin_backups"))
 
         if not file.filename.endswith(".db"):
-            flash("Apenas arquivos .db sÃ£o permitidos!", "danger")
+            flash("Apenas arquivos .db são permitidos!", "danger")
             return redirect(url_for("super_admin_backups"))
 
         # Salvar arquivo
@@ -3079,43 +3069,36 @@ def upload_backup():
 @app.route("/")
 def index():
     """Rota inicial - redireciona para login ou dashboard"""
-    try:
-        if current_user.is_authenticated:
-            return redirect(url_for('dashboard'))
-    except Exception as exc:
-        app.logger.error(f"Falha ao resolver sessao na rota '/': {exc}")
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Dashboard principal com mÃ©tricas e ranking"""
+    """Dashboard principal com métricas e ranking"""
     
-    # CACHE: Usar cache key baseado em usuÃ¡rio, mÃªs e ano (5 minutos)
+    # CACHE: Usar cache key baseado em usuário, mês e ano (5 minutos)
     hoje = datetime.now()
     mes_atual = request.args.get("mes", hoje.month, type=int)
     ano_atual = request.args.get("ano", hoje.year, type=int)
     
     cache_key = f"dashboard_{current_user.id}_{mes_atual}_{ano_atual}"
     
-    # Tentar obter do cache se disponÃ­vel
+    # Tentar obter do cache se disponível
     if cache:
         cached_result = cache.get(cache_key)
         if cached_result:
             return cached_result
     
     try:
-        # Obter o mÃªs e ano atuais
+        # Obter o mês e ano atuais
         hoje = datetime.now()
         mes_atual = request.args.get("mes", hoje.month, type=int)
         ano_atual = request.args.get("ano", hoje.year, type=int)
 
-        # Buscar todas as metas do perÃ­odo (filtrando por empresa e cargo)
-        # OTIMIZAÃ‡ÃƒO: Usar joinedload para evitar N+1 queries
+        # Buscar todas as metas do período (filtrando por empresa e cargo)
+        # OTIMIZAÇÃO: Usar joinedload para evitar N+1 queries
         from sqlalchemy.orm import joinedload
 
         query = (
@@ -3128,23 +3111,23 @@ def dashboard():
         )
 
         if current_user.is_super_admin:
-            # Super admin vÃª tudo
+            # Super admin vê tudo
             pass
         elif current_user.cargo == "supervisor":
-            # Supervisor vÃª apenas metas dos seus vendedores
+            # Supervisor vê apenas metas dos seus vendedores
             query = query.filter(Vendedor.supervisor_id == current_user.id)
         elif current_user.cargo == "vendedor" and current_user.vendedor_id:
-            # Vendedor vÃª apenas suas metas e dos colegas da mesma equipe
+            # Vendedor vê apenas suas metas e dos colegas da mesma equipe
             vendedor_atual = Vendedor.query.get(current_user.vendedor_id)
             if vendedor_atual and vendedor_atual.equipe_id:
                 query = query.filter(
                     Vendedor.equipe_id == vendedor_atual.equipe_id
                 )
             else:
-                # Se nÃ£o tem equipe, vÃª apenas suas prÃ³prias metas
+                # Se não tem equipe, vê apenas suas próprias metas
                 query = query.filter(Vendedor.id == current_user.vendedor_id)
         else:
-            # Outros usuÃ¡rios veem apenas da sua empresa
+            # Outros usuários veem apenas da sua empresa
             query = query.filter(
                 Vendedor.empresa_id == current_user.empresa_id
             )
@@ -3158,7 +3141,7 @@ def dashboard():
             if not meta.vendedor:
                 continue
 
-            # Calcular projeÃ§Ã£o para este vendedor
+            # Calcular projeção para este vendedor
             try:
                 projecao = calcular_projecao_mes(
                     receita_atual=meta.receita_alcancada or 0.0,
@@ -3172,8 +3155,8 @@ def dashboard():
                     ),
                 )
             except Exception as e:
-                app.logger.error(f"Erro ao calcular projeÃ§Ã£o para meta {meta.id}: {e}")
-                # Usar valores padrÃ£o se houver erro
+                app.logger.error(f"Erro ao calcular projeção para meta {meta.id}: {e}")
+                # Usar valores padrão se houver erro
                 projecao = {
                     "media_diaria": 0.0,
                     "projecao_mes": 0.0,
@@ -3186,11 +3169,11 @@ def dashboard():
                     "status_projecao": "Sem dados",
                 }
 
-            # Buscar nome do supervisor (jÃ¡ carregado via joinedload)
+            # Buscar nome do supervisor (já carregado via joinedload)
             supervisor_nome = "Sem supervisor"
             supervisor_obj = None
             try:
-                # Usar relacionamento jÃ¡ carregado
+                # Usar relacionamento já carregado
                 if meta.vendedor.supervisor_obj:
                     supervisor_obj = meta.vendedor.supervisor_obj
                     supervisor_nome = supervisor_obj.nome
@@ -3199,7 +3182,7 @@ def dashboard():
             except Exception as e:
                 app.logger.error(f"Erro ao buscar supervisor para vendedor {meta.vendedor.id}: {e}")
 
-            # Buscar nome da equipe (jÃ¡ carregada via joinedload)
+            # Buscar nome da equipe (já carregada via joinedload)
             equipe_nome = "Sem Equipe"
             try:
                 if meta.vendedor.equipe_obj:
@@ -3229,7 +3212,7 @@ def dashboard():
                         .replace("X", ".")
                     ),
                     "status_comissao": meta.status_comissao or "Pendente",
-                    # Dados de projeÃ§Ã£o
+                    # Dados de projeção
                     "projecao": {
                         "media_diaria": projecao["media_diaria"],
                         "media_diaria_formatada": formatar_moeda(
@@ -3272,7 +3255,7 @@ def dashboard():
         total_meta = sum(v["meta"] for v in vendedores_data)
         total_comissao = sum(v["comissao_total"] for v in vendedores_data)
 
-        # Calcular projeÃ§Ã£o global da equipe
+        # Calcular projeção global da equipe
         projecao_global = calcular_projecao_mes(
             receita_atual=total_receita,
             meta_mes=total_meta,
@@ -3320,7 +3303,7 @@ def dashboard():
                 "comissao_total"
             ]
 
-        # Calcular projeÃ§Ãµes para cada equipe
+        # Calcular projeções para cada equipe
         for equipe_nome, dados in projecoes_por_equipe.items():
             projecao_equipe = calcular_projecao_mes(
                 receita_atual=dados["receita_total"],
@@ -3333,7 +3316,7 @@ def dashboard():
                     else None
                 ),
             )
-            # Adicionar formataÃ§Ã£o dos valores
+            # Adicionar formatação dos valores
             dados["projecao"] = {
                 "media_diaria": projecao_equipe["media_diaria"],
                 "media_diaria_formatada": formatar_moeda(
@@ -3352,7 +3335,7 @@ def dashboard():
                 else 0
             )
 
-        # ===== AGRUPAMENTO POR SUPERVISÃƒO =====
+        # ===== AGRUPAMENTO POR SUPERVISÃO =====
         projecoes_por_supervisor = {}
         for v in vendedores_data:
             supervisor_nome = v["supervisor"]
@@ -3395,7 +3378,7 @@ def dashboard():
                 "comissao_total"
             ]
 
-        # Calcular projeÃ§Ãµes para cada supervisor
+        # Calcular projeções para cada supervisor
         for supervisor_nome, dados in projecoes_por_supervisor.items():
             projecao_supervisor = calcular_projecao_mes(
                 receita_atual=dados["receita_total"],
@@ -3408,7 +3391,7 @@ def dashboard():
                     else None
                 ),
             )
-            # Adicionar formataÃ§Ã£o dos valores
+            # Adicionar formatação dos valores
             dados["projecao"] = {
                 "media_diaria": projecao_supervisor["media_diaria"],
                 "media_diaria_formatada": formatar_moeda(
@@ -3429,7 +3412,7 @@ def dashboard():
                 else 0
             )
 
-            # ComissÃ£o do supervisor baseada nas faixas de supervisor
+            # Comissão do supervisor baseada nas faixas de supervisor
             taxa_sup = _obter_taxa_por_alcance(
                 "supervisor",
                 current_user.empresa_id if current_user.cargo != "super_admin" else None,
@@ -3474,7 +3457,7 @@ def dashboard():
             ),
             "mes": mes_atual,
             "ano": ano_atual,
-            # ProjeÃ§Ã£o global
+            # Projeção global
             "projecao_global": {
                 "media_diaria": projecao_global["media_diaria"],
                 "media_diaria_formatada": formatar_moeda(
@@ -3546,15 +3529,15 @@ def dashboard():
 @app.route("/supervisor/dashboard")
 @login_required
 def supervisor_dashboard():
-    """Dashboard especÃ­fico para supervisores com projeÃ§Ãµes consolidadas"""
-    # Verificar se o usuÃ¡rio Ã© supervisor
+    """Dashboard específico para supervisores com projeções consolidadas"""
+    # Verificar se o usuário é supervisor
     if current_user.cargo != "supervisor":
         flash(
-            "Acesso negado. Esta Ã¡rea Ã© exclusiva para supervisores.", "danger"
+            "Acesso negado. Esta área é exclusiva para supervisores.", "danger"
         )
         return redirect(url_for("dashboard"))
 
-    # Obter o mÃªs e ano atuais ou filtrados
+    # Obter o mês e ano atuais ou filtrados
     hoje = datetime.now()
     mes_atual = request.args.get("mes", hoje.month, type=int)
     ano_atual = request.args.get("ano", hoje.year, type=int)
@@ -3565,7 +3548,7 @@ def supervisor_dashboard():
     ).all()
 
     if not vendedores:
-        # Faixas dinÃ¢micas para legenda do supervisor
+        # Faixas dinâmicas para legenda do supervisor
         faixas_supervisor = (
             FaixaComissaoSupervisor.query.filter_by(
                 empresa_id=current_user.empresa_id
@@ -3594,13 +3577,13 @@ def supervisor_dashboard():
     total_comissao = 0
 
     for vendedor in vendedores:
-        # Buscar meta do vendedor no perÃ­odo
+        # Buscar meta do vendedor no período
         meta = Meta.query.filter_by(
             vendedor_id=vendedor.id, mes=mes_atual, ano=ano_atual
         ).first()
 
         if meta:
-            # Calcular projeÃ§Ã£o
+            # Calcular projeção
             projecao = calcular_projecao_mes(
                 receita_atual=meta.receita_alcancada,
                 meta_mes=meta.valor_meta,
@@ -3634,7 +3617,7 @@ def supervisor_dashboard():
     # Ordenar por percentual de alcance
     vendedores_data.sort(key=lambda x: x["percentual_alcance"], reverse=True)
 
-    # Calcular projeÃ§Ã£o consolidada do supervisor
+    # Calcular projeção consolidada do supervisor
     projecao_supervisor = calcular_projecao_mes(
         receita_atual=total_receita,
         meta_mes=total_meta,
@@ -3664,7 +3647,7 @@ def supervisor_dashboard():
         "ano": ano_atual,
     }
 
-    # ComissÃ£o especÃ­fica do supervisor pelas faixas de supervisor
+    # Comissão específica do supervisor pelas faixas de supervisor
     try:
         taxa_sup = _obter_taxa_por_alcance(
             "supervisor",
@@ -3677,9 +3660,9 @@ def supervisor_dashboard():
             resumo_supervisor["comissao_supervisor"]
         )
     except Exception as e:
-        app.logger.error(f"Erro ao calcular comissÃ£o do supervisor: {e}")
+        app.logger.error(f"Erro ao calcular comissão do supervisor: {e}")
 
-    # Faixas dinÃ¢micas para legenda do supervisor
+    # Faixas dinâmicas para legenda do supervisor
     faixas_supervisor = (
         FaixaComissaoSupervisor.query.filter_by(
             empresa_id=current_user.empresa_id
@@ -3705,26 +3688,26 @@ def supervisor_dashboard():
 @login_required
 def vendedor_dashboard():
     """Dashboard mobile para vendedores"""
-    # Verificar se o usuÃ¡rio Ã© um vendedor
+    # Verificar se o usuário é um vendedor
     if not current_user.vendedor_id:
         flash(
-            "Acesso negado. Esta Ã¡rea Ã© exclusiva para vendedores.", "danger"
+            "Acesso negado. Esta área é exclusiva para vendedores.", "danger"
         )
         return redirect(url_for("dashboard"))
 
     vendedor = current_user.vendedor
 
-    # Obter mÃªs e ano atuais
+    # Obter mês e ano atuais
     hoje = datetime.now()
     mes_atual = hoje.month
     ano_atual = hoje.year
 
-    # Buscar meta do mÃªs atual
+    # Buscar meta do mês atual
     meta_atual = Meta.query.filter_by(
         vendedor_id=vendedor.id, mes=mes_atual, ano=ano_atual
     ).first()
 
-    # Se nÃ£o houver meta, mostrar mensagem
+    # Se não houver meta, mostrar mensagem
     if not meta_atual:
         return render_template(
             "vendedor/dashboard.html",
@@ -3735,16 +3718,16 @@ def vendedor_dashboard():
             historico=[],
         )
 
-    # Garantir que percentual de alcance e comissÃ£o estejam atualizados
+    # Garantir que percentual de alcance e comissão estejam atualizados
     try:
         meta_atual.calcular_comissao()
         db.session.commit()
     except Exception as e:
         app.logger.error(
-            f"Erro ao recalcular comissÃ£o da meta {meta_atual.id} no dashboard do vendedor: {e}"
+            f"Erro ao recalcular comissão da meta {meta_atual.id} no dashboard do vendedor: {e}"
         )
 
-    # Calcular projeÃ§Ã£o
+    # Calcular projeção
     projecao = calcular_projecao_mes(
         receita_atual=meta_atual.receita_alcancada,
         meta_mes=meta_atual.valor_meta,
@@ -3756,7 +3739,7 @@ def vendedor_dashboard():
     # Buscar ranking da equipe (se o vendedor tiver equipe)
     ranking_equipe = []
     if vendedor.equipe_id:
-        # Buscar todas as metas da equipe no mÃªs atual
+        # Buscar todas as metas da equipe no mês atual
         metas_equipe = (
             Meta.query.join(Vendedor)
             .filter(
@@ -3784,14 +3767,14 @@ def vendedor_dashboard():
         # Ordenar por percentual de alcance
         ranking_equipe.sort(key=lambda x: x["percentual"], reverse=True)
 
-        # Adicionar posiÃ§Ã£o
+        # Adicionar posição
         for idx, item in enumerate(ranking_equipe, 1):
             item["posicao"] = idx
 
-    # Buscar histÃ³rico dos Ãºltimos 3 meses
+    # Buscar histórico dos últimos 3 meses
     historico = []
     for i in range(3):
-        # Calcular mÃªs e ano
+        # Calcular mês e ano
         mes_hist = mes_atual - i
         ano_hist = ano_atual
 
@@ -3799,7 +3782,7 @@ def vendedor_dashboard():
             mes_hist += 12
             ano_hist -= 1
 
-        # Buscar meta do mÃªs
+        # Buscar meta do mês
         meta_hist = Meta.query.filter_by(
             vendedor_id=vendedor.id, mes=mes_hist, ano=ano_hist
         ).first()
@@ -3847,19 +3830,19 @@ def lista_vendedores():
     """Lista todos os vendedores"""
     page = request.args.get("page", 1, type=int)
 
-    # Quantidade de registros por pÃ¡gina (lista operacional, costuma ser menor que clientes)
+    # Quantidade de registros por página (lista operacional, costuma ser menor que clientes)
     per_page = 20
 
-    # Construir query base respeitando permissÃµes
+    # Construir query base respeitando permissões
     if current_user.is_super_admin:
         base_query = Vendedor.query.filter_by(ativo=True)
     elif current_user.cargo == "supervisor":
-        # Supervisor vÃª apenas seus vendedores
+        # Supervisor vê apenas seus vendedores
         base_query = Vendedor.query.filter_by(
             supervisor_id=current_user.id, ativo=True
         )
     elif current_user.cargo == "vendedor" and current_user.vendedor_id:
-        # Vendedor vÃª apenas ele mesmo e vendedores da mesma equipe (ou sÃ³ ele, se sem equipe)
+        # Vendedor vê apenas ele mesmo e vendedores da mesma equipe (ou só ele, se sem equipe)
         vendedor_atual = Vendedor.query.get(current_user.vendedor_id)
         if vendedor_atual and vendedor_atual.equipe_id:
             base_query = Vendedor.query.filter_by(
@@ -3874,7 +3857,7 @@ def lista_vendedores():
             empresa_id=current_user.empresa_id, ativo=True
         )
 
-    # EstatÃ­sticas globais (baseadas no conjunto filtrado)
+    # Estatísticas globais (baseadas no conjunto filtrado)
     total_vendedores = base_query.count()
     total_com_supervisor = base_query.filter(
         Vendedor.supervisor_id.isnot(None)
@@ -3889,7 +3872,7 @@ def lista_vendedores():
         "em_equipes": total_em_equipes,
     }
 
-    # PaginaÃ§Ã£o ordenada por nome
+    # Paginação ordenada por nome
     pagination = base_query.order_by(Vendedor.nome).paginate(
         page=page, per_page=per_page, error_out=False
     )
@@ -3976,11 +3959,11 @@ def editar_vendedor(id):
     """Editar vendedor existente"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     # (exceto super admin)
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
-            msg = "VocÃª nÃ£o tem permissÃ£o " "para editar este vendedor."
+            msg = "Você não tem permissão " "para editar este vendedor."
             flash(msg, "danger")
             return redirect(url_for("lista_vendedores"))
 
@@ -4010,7 +3993,7 @@ def editar_vendedor(id):
         (e.id, e.nome) for e in equipes
     ]
 
-    # PrÃ©-preencher o formulÃ¡rio com dados do vendedor
+    # Pré-preencher o formulário com dados do vendedor
     if request.method == "GET":
         if vendedor.supervisor_id:
             form.supervisor_id.data = vendedor.supervisor_id
@@ -4044,7 +4027,7 @@ def editar_vendedor(id):
         vendedor.supervisor_id = supervisor_id
         vendedor.supervisor_nome = supervisor.nome if supervisor else None
         vendedor.equipe_id = equipe_id
-        # Nota: empresa_id nÃ£o deve ser alterado na ediÃ§Ã£o
+        # Nota: empresa_id não deve ser alterado na edição
 
         db.session.commit()
         flash(f"Vendedor {vendedor.nome} atualizado com sucesso!", "success")
@@ -4063,11 +4046,11 @@ def deletar_vendedor(id):
     """Desativar vendedor"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     # (exceto super admin)
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
-            msg = "VocÃª nÃ£o tem permissÃ£o " "para deletar este vendedor."
+            msg = "Você não tem permissão " "para deletar este vendedor."
             flash(msg, "danger")
             return redirect(url_for("lista_vendedores"))
 
@@ -4084,20 +4067,20 @@ def criar_login_vendedor(id):
     """Criar login de acesso para o vendedor"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para acessar este vendedor.", "danger"
+                "Você não tem permissão para acessar este vendedor.", "danger"
             )
             return redirect(url_for("lista_vendedores"))
 
-    # Verificar se jÃ¡ tem login
+    # Verificar se já tem login
     usuario_existente = Usuario.query.filter_by(
         vendedor_id=vendedor.id
     ).first()
     if usuario_existente:
-        flash(f"Vendedor {vendedor.nome} jÃ¡ possui login cadastrado!", "warning")
+        flash(f"Vendedor {vendedor.nome} já possui login cadastrado!", "warning")
         return redirect(url_for("lista_vendedores"))
 
     if request.method == "POST":
@@ -4106,28 +4089,28 @@ def criar_login_vendedor(id):
         confirmar_senha = request.form.get("confirmar_senha")
 
         if not email or not senha or not confirmar_senha:
-            flash("Preencha todos os campos obrigatÃ³rios!", "danger")
+            flash("Preencha todos os campos obrigatórios!", "danger")
             return render_template(
                 "vendedores/criar_login.html", vendedor=vendedor
             )
 
         if senha != confirmar_senha:
-            flash("As senhas nÃ£o coincidem!", "danger")
+            flash("As senhas não coincidem!", "danger")
             return render_template(
                 "vendedores/criar_login.html", vendedor=vendedor
             )
 
         if len(senha) < 6:
-            flash("A senha deve ter no mÃ­nimo 6 caracteres!", "danger")
+            flash("A senha deve ter no mínimo 6 caracteres!", "danger")
             return render_template(
                 "vendedores/criar_login.html", vendedor=vendedor
             )
 
-        # Verificar se email jÃ¡ estÃ¡ em uso
+        # Verificar se email já está em uso
         email_existe = Usuario.query.filter_by(email=email).first()
         if email_existe:
             flash(
-                f"O email {email} jÃ¡ estÃ¡ cadastrado no sistema! Use um email diferente.",
+                f"O email {email} já está cadastrado no sistema! Use um email diferente.",
                 "danger",
             )
             return render_template(
@@ -4135,7 +4118,7 @@ def criar_login_vendedor(id):
             )
 
         try:
-            # Criar usuÃ¡rio do tipo vendedor
+            # Criar usuário do tipo vendedor
             usuario = Usuario(
                 nome=vendedor.nome,
                 email=email,
@@ -4144,7 +4127,7 @@ def criar_login_vendedor(id):
                 vendedor_id=vendedor.id,
                 is_super_admin=False,
                 ativo=True,
-                # PermissÃµes padrÃ£o do vendedor
+                # Permissões padrão do vendedor
                 pode_ver_dashboard=True,
                 pode_gerenciar_vendedores=False,
                 pode_gerenciar_metas=False,
@@ -4160,7 +4143,7 @@ def criar_login_vendedor(id):
                 pode_editar_clientes=True,
                 pode_excluir_clientes=False,
                 pode_importar_clientes=False,
-                # Estoque: acesso somente leitura ao saldo/nÃ­veis
+                # Estoque: acesso somente leitura ao saldo/níveis
                 pode_acessar_estoque=True,
                 pode_gerenciar_produtos=False,
                 pode_movimentar_estoque=False,
@@ -4185,21 +4168,21 @@ def criar_login_vendedor(id):
 @login_required
 @permission_required("pode_gerenciar_vendedores")
 def editar_login_vendedor(id):
-    """Editar informaÃ§Ãµes de login do vendedor"""
+    """Editar informações de login do vendedor"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para acessar este vendedor.", "danger"
+                "Você não tem permissão para acessar este vendedor.", "danger"
             )
             return redirect(url_for("lista_vendedores"))
 
-    # Buscar usuÃ¡rio do vendedor
+    # Buscar usuário do vendedor
     usuario = Usuario.query.filter_by(vendedor_id=vendedor.id).first()
     if not usuario:
-        flash(f"Vendedor {vendedor.nome} nÃ£o possui login cadastrado!", "warning")
+        flash(f"Vendedor {vendedor.nome} não possui login cadastrado!", "warning")
         return redirect(url_for("lista_vendedores"))
 
     if request.method == "POST":
@@ -4209,7 +4192,7 @@ def editar_login_vendedor(id):
         confirmar_senha = request.form.get("confirmar_senha")
 
         if not email or not nome:
-            flash("Preencha todos os campos obrigatÃ³rios!", "danger")
+            flash("Preencha todos os campos obrigatórios!", "danger")
             return render_template(
                 "vendedores/editar_login.html",
                 vendedor=vendedor,
@@ -4219,7 +4202,7 @@ def editar_login_vendedor(id):
         # Se informou senha, validar
         if nova_senha or confirmar_senha:
             if nova_senha != confirmar_senha:
-                flash("As senhas nÃ£o coincidem!", "danger")
+                flash("As senhas não coincidem!", "danger")
                 return render_template(
                     "vendedores/editar_login.html",
                     vendedor=vendedor,
@@ -4227,7 +4210,7 @@ def editar_login_vendedor(id):
                 )
 
             if len(nova_senha) < 6:
-                flash("A senha deve ter no mÃ­nimo 6 caracteres!", "danger")
+                flash("A senha deve ter no mínimo 6 caracteres!", "danger")
                 return render_template(
                     "vendedores/editar_login.html",
                     vendedor=vendedor,
@@ -4235,7 +4218,7 @@ def editar_login_vendedor(id):
                 )
 
         try:
-            # Atualizar dados do usuÃ¡rio
+            # Atualizar dados do usuário
             usuario.email = email
             usuario.nome = nome
 
@@ -4263,30 +4246,30 @@ def excluir_login_vendedor(id):
     """Excluir login de acesso do vendedor"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para acessar este vendedor.", "danger"
+                "Você não tem permissão para acessar este vendedor.", "danger"
             )
             return redirect(url_for("lista_vendedores"))
 
-    # Buscar usuÃ¡rio do vendedor
+    # Buscar usuário do vendedor
     usuario = Usuario.query.filter_by(vendedor_id=vendedor.id).first()
     if not usuario:
-        flash(f"Vendedor {vendedor.nome} nÃ£o possui login cadastrado!", "warning")
+        flash(f"Vendedor {vendedor.nome} não possui login cadastrado!", "warning")
         return redirect(url_for("lista_vendedores"))
 
     try:
-        # Remover vinculo e desativar usuÃ¡rio
+        # Remover vinculo e desativar usuário
         usuario.vendedor_id = None
         usuario.ativo = False
         usuario.bloqueado = True
-        usuario.motivo_bloqueio = "Login excluÃ­do pelo administrador"
+        usuario.motivo_bloqueio = "Login excluído pelo administrador"
 
         db.session.commit()
 
-        flash(f"Login de {vendedor.nome} excluÃ­do com sucesso!", "success")
+        flash(f"Login de {vendedor.nome} excluído com sucesso!", "success")
         return redirect(url_for("lista_vendedores"))
 
     except Exception as e:
@@ -4301,18 +4284,18 @@ def resetar_senha_vendedor(id):
     """Resetar senha do login do vendedor"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para acessar este vendedor.", "danger"
+                "Você não tem permissão para acessar este vendedor.", "danger"
             )
             return redirect(url_for("lista_vendedores"))
 
-    # Buscar usuÃ¡rio do vendedor
+    # Buscar usuário do vendedor
     usuario = Usuario.query.filter_by(vendedor_id=vendedor.id).first()
     if not usuario:
-        flash(f"Vendedor {vendedor.nome} nÃ£o possui login cadastrado!", "warning")
+        flash(f"Vendedor {vendedor.nome} não possui login cadastrado!", "warning")
         return redirect(url_for("lista_vendedores"))
 
     if request.method == "POST":
@@ -4326,13 +4309,13 @@ def resetar_senha_vendedor(id):
             )
 
         if nova_senha != confirmar_senha:
-            flash("As senhas nÃ£o coincidem!", "danger")
+            flash("As senhas não coincidem!", "danger")
             return render_template(
                 "vendedores/resetar_senha.html", vendedor=vendedor
             )
 
         if len(nova_senha) < 6:
-            flash("A senha deve ter no mÃ­nimo 6 caracteres!", "danger")
+            flash("A senha deve ter no mínimo 6 caracteres!", "danger")
             return render_template(
                 "vendedores/resetar_senha.html", vendedor=vendedor
             )
@@ -4357,17 +4340,17 @@ def ativar_vendedor(id):
     """Ativar vendedor desativado"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para acessar este vendedor.", "danger"
+                "Você não tem permissão para acessar este vendedor.", "danger"
             )
             return redirect(url_for("lista_vendedores"))
 
     vendedor.ativo = True
 
-    # Ativar tambÃ©m o usuÃ¡rio se existir
+    # Ativar também o usuário se existir
     usuario = Usuario.query.filter_by(vendedor_id=vendedor.id).first()
     if usuario:
         usuario.ativo = True
@@ -4383,17 +4366,17 @@ def desativar_vendedor(id):
     """Desativar vendedor"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para acessar este vendedor.", "danger"
+                "Você não tem permissão para acessar este vendedor.", "danger"
             )
             return redirect(url_for("lista_vendedores"))
 
     vendedor.ativo = False
 
-    # Desativar tambÃ©m o usuÃ¡rio se existir
+    # Desativar também o usuário se existir
     usuario = Usuario.query.filter_by(vendedor_id=vendedor.id).first()
     if usuario:
         usuario.ativo = False
@@ -4408,25 +4391,25 @@ def desativar_vendedor(id):
 @login_required
 @admin_required
 def gerenciar_permissoes_vendedor(id):
-    """Gerenciar permissÃµes especÃ­ficas do vendedor"""
+    """Gerenciar permissões específicas do vendedor"""
     vendedor = Vendedor.query.get_or_404(id)
 
-    # Verificar se o vendedor pertence Ã  empresa do usuÃ¡rio
+    # Verificar se o vendedor pertence à empresa do usuário
     if not current_user.is_super_admin:
         if vendedor.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para acessar este vendedor.", "danger"
+                "Você não tem permissão para acessar este vendedor.", "danger"
             )
             return redirect(url_for("lista_vendedores"))
 
-    # Buscar usuÃ¡rio do vendedor
+    # Buscar usuário do vendedor
     usuario = Usuario.query.filter_by(vendedor_id=vendedor.id).first()
     if not usuario:
-        flash(f"Vendedor {vendedor.nome} nÃ£o possui login cadastrado!", "warning")
+        flash(f"Vendedor {vendedor.nome} não possui login cadastrado!", "warning")
         return redirect(url_for("lista_vendedores"))
 
     if request.method == "POST":
-        # Atualizar permissÃµes
+        # Atualizar permissões
         usuario.pode_ver_dashboard = "pode_ver_dashboard" in request.form
         usuario.pode_gerenciar_vendedores = (
             "pode_gerenciar_vendedores" in request.form
@@ -4445,14 +4428,14 @@ def gerenciar_permissoes_vendedor(id):
             "pode_aprovar_comissoes" in request.form
         )
 
-        # PermissÃµes de Clientes
+        # Permissões de Clientes
         usuario.pode_acessar_clientes = "pode_acessar_clientes" in request.form
         usuario.pode_criar_clientes = "pode_criar_clientes" in request.form
         usuario.pode_editar_clientes = "pode_editar_clientes" in request.form
         usuario.pode_excluir_clientes = "pode_excluir_clientes" in request.form
         usuario.pode_importar_clientes = "pode_importar_clientes" in request.form
 
-        # PermissÃµes de Estoque
+        # Permissões de Estoque
         usuario.pode_acessar_estoque = "pode_acessar_estoque" in request.form
         usuario.pode_gerenciar_produtos = "pode_gerenciar_produtos" in request.form
         usuario.pode_movimentar_estoque = "pode_movimentar_estoque" in request.form
@@ -4460,7 +4443,7 @@ def gerenciar_permissoes_vendedor(id):
         usuario.pode_ajustar_estoque = "pode_ajustar_estoque" in request.form
 
         db.session.commit()
-        flash(f"PermissÃµes de {vendedor.nome} atualizadas com sucesso!", "success")
+        flash(f"Permissões de {vendedor.nome} atualizadas com sucesso!", "success")
         return redirect(url_for("lista_vendedores"))
 
     return render_template(
@@ -4471,7 +4454,7 @@ def gerenciar_permissoes_vendedor(id):
 @login_required
 def importar_vendedores():
     """Importar vendedores via planilha Excel - Admin, Supervisor, RH e Gerente"""
-    # Verificar permissÃµes: admin, supervisor, RH e gerente podem importar vendedores
+    # Verificar permissões: admin, supervisor, RH e gerente podem importar vendedores
     if not pode_importar(current_user, "vendedores"):
         flash(
             "Acesso negado! Apenas Administradores, Supervisores, RH e Gerentes podem importar vendedores.",
@@ -4488,14 +4471,14 @@ def importar_vendedores():
 
         # Verificar disponibilidade do Excel
         if not EXCEL_AVAILABLE and not ensure_excel_available():
-            flash("Erro: Bibliotecas Excel nÃ£o instaladas. Contate o administrador.", "danger")
+            flash("Erro: Bibliotecas Excel não instaladas. Contate o administrador.", "danger")
             return redirect(request.url)
 
         try:
             # Ler Excel
             df = pd.read_excel(arquivo)
 
-            # Normalizar nomes das colunas (remover espaÃ§os, lowercase)
+            # Normalizar nomes das colunas (remover espaços, lowercase)
             df.columns = df.columns.str.strip().str.lower()
 
             # Mapear colunas com nomes variados
@@ -4506,23 +4489,23 @@ def importar_vendedores():
                 "cpf": ["cpf", "documento"],
             }
 
-            # Renomear colunas para padrÃ£o
+            # Renomear colunas para padrão
             for col_padrao, variantes in colunas_map.items():
                 for col in df.columns:
                     if col in variantes:
                         df.rename(columns={col: col_padrao}, inplace=True)
                         break
 
-            # Validar colunas obrigatÃ³rias
+            # Validar colunas obrigatórias
             colunas_obrigatorias = ["nome", "email", "telefone", "cpf"]
             colunas_faltando = [
                 col for col in colunas_obrigatorias if col not in df.columns
             ]
 
             if colunas_faltando:
-                # Formatar para exibiÃ§Ã£o
+                # Formatar para exibição
                 colunas_exibir = [c.capitalize() for c in colunas_faltando]
-                msg = f'Colunas obrigatÃ³rias faltando: {", ".join(colunas_exibir)}'
+                msg = f'Colunas obrigatórias faltando: {", ".join(colunas_exibir)}'
                 flash(msg, "danger")
                 return redirect(request.url)
 
@@ -4533,7 +4516,7 @@ def importar_vendedores():
                     "empresa_cnpj" not in df.columns and
                     "empresa cnpj" not in df.columns
                 ):
-                    # Renomear se existir com espaÃ§o
+                    # Renomear se existir com espaço
                     if "empresa cnpj" in df.columns:
                         df.rename(
                             columns={"empresa cnpj": "empresa_cnpj"},
@@ -4562,7 +4545,7 @@ def importar_vendedores():
                         if not empresa:
                             erros.append(
                                 f"Linha {idx + 2}: Empresa CNPJ "
-                                f"{row['empresa_cnpj']} nÃ£o encontrada"
+                                f"{row['empresa_cnpj']} não encontrada"
                             )
                             continue
                         empresa_id = empresa.id
@@ -4572,7 +4555,7 @@ def importar_vendedores():
                         email=row["email"]
                     ).first()
                     if vendedor_existe:
-                        erros.append(f"Linha {idx + 2}: Email {row['email']} jÃ¡ cadastrado")
+                        erros.append(f"Linha {idx + 2}: Email {row['email']} já cadastrado")
                         continue
 
                     # Buscar supervisor (opcional)
@@ -4624,12 +4607,12 @@ def importar_vendedores():
                     db.session.add(vendedor)
                     db.session.flush()  # Para obter o ID do vendedor
 
-                    # Verificar se hÃ¡ colunas de meta (opcionais)
+                    # Verificar se há colunas de meta (opcionais)
                     col_mes = next(
                         (
                             c
                             for c in df.columns
-                            if "mes" in c.lower() or "mÃªs" in c.lower()
+                            if "mes" in c.lower() or "mês" in c.lower()
                         ),
                         None,
                     )
@@ -4657,7 +4640,7 @@ def importar_vendedores():
                                 ano_meta = int(row[col_ano])
                                 valor_meta = float(row[col_meta])
 
-                                # Verificar se meta jÃ¡ existe
+                                # Verificar se meta já existe
                                 meta_existe = Meta.query.filter_by(
                                     vendedor_id=vendedor.id,
                                     mes=mes_meta,
@@ -4673,7 +4656,7 @@ def importar_vendedores():
                                     )
                                     db.session.add(meta)
                             except (ValueError, TypeError):
-                                # Ignorar erro de conversÃ£o de meta
+                                # Ignorar erro de conversão de meta
                                 pass
 
                     sucesso += 1
@@ -4683,11 +4666,11 @@ def importar_vendedores():
 
             if erros:
                 db.session.rollback()
-                msg_erro = "<br>".join(erros[:10])  # Mostrar atÃ© 10 erros
+                msg_erro = "<br>".join(erros[:10])  # Mostrar até 10 erros
                 if len(erros) > 10:
                     msg_erro += f"<br>... e mais {len(erros) - 10} erros"
                 flash(f"Erros encontrados:<br>{msg_erro}", "warning")
-                # Retornar para pÃ¡gina de importaÃ§Ã£o sem redirecionar
+                # Retornar para página de importação sem redirecionar
                 return render_template("vendedores/importar.html")
             elif sucesso > 0:
                 db.session.commit()
@@ -4713,14 +4696,14 @@ def importar_vendedores():
 @app.route("/vendedores/download-template")
 @login_required
 def download_template_vendedores():
-    """Gera e baixa o template Excel para importaÃ§Ã£o de vendedores"""
-    # Verificar permissÃµes
+    """Gera e baixa o template Excel para importação de vendedores"""
+    # Verificar permissões
     if not pode_importar(current_user, "vendedores"):
         flash("Acesso negado!", "danger")
         return redirect(url_for("lista_vendedores"))
 
     if not EXCEL_AVAILABLE and not ensure_excel_available():
-        flash("Erro: Bibliotecas Excel nÃ£o instaladas.", "danger")
+        flash("Erro: Bibliotecas Excel não instaladas.", "danger")
         return redirect(url_for("importar_vendedores"))
 
     try:
@@ -4746,7 +4729,7 @@ def download_template_vendedores():
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                            top=Side(style='thin'), bottom=Side(style='thin'))
 
-        # Escrever cabeÃ§alhos
+        # Escrever cabeçalhos
         for col_num, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col_num, value=header)
             cell.fill = header_fill
@@ -4766,7 +4749,7 @@ def download_template_vendedores():
         if current_user.is_super_admin:
             ws.cell(row=2, column=5, value="00.000.000/0001-00").border = thin_border
 
-        # Salvar em memÃ³ria
+        # Salvar em memória
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
@@ -4783,21 +4766,21 @@ def download_template_vendedores():
         flash(f"Erro ao gerar template: {str(e)}", "danger")
         return redirect(url_for("importar_vendedores"))
 
-# ===== ROTAS DE FUNCIONÃRIOS (CRUD ADMINISTRATIVO) =====
+# ===== ROTAS DE FUNCIONÁRIOS (CRUD ADMINISTRATIVO) =====
 
 @app.route("/funcionarios")
 @login_required
 def lista_funcionarios():
-    """Lista todos os usuÃ¡rios/funcionÃ¡rios da empresa (somente Admin)."""
-    # Apenas Admin pode gerenciar funcionÃ¡rios
+    """Lista todos os usuários/funcionários da empresa (somente Admin)."""
+    # Apenas Admin pode gerenciar funcionários
     if current_user.cargo != "admin":
         flash(
-            "Acesso negado! Apenas Administradores podem gerenciar funcionÃ¡rios.",
+            "Acesso negado! Apenas Administradores podem gerenciar funcionários.",
             "danger",
         )
         return redirect(url_for("dashboard"))
 
-    # Super admin enxerga todos os usuÃ¡rios (exceto super admins)
+    # Super admin enxerga todos os usuários (exceto super admins)
     if current_user.is_super_admin:
         funcionarios = (
             Usuario.query.filter(Usuario.is_super_admin.is_(False))
@@ -4805,7 +4788,7 @@ def lista_funcionarios():
             .all()
         )
     else:
-        # Admin comum vÃª todos os usuÃ¡rios da prÃ³pria empresa (exceto super admins)
+        # Admin comum vê todos os usuários da própria empresa (exceto super admins)
         funcionarios = (
             Usuario.query.filter(
                 Usuario.empresa_id == current_user.empresa_id,
@@ -4822,16 +4805,16 @@ def lista_funcionarios():
 @app.route("/funcionarios/criar", methods=["GET", "POST"])
 @login_required
 def criar_funcionario():
-    """Criar novo funcionÃ¡rio - Apenas Admin"""
-    # Apenas Admin pode criar funcionÃ¡rios
+    """Criar novo funcionário - Apenas Admin"""
+    # Apenas Admin pode criar funcionários
     if current_user.cargo != "admin":
         flash(
-            "Acesso negado! Apenas Administradores podem criar funcionÃ¡rios.",
+            "Acesso negado! Apenas Administradores podem criar funcionários.",
             "danger",
         )
         return redirect(url_for("dashboard"))
 
-    # Buscar hierarquia disponÃ­vel na empresa para o formulÃ¡rio
+    # Buscar hierarquia disponível na empresa para o formulário
     if current_user.is_super_admin:
         admins_disponiveis = (
             Usuario.query.filter(
@@ -4894,28 +4877,28 @@ def criar_funcionario():
             senha = request.form.get("senha", "").strip()
             confirmar_senha = request.form.get("confirmar_senha", "").strip()
 
-            # VÃ­nculos hierÃ¡rquicos (opcionais conforme cargo)
+            # Vínculos hierárquicos (opcionais conforme cargo)
             admin_id_raw = request.form.get("admin_id", "").strip()
             gerente_id_raw = request.form.get("gerente_id", "").strip()
             supervisor_id_raw = request.form.get("supervisor_id", "").strip()
 
-            # ValidaÃ§Ãµes
+            # Validações
             if not all([nome, email, cargo, senha]):
                 flash(
-                    "âš ï¸ Por favor, preencha todos os campos obrigatÃ³rios!",
+                    "⚠️ Por favor, preencha todos os campos obrigatórios!",
                     "warning",
                 )
                 return render_template("funcionarios/form.html")
 
             if len(senha) < 6:
-                flash("âš ï¸ A senha deve ter no mÃ­nimo 6 caracteres!", "warning")
+                flash("⚠️ A senha deve ter no mínimo 6 caracteres!", "warning")
                 return render_template("funcionarios/form.html")
 
             if senha != confirmar_senha:
-                flash("âš ï¸ As senhas nÃ£o conferem!", "warning")
+                flash("⚠️ As senhas não conferem!", "warning")
                 return render_template("funcionarios/form.html")
 
-            # Verificar se cargo Ã© vÃ¡lido
+            # Verificar se cargo é válido
             cargos_permitidos = [
                 "admin",
                 "gerente",
@@ -4930,12 +4913,12 @@ def criar_funcionario():
                 "usuario",
             ]
             if cargo not in cargos_permitidos:
-                flash("âš ï¸ Cargo invÃ¡lido!", "warning")
+                flash("⚠️ Cargo inválido!", "warning")
                 return render_template("funcionarios/form.html")
 
-            # Verificar se email jÃ¡ existe
+            # Verificar se email já existe
             if Usuario.query.filter_by(email=email).first():
-                flash("âš ï¸ Este e-mail jÃ¡ estÃ¡ cadastrado!", "warning")
+                flash("⚠️ Este e-mail já está cadastrado!", "warning")
                 return render_template(
                     "funcionarios/form.html",
                     funcionario=None,
@@ -4948,11 +4931,11 @@ def criar_funcionario():
             gerente_id = None
             supervisor_id = None
 
-            # Todo GERENTE (incluindo gerente de manutenÃ§Ã£o) deve estar vinculado a um ADMIN
+            # Todo GERENTE (incluindo gerente de manutenção) deve estar vinculado a um ADMIN
             if cargo in ["gerente", "gerente_manutencao"]:
                 if not admins_disponiveis:
                     flash(
-                        "âš ï¸ Nenhum administrador disponÃ­vel para vincular o gerente. Cadastre um administrador primeiro.",
+                        "⚠️ Nenhum administrador disponível para vincular o gerente. Cadastre um administrador primeiro.",
                         "warning",
                     )
                     return render_template(
@@ -4965,7 +4948,7 @@ def criar_funcionario():
 
                 if not admin_id_raw:
                     flash(
-                        "âš ï¸ Selecione o Administrador responsÃ¡vel por este gerente.",
+                        "⚠️ Selecione o Administrador responsável por este gerente.",
                         "warning",
                     )
                     return render_template(
@@ -4979,7 +4962,7 @@ def criar_funcionario():
                 try:
                     admin_id = int(admin_id_raw)
                 except ValueError:
-                    flash("âš ï¸ Administrador selecionado invÃ¡lido.", "warning")
+                    flash("⚠️ Administrador selecionado inválido.", "warning")
                     return render_template(
                         "funcionarios/form.html",
                         funcionario=None,
@@ -4991,7 +4974,7 @@ def criar_funcionario():
                 admin = Usuario.query.get(admin_id)
                 if not admin or admin.cargo != "admin":
                     flash(
-                        "âš ï¸ Administrador responsÃ¡vel nÃ£o encontrado ou invÃ¡lido.",
+                        "⚠️ Administrador responsável não encontrado ou inválido.",
                         "warning",
                     )
                     return render_template(
@@ -5004,11 +4987,11 @@ def criar_funcionario():
 
                 gerente_id = admin.id
 
-            # Todo SUPERVISOR (incluindo supervisor de manutenÃ§Ã£o) deve estar vinculado a um GERENTE
+            # Todo SUPERVISOR (incluindo supervisor de manutenção) deve estar vinculado a um GERENTE
             if cargo in ["supervisor", "supervisor_manutencao"]:
                 if not gerentes_disponiveis:
                     flash(
-                        "âš ï¸ Nenhum gerente disponÃ­vel para vincular o supervisor. Cadastre um gerente primeiro.",
+                        "⚠️ Nenhum gerente disponível para vincular o supervisor. Cadastre um gerente primeiro.",
                         "warning",
                     )
                     return render_template(
@@ -5021,7 +5004,7 @@ def criar_funcionario():
 
                 if not gerente_id_raw:
                     flash(
-                        "âš ï¸ Selecione o Gerente responsÃ¡vel por este supervisor.",
+                        "⚠️ Selecione o Gerente responsável por este supervisor.",
                         "warning",
                     )
                     return render_template(
@@ -5035,7 +5018,7 @@ def criar_funcionario():
                 try:
                     gerente_id_val = int(gerente_id_raw)
                 except ValueError:
-                    flash("âš ï¸ Gerente selecionado invÃ¡lido.", "warning")
+                    flash("⚠️ Gerente selecionado inválido.", "warning")
                     return render_template(
                         "funcionarios/form.html",
                         funcionario=None,
@@ -5050,7 +5033,7 @@ def criar_funcionario():
                     "gerente_manutencao",
                 ]:
                     flash(
-                        "âš ï¸ Gerente responsÃ¡vel nÃ£o encontrado ou invÃ¡lido.",
+                        "⚠️ Gerente responsável não encontrado ou inválido.",
                         "warning",
                     )
                     return render_template(
@@ -5063,7 +5046,7 @@ def criar_funcionario():
 
                 gerente_id = gerente_responsavel.id
 
-            # Todos VENDEDOR, TÃ‰CNICO, AUXILIAR e USUÃRIO devem estar vinculados a um SUPERVISOR
+            # Todos VENDEDOR, TÉCNICO, AUXILIAR e USUÁRIO devem estar vinculados a um SUPERVISOR
             cargos_que_precisam_supervisor = [
                 "vendedor",
                 "tecnico",
@@ -5073,7 +5056,7 @@ def criar_funcionario():
             if cargo in cargos_que_precisam_supervisor:
                 if not supervisores_disponiveis:
                     flash(
-                        "âš ï¸ Nenhum supervisor disponÃ­vel para vincular este funcionÃ¡rio. Cadastre um supervisor primeiro.",
+                        "⚠️ Nenhum supervisor disponível para vincular este funcionário. Cadastre um supervisor primeiro.",
                         "warning",
                     )
                     return render_template(
@@ -5086,7 +5069,7 @@ def criar_funcionario():
 
                 if not supervisor_id_raw:
                     flash(
-                        "âš ï¸ Selecione o Supervisor responsÃ¡vel por este funcionÃ¡rio.",
+                        "⚠️ Selecione o Supervisor responsável por este funcionário.",
                         "warning",
                     )
                     return render_template(
@@ -5100,7 +5083,7 @@ def criar_funcionario():
                 try:
                     supervisor_id_val = int(supervisor_id_raw)
                 except ValueError:
-                    flash("âš ï¸ Supervisor selecionado invÃ¡lido.", "warning")
+                    flash("⚠️ Supervisor selecionado inválido.", "warning")
                     return render_template(
                         "funcionarios/form.html",
                         funcionario=None,
@@ -5115,7 +5098,7 @@ def criar_funcionario():
                     "supervisor_manutencao",
                 ]:
                     flash(
-                        "âš ï¸ Supervisor responsÃ¡vel nÃ£o encontrado ou invÃ¡lido.",
+                        "⚠️ Supervisor responsável não encontrado ou inválido.",
                         "warning",
                     )
                     return render_template(
@@ -5128,7 +5111,7 @@ def criar_funcionario():
 
                 supervisor_id = supervisor_responsavel.id
 
-            # Criar funcionÃ¡rio
+            # Criar funcionário
             funcionario = Usuario(
                 nome=nome,
                 email=email,
@@ -5148,23 +5131,23 @@ def criar_funcionario():
             db.session.add(funcionario)
             db.session.commit()
 
-            flash(f"FuncionÃ¡rio {nome} cadastrado com sucesso!", "success")
+            flash(f"Funcionário {nome} cadastrado com sucesso!", "success")
             return redirect(url_for("lista_funcionarios"))
 
         except Exception as e:
             db.session.rollback()
-            flash(f"Erro ao cadastrar funcionÃ¡rio: {str(e)}", "danger")
+            flash(f"Erro ao cadastrar funcionário: {str(e)}", "danger")
 
     return render_template("funcionarios/form.html", funcionario=None)
 
 @app.route("/funcionarios/<int:id>/editar", methods=["GET", "POST"])
 @login_required
 def editar_funcionario(id):
-    """Editar funcionÃ¡rio - Apenas Admin"""
-    # Apenas Admin pode editar funcionÃ¡rios
+    """Editar funcionário - Apenas Admin"""
+    # Apenas Admin pode editar funcionários
     if current_user.cargo != "admin":
         flash(
-            "Acesso negado! Apenas Administradores podem editar funcionÃ¡rios.",
+            "Acesso negado! Apenas Administradores podem editar funcionários.",
             "danger",
         )
         return redirect(url_for("dashboard"))
@@ -5175,12 +5158,12 @@ def editar_funcionario(id):
     if not current_user.is_super_admin:
         if funcionario.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para editar este funcionÃ¡rio!",
+                "Você não tem permissão para editar este funcionário!",
                 "danger",
             )
             return redirect(url_for("lista_funcionarios"))
 
-    # Buscar hierarquia disponÃ­vel na empresa para o formulÃ¡rio
+    # Buscar hierarquia disponível na empresa para o formulário
     if current_user.is_super_admin:
         admins_disponiveis = (
             Usuario.query.filter(
@@ -5245,10 +5228,10 @@ def editar_funcionario(id):
             gerente_id_raw = request.form.get("gerente_id", "").strip()
             supervisor_id_raw = request.form.get("supervisor_id", "").strip()
 
-            # ValidaÃ§Ãµes
+            # Validações
             if not all([nome, email, cargo]):
                 flash(
-                    "âš ï¸ Por favor, preencha todos os campos obrigatÃ³rios!",
+                    "⚠️ Por favor, preencha todos os campos obrigatórios!",
                     "warning",
                 )
                 return render_template(
@@ -5259,7 +5242,7 @@ def editar_funcionario(id):
                     supervisores_disponiveis=supervisores_disponiveis,
                 )
 
-            # Verificar se cargo Ã© vÃ¡lido
+            # Verificar se cargo é válido
             cargos_permitidos = [
                 "admin",
                 "gerente",
@@ -5274,7 +5257,7 @@ def editar_funcionario(id):
                 "usuario",
             ]
             if cargo not in cargos_permitidos:
-                flash("âš ï¸ Cargo invÃ¡lido!", "warning")
+                flash("⚠️ Cargo inválido!", "warning")
                 return render_template(
                     "funcionarios/form.html",
                     funcionario=funcionario,
@@ -5287,11 +5270,11 @@ def editar_funcionario(id):
             gerente_id = funcionario.gerente_id
             supervisor_id = funcionario.supervisor_id
 
-            # Todo GERENTE (incluindo gerente de manutenÃ§Ã£o) deve estar vinculado a um ADMIN
+            # Todo GERENTE (incluindo gerente de manutenção) deve estar vinculado a um ADMIN
             if cargo in ["gerente", "gerente_manutencao"]:
                 if not admins_disponiveis:
                     flash(
-                        "âš ï¸ Nenhum administrador disponÃ­vel para vincular o gerente. Cadastre um administrador primeiro.",
+                        "⚠️ Nenhum administrador disponível para vincular o gerente. Cadastre um administrador primeiro.",
                         "warning",
                     )
                     return render_template(
@@ -5304,7 +5287,7 @@ def editar_funcionario(id):
 
                 if not admin_id_raw:
                     flash(
-                        "âš ï¸ Selecione o Administrador responsÃ¡vel por este gerente.",
+                        "⚠️ Selecione o Administrador responsável por este gerente.",
                         "warning",
                     )
                     return render_template(
@@ -5318,7 +5301,7 @@ def editar_funcionario(id):
                 try:
                     admin_id = int(admin_id_raw)
                 except ValueError:
-                    flash("âš ï¸ Administrador selecionado invÃ¡lido.", "warning")
+                    flash("⚠️ Administrador selecionado inválido.", "warning")
                     return render_template(
                         "funcionarios/form.html",
                         funcionario=funcionario,
@@ -5330,7 +5313,7 @@ def editar_funcionario(id):
                 admin = Usuario.query.get(admin_id)
                 if not admin or admin.cargo != "admin":
                     flash(
-                        "âš ï¸ Administrador responsÃ¡vel nÃ£o encontrado ou invÃ¡lido.",
+                        "⚠️ Administrador responsável não encontrado ou inválido.",
                         "warning",
                     )
                     return render_template(
@@ -5343,11 +5326,11 @@ def editar_funcionario(id):
 
                 gerente_id = admin.id
 
-            # Todo SUPERVISOR (incluindo supervisor de manutenÃ§Ã£o) deve estar vinculado a um GERENTE
+            # Todo SUPERVISOR (incluindo supervisor de manutenção) deve estar vinculado a um GERENTE
             if cargo in ["supervisor", "supervisor_manutencao"]:
                 if not gerentes_disponiveis:
                     flash(
-                        "âš ï¸ Nenhum gerente disponÃ­vel para vincular o supervisor. Cadastre um gerente primeiro.",
+                        "⚠️ Nenhum gerente disponível para vincular o supervisor. Cadastre um gerente primeiro.",
                         "warning",
                     )
                     return render_template(
@@ -5360,7 +5343,7 @@ def editar_funcionario(id):
 
                 if not gerente_id_raw:
                     flash(
-                        "âš ï¸ Selecione o Gerente responsÃ¡vel por este supervisor.",
+                        "⚠️ Selecione o Gerente responsável por este supervisor.",
                         "warning",
                     )
                     return render_template(
@@ -5374,7 +5357,7 @@ def editar_funcionario(id):
                 try:
                     gerente_id_val = int(gerente_id_raw)
                 except ValueError:
-                    flash("âš ï¸ Gerente selecionado invÃ¡lido.", "warning")
+                    flash("⚠️ Gerente selecionado inválido.", "warning")
                     return render_template(
                         "funcionarios/form.html",
                         funcionario=funcionario,
@@ -5389,7 +5372,7 @@ def editar_funcionario(id):
                     "gerente_manutencao",
                 ]:
                     flash(
-                        "âš ï¸ Gerente responsÃ¡vel nÃ£o encontrado ou invÃ¡lido.",
+                        "⚠️ Gerente responsável não encontrado ou inválido.",
                         "warning",
                     )
                     return render_template(
@@ -5402,7 +5385,7 @@ def editar_funcionario(id):
 
                 gerente_id = gerente_responsavel.id
 
-            # Todos VENDEDOR, TÃ‰CNICO, AUXILIAR e USUÃRIO devem estar vinculados a um SUPERVISOR
+            # Todos VENDEDOR, TÉCNICO, AUXILIAR e USUÁRIO devem estar vinculados a um SUPERVISOR
             cargos_que_precisam_supervisor = [
                 "vendedor",
                 "tecnico",
@@ -5412,7 +5395,7 @@ def editar_funcionario(id):
             if cargo in cargos_que_precisam_supervisor:
                 if not supervisores_disponiveis:
                     flash(
-                        "âš ï¸ Nenhum supervisor disponÃ­vel para vincular este funcionÃ¡rio. Cadastre um supervisor primeiro.",
+                        "⚠️ Nenhum supervisor disponível para vincular este funcionário. Cadastre um supervisor primeiro.",
                         "warning",
                     )
                     return render_template(
@@ -5425,7 +5408,7 @@ def editar_funcionario(id):
 
                 if not supervisor_id_raw:
                     flash(
-                        "âš ï¸ Selecione o Supervisor responsÃ¡vel por este funcionÃ¡rio.",
+                        "⚠️ Selecione o Supervisor responsável por este funcionário.",
                         "warning",
                     )
                     return render_template(
@@ -5439,7 +5422,7 @@ def editar_funcionario(id):
                 try:
                     supervisor_id_val = int(supervisor_id_raw)
                 except ValueError:
-                    flash("âš ï¸ Supervisor selecionado invÃ¡lido.", "warning")
+                    flash("⚠️ Supervisor selecionado inválido.", "warning")
                     return render_template(
                         "funcionarios/form.html",
                         funcionario=funcionario,
@@ -5454,7 +5437,7 @@ def editar_funcionario(id):
                     "supervisor_manutencao",
                 ]:
                     flash(
-                        "âš ï¸ Supervisor responsÃ¡vel nÃ£o encontrado ou invÃ¡lido.",
+                        "⚠️ Supervisor responsável não encontrado ou inválido.",
                         "warning",
                     )
                     return render_template(
@@ -5467,7 +5450,7 @@ def editar_funcionario(id):
 
                 supervisor_id = supervisor_responsavel.id
             elif cargo not in ["gerente", "supervisor"]:
-                # Para outros cargos, vÃ­nculo com supervisor Ã© opcional
+                # Para outros cargos, vínculo com supervisor é opcional
                 supervisor_id = supervisor_id or None
 
             # Atualizar dados
@@ -5486,25 +5469,25 @@ def editar_funcionario(id):
                 ).strip()
                 if len(nova_senha) < 6:
                     flash(
-                        "âš ï¸ A senha deve ter no mÃ­nimo 6 caracteres!", "warning"
+                        "⚠️ A senha deve ter no mínimo 6 caracteres!", "warning"
                     )
                     return render_template(
                         "funcionarios/form.html", funcionario=funcionario
                     )
                 if nova_senha != confirmar_senha:
-                    flash("âš ï¸ As senhas nÃ£o conferem!", "warning")
+                    flash("⚠️ As senhas não conferem!", "warning")
                     return render_template(
                         "funcionarios/form.html", funcionario=funcionario
                     )
                 funcionario.set_senha(nova_senha)
 
             db.session.commit()
-            flash(f"FuncionÃ¡rio {funcionario.nome} atualizado com sucesso!", "success")
+            flash(f"Funcionário {funcionario.nome} atualizado com sucesso!", "success")
             return redirect(url_for("lista_funcionarios"))
 
         except Exception as e:
             db.session.rollback()
-            flash(f"Erro ao atualizar funcionÃ¡rio: {str(e)}", "danger")
+            flash(f"Erro ao atualizar funcionário: {str(e)}", "danger")
 
     return render_template(
         "funcionarios/form.html",
@@ -5517,11 +5500,11 @@ def editar_funcionario(id):
 @app.route("/funcionarios/<int:id>/deletar", methods=["POST"])
 @login_required
 def deletar_funcionario(id):
-    """Deletar funcionÃ¡rio - Apenas Admin"""
-    # Apenas Admin pode deletar funcionÃ¡rios
+    """Deletar funcionário - Apenas Admin"""
+    # Apenas Admin pode deletar funcionários
     if current_user.cargo != "admin":
         flash(
-            "Acesso negado! Apenas Administradores podem deletar funcionÃ¡rios.",
+            "Acesso negado! Apenas Administradores podem deletar funcionários.",
             "danger",
         )
         return redirect(url_for("dashboard"))
@@ -5532,42 +5515,42 @@ def deletar_funcionario(id):
     if not current_user.is_super_admin:
         if funcionario.empresa_id != current_user.empresa_id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para deletar este funcionÃ¡rio!",
+                "Você não tem permissão para deletar este funcionário!",
                 "danger",
             )
             return redirect(url_for("lista_funcionarios"))
 
-    # NÃ£o pode deletar a si mesmo
+    # Não pode deletar a si mesmo
     if funcionario.id == current_user.id:
-        flash("âš ï¸ VocÃª nÃ£o pode deletar seu prÃ³prio usuÃ¡rio!", "warning")
+        flash("⚠️ Você não pode deletar seu próprio usuário!", "warning")
         return redirect(url_for("lista_funcionarios"))
 
     try:
         nome = funcionario.nome
         db.session.delete(funcionario)
         db.session.commit()
-        flash(f"FuncionÃ¡rio {nome} removido com sucesso!", "success")
+        flash(f"Funcionário {nome} removido com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao remover funcionÃ¡rio: {str(e)}", "danger")
+        flash(f"Erro ao remover funcionário: {str(e)}", "danger")
 
     return redirect(url_for("lista_funcionarios"))
 
 @app.route("/funcionarios/<int:id>/ativar-desativar", methods=["POST"])
 @login_required
 def ativar_desativar_funcionario(id):
-    """Ativar/Desativar funcionÃ¡rio - Apenas Admin"""
-    # Apenas Admin pode ativar/desativar funcionÃ¡rios
+    """Ativar/Desativar funcionário - Apenas Admin"""
+    # Apenas Admin pode ativar/desativar funcionários
     if current_user.cargo != "admin":
         flash("Acesso negado!", "danger")
         return redirect(url_for("dashboard"))
 
     funcionario = Usuario.query.get_or_404(id)
 
-    # Verificar permissÃµes
+    # Verificar permissões
     if not current_user.is_super_admin:
         if funcionario.empresa_id != current_user.empresa_id:
-            flash("VocÃª nÃ£o tem permissÃ£o!", "danger")
+            flash("Você não tem permissão!", "danger")
             return redirect(url_for("lista_funcionarios"))
 
     try:
@@ -5575,7 +5558,7 @@ def ativar_desativar_funcionario(id):
         db.session.commit()
 
         status = "ativado" if funcionario.ativo else "desativado"
-        flash(f"FuncionÃ¡rio {funcionario.nome} {status} com sucesso!", "success")
+        flash(f"Funcionário {funcionario.nome} {status} com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
         flash(f"Erro: {str(e)}", "danger")
@@ -5587,12 +5570,12 @@ def ativar_desativar_funcionario(id):
 @app.route("/clientes")
 @login_required
 def lista_clientes():
-    """Lista todos os clientes com paginaÃ§Ã£o"""
-    # ParÃ¢metros de paginaÃ§Ã£o
+    """Lista todos os clientes com paginação"""
+    # Parâmetros de paginação
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get(
         "per_page", 10, type=int
-    )  # 10 clientes por pÃ¡gina (melhor desempenho e leitura)
+    )  # 10 clientes por página (melhor desempenho e leitura)
 
     # Obter filtros da query string
     status_filtro = request.args.get("status", "todos")
@@ -5603,12 +5586,12 @@ def lista_clientes():
 
     # Base query com lazy loading otimizado
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
-        # Vendedor vÃª apenas seus clientes
+        # Vendedor vê apenas seus clientes
         query = Cliente.query.filter_by(
             vendedor_id=current_user.vendedor_id, ativo=True
         )
     elif current_user.cargo == "supervisor":
-        # Supervisor vÃª clientes de seus vendedores
+        # Supervisor vê clientes de seus vendedores
         vendedores_ids = [v.id for v in current_user.vendedores]
         query = Cliente.query.filter(
             Cliente.vendedor_id.in_(vendedores_ids), Cliente.ativo
@@ -5616,7 +5599,7 @@ def lista_clientes():
     elif current_user.is_super_admin:
         query = Cliente.query.filter_by(ativo=True)
     else:
-        # Admin da empresa vÃª todos clientes da empresa
+        # Admin da empresa vê todos clientes da empresa
         query = Cliente.query.filter_by(
             empresa_id=current_user.empresa_id, ativo=True
         )
@@ -5655,10 +5638,10 @@ def lista_clientes():
     if status_filtro != "todos":
         clientes = [c for c in clientes if c.get_status_cor() == status_filtro]
 
-    # EstatÃ­sticas (otimizadas - contar no banco)
+    # Estatísticas (otimizadas - contar no banco)
     total_clientes = pagination.total
 
-    # Para estatÃ­sticas de status, usamos a pÃ¡gina atual
+    # Para estatísticas de status, usamos a página atual
     clientes_verde = len(
         [c for c in clientes if c.get_status_cor() == "verde"]
     )
@@ -5690,18 +5673,18 @@ def lista_clientes():
 def novo_cliente():
     """Cadastrar novo cliente"""
     try:
-        # Criar formulÃ¡rio com empresa_id para popular dropdowns automaticamente
+        # Criar formulário com empresa_id para popular dropdowns automaticamente
         form = ClienteForm(empresa_id=current_user.empresa_id)
         
-        # Se o usuÃ¡rio for vendedor, prÃ©-selecionar seu ID
+        # Se o usuário for vendedor, pré-selecionar seu ID
         if request.method == "GET" and current_user.cargo == "vendedor":
             vendedor_atual = Vendedor.query.filter_by(usuario_id=current_user.id).first()
             if vendedor_atual:
                 form.vendedor_id.data = vendedor_atual.id
                 
     except Exception as e:
-        app.logger.error(f"Erro ao inicializar formulÃ¡rio de cliente: {str(e)}")
-        flash("Erro ao carregar formulÃ¡rio. Tente novamente.", "danger")
+        app.logger.error(f"Erro ao inicializar formulário de cliente: {str(e)}")
+        flash("Erro ao carregar formulário. Tente novamente.", "danger")
         return redirect(url_for("lista_clientes"))
 
     if form.validate_on_submit():
@@ -5710,18 +5693,18 @@ def novo_cliente():
             # Determinar vendedor_id
             vendedor_id = form.vendedor_id.data
 
-            # Regra padrÃ£o: cliente pertence Ã  mesma empresa do vendedor selecionado
+            # Regra padrão: cliente pertence à mesma empresa do vendedor selecionado
             supervisor_id_resolvido = None
             if vendedor_id:
                 vendedor_sel = Vendedor.query.get(vendedor_id)
                 if not vendedor_sel:
-                    raise Exception("Vendedor selecionado nÃ£o existe.")
-                # Bloqueia associaÃ§Ã£o entre empresas diferentes
+                    raise Exception("Vendedor selecionado não existe.")
+                # Bloqueia associação entre empresas diferentes
                 if (
                     not current_user.is_super_admin and
                     vendedor_sel.empresa_id != current_user.empresa_id
                 ):
-                    raise Exception("Vendedor de outra empresa nÃ£o pode ser associado ao cliente.")
+                    raise Exception("Vendedor de outra empresa não pode ser associado ao cliente.")
                 # Supervisor do cliente segue o supervisor do vendedor
                 supervisor_id_resolvido = vendedor_sel.supervisor_id
 
@@ -5751,7 +5734,7 @@ def novo_cliente():
                 re.sub(r"\D", "", form.cep.data) if form.cep.data else None
             )
 
-            # Gerar cÃ³digo Ãºnico do cliente
+            # Gerar código único do cliente
             municipio = (
                 form.municipio.data.strip()
                 if form.municipio.data
@@ -5761,16 +5744,16 @@ def novo_cliente():
                     else "SEM_CIDADE"
                 )
             )
-            # Gerar cÃ³digo Ãºnico do cliente
-            # A funÃ§Ã£o gerar_codigo_cliente jÃ¡ tem retry interno e Ã© thread-safe
+            # Gerar código único do cliente
+            # A função gerar_codigo_cliente já tem retry interno e é thread-safe
             try:
                 codigo_cliente = Cliente.gerar_codigo_cliente(
                     municipio, current_user.empresa_id
                 )
             except Exception as e:
-                app.logger.error(f"Erro ao gerar cÃ³digo de cliente: {str(e)}")
+                app.logger.error(f"Erro ao gerar código de cliente: {str(e)}")
                 raise Exception(
-                    "NÃ£o foi possÃ­vel gerar cÃ³digo Ãºnico para o cliente. "
+                    "Não foi possível gerar código único para o cliente. "
                     "Por favor, tente novamente em alguns instantes."
                 )
 
@@ -5806,7 +5789,7 @@ def novo_cliente():
                 cep=cep_limpo,
                 bairro=form.bairro.data.strip() if form.bairro.data else None,
                 estado=(form.estado.data.strip() if form.estado.data else None),
-                cidade=municipio,  # MantÃ©m compatibilidade
+                cidade=municipio,  # Mantém compatibilidade
                 ponto_referencia=(
                     form.ponto_referencia.data.strip()
                     if form.ponto_referencia.data
@@ -5851,7 +5834,7 @@ def novo_cliente():
 
             db.session.add(cliente)
             
-            # Tentar salvar com retry em caso de violaÃ§Ã£o de unicidade (raro com novo sistema)
+            # Tentar salvar com retry em caso de violação de unicidade (raro com novo sistema)
             max_commit_tentativas = 5
             
             for commit_tentativa in range(max_commit_tentativas):
@@ -5863,13 +5846,13 @@ def novo_cliente():
                     from sqlalchemy.exc import IntegrityError
                     db.session.rollback()
                     
-                    # Se for erro de unicidade no cÃ³digo (muito raro agora)
+                    # Se for erro de unicidade no código (muito raro agora)
                     if isinstance(e, IntegrityError) and 'codigo_cliente' in str(e).lower():
                         if commit_tentativa < max_commit_tentativas - 1:
-                            # Gerar novo cÃ³digo e tentar novamente
+                            # Gerar novo código e tentar novamente
                             app.logger.warning(
-                                f"Conflito de cÃ³digo detectado na tentativa {commit_tentativa + 1}, "
-                                f"gerando novo cÃ³digo..."
+                                f"Conflito de código detectado na tentativa {commit_tentativa + 1}, "
+                                f"gerando novo código..."
                             )
                             import time
                             time.sleep(0.15 * (commit_tentativa + 1))
@@ -5880,10 +5863,10 @@ def novo_cliente():
                             cliente.codigo_cliente = novo_codigo
                             db.session.add(cliente)
                         else:
-                            # Ãšltima tentativa falhou
+                            # Última tentativa falhou
                             app.logger.error(f"Falha persistente ao salvar cliente: {str(e)}")
                             raise Exception(
-                                "NÃ£o foi possÃ­vel salvar o cliente apÃ³s mÃºltiplas tentativas. "
+                                "Não foi possível salvar o cliente após múltiplas tentativas. "
                                 "Por favor, aguarde alguns segundos e tente novamente."
                             )
                     
@@ -5891,11 +5874,11 @@ def novo_cliente():
                     elif isinstance(e, IntegrityError):
                         if 'cpf' in str(e).lower():
                             raise Exception(
-                                "JÃ¡ existe um cliente cadastrado com este CPF nesta empresa."
+                                "Já existe um cliente cadastrado com este CPF nesta empresa."
                             )
                         elif 'cnpj' in str(e).lower():
                             raise Exception(
-                                "JÃ¡ existe um cliente cadastrado com este CNPJ nesta empresa."
+                                "Já existe um cliente cadastrado com este CNPJ nesta empresa."
                             )
                         else:
                             raise Exception(f"Erro de integridade de dados: {str(e)}")
@@ -5904,17 +5887,17 @@ def novo_cliente():
                         raise
 
             flash("Cliente cadastrado com sucesso!", "success")
-            app.logger.info(f"Cliente {cliente.nome} cadastrado com cÃ³digo {cliente.codigo_cliente}")
+            app.logger.info(f"Cliente {cliente.nome} cadastrado com código {cliente.codigo_cliente}")
             return redirect(url_for("lista_clientes"))
 
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Erro ao cadastrar cliente: {str(e)}")
             
-            # Mensagem mais amigÃ¡vel para o usuÃ¡rio
+            # Mensagem mais amigável para o usuário
             if 'codigo_cliente' in str(e) and 'duplicate' in str(e).lower():
                 flash(
-                    "Ocorreu um conflito ao gerar o cÃ³digo do cliente. "
+                    "Ocorreu um conflito ao gerar o código do cliente. "
                     "Por favor, tente cadastrar novamente.",
                     "warning"
                 )
@@ -5931,22 +5914,22 @@ def ver_cliente(id):
     """Ver detalhes do cliente"""
     cliente = Cliente.query.get_or_404(id)
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if not verificar_acesso_cliente(cliente):
-        flash("VocÃª nÃ£o tem permissÃ£o para acessar este cliente.", "danger")
+        flash("Você não tem permissão para acessar este cliente.", "danger")
         return redirect(url_for("lista_clientes"))
 
-    # Buscar histÃ³rico de compras
+    # Buscar histórico de compras
     compras = (
         cliente.compras.order_by(CompraCliente.data_compra.desc())
         .limit(20)
         .all()
     )
 
-    # EstatÃ­sticas do cliente
+    # Estatísticas do cliente
     total_compras = cliente.compras.count()
     total_compras_mes = cliente.get_total_compras_mes()
-    agora = now_brasilia()
+    agora = datetime.utcnow()
 
     return render_template(
         "clientes/ver.html",
@@ -5964,16 +5947,16 @@ def editar_cliente(id):
     """Editar cliente existente"""
     cliente = Cliente.query.get_or_404(id)
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if not verificar_acesso_cliente(cliente):
-        flash("VocÃª nÃ£o tem permissÃ£o para editar este cliente.", "danger")
+        flash("Você não tem permissão para editar este cliente.", "danger")
         return redirect(url_for("lista_clientes"))
 
     form = ClienteForm(
         cliente_id=cliente.id, empresa_id=current_user.empresa_id, obj=cliente
     )
 
-    # PrÃ©-preencher formas de pagamento e vendedor
+    # Pré-preencher formas de pagamento e vendedor
     if request.method == "GET":
         form.formas_pagamento.data = cliente.get_formas_pagamento_list()
         form.vendedor_id.data = cliente.vendedor_id
@@ -5988,7 +5971,7 @@ def editar_cliente(id):
             # Atualizar vendedor
             cliente.vendedor_id = form.vendedor_id.data
 
-            # Atualizar dados bÃ¡sicos
+            # Atualizar dados básicos
             cliente.nome = form.nome.data.strip() if form.nome.data else None
             cliente.razao_social = (
                 form.razao_social.data.strip()
@@ -6013,7 +5996,7 @@ def editar_cliente(id):
                 form.codigo_bp.data.strip() if form.codigo_bp.data else None
             )
 
-            # Atualizar endereÃ§o
+            # Atualizar endereço
             cliente.logradouro = (
                 form.logradouro.data.strip() if form.logradouro.data else None
             )
@@ -6023,7 +6006,7 @@ def editar_cliente(id):
                 else (form.cidade.data.strip() if form.cidade.data else None)
             )
             cliente.municipio = municipio
-            cliente.cidade = municipio  # MantÃ©m compatibilidade
+            cliente.cidade = municipio  # Mantém compatibilidade
             cliente.cep = (
                 re.sub(r"\D", "", form.cep.data) if form.cep.data else None
             )
@@ -6066,7 +6049,7 @@ def editar_cliente(id):
                 form.email.data.strip().lower() if form.email.data else None
             )
 
-            # Atualizar informaÃ§Ãµes comerciais
+            # Atualizar informações comerciais
             cliente.dia_visita = (
                 form.dia_visita.data if form.dia_visita.data else None
             )
@@ -6106,16 +6089,16 @@ def editar_cliente(id):
 @login_required
 def inativar_cliente(id):
     """Inativar cliente (soft delete) - Apenas Admin"""
-    # Verificar se Ã© admin ou super_admin
+    # Verificar se é admin ou super_admin
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado. Apenas administradores podem inativar clientes.", "danger")
         return redirect(url_for("lista_clientes"))
     
     cliente = Cliente.query.get_or_404(id)
 
-    # Super admin pode inativar qualquer cliente, admin sÃ³ da sua empresa
+    # Super admin pode inativar qualquer cliente, admin só da sua empresa
     if not current_user.is_super_admin and cliente.empresa_id != current_user.empresa_id:
-        flash("VocÃª nÃ£o tem permissÃ£o para inativar este cliente.", "danger")
+        flash("Você não tem permissão para inativar este cliente.", "danger")
         return redirect(url_for("lista_clientes"))
 
     try:
@@ -6134,73 +6117,73 @@ def inativar_cliente(id):
 def deletar_cliente(id):
     """Excluir cliente permanentemente - Apenas Admin
     
-    Regras de negÃ³cio:
-    - Clientes com vendas/compras NÃƒO podem ser excluÃ­dos (apenas inativados)
-    - Clientes sem histÃ³rico podem ser excluÃ­dos permanentemente
+    Regras de negócio:
+    - Clientes com vendas/compras NÃO podem ser excluídos (apenas inativados)
+    - Clientes sem histórico podem ser excluídos permanentemente
     """
-    # Verificar se Ã© admin ou super_admin
+    # Verificar se é admin ou super_admin
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado. Apenas administradores podem excluir clientes.", "danger")
         return redirect(url_for("lista_clientes"))
     
     cliente = Cliente.query.get_or_404(id)
 
-    # Super admin pode excluir qualquer cliente, admin sÃ³ da sua empresa
+    # Super admin pode excluir qualquer cliente, admin só da sua empresa
     if not current_user.is_super_admin and cliente.empresa_id != current_user.empresa_id:
-        flash("VocÃª nÃ£o tem permissÃ£o para excluir este cliente.", "danger")
+        flash("Você não tem permissão para excluir este cliente.", "danger")
         return redirect(url_for("lista_clientes"))
 
     try:
         nome_cliente = cliente.nome
         
-        # REGRA 1: Verificar se hÃ¡ vendas/compras registradas
+        # REGRA 1: Verificar se há vendas/compras registradas
         total_compras = CompraCliente.query.filter_by(cliente_id=cliente.id).count()
         
         if total_compras > 0:
             flash(
                 Markup(
-                    f"âš ï¸ NÃ£o Ã© possÃ­vel excluir o cliente '{nome_cliente}'. "
+                    f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
                     f"Este cliente possui {total_compras} venda(s) registrada(s) no sistema. "
                     f"<br><br>"
-                    f"<strong>ðŸ“‹ Por questÃµes de auditoria e histÃ³rico financeiro, clientes com vendas sÃ³ podem ser INATIVADOS.</strong>"
+                    f"<strong>📋 Por questões de auditoria e histórico financeiro, clientes com vendas só podem ser INATIVADOS.</strong>"
                     f"<br><br>"
-                    f"Use a opÃ§Ã£o <strong>'Inativar Cliente'</strong> no menu de aÃ§Ãµes administrativas."
+                    f"Use a opção <strong>'Inativar Cliente'</strong> no menu de ações administrativas."
                 ),
                 "warning"
             )
             return redirect(url_for("lista_clientes"))
         
-        # REGRA 2: Verificar se hÃ¡ ordens de serviÃ§o (qualquer status)
+        # REGRA 2: Verificar se há ordens de serviço (qualquer status)
         from models import OrdemServico
         total_ordens = OrdemServico.query.filter_by(cliente_id=cliente.id).count()
         
         if total_ordens > 0:
             flash(
                 Markup(
-                    f"âš ï¸ NÃ£o Ã© possÃ­vel excluir o cliente '{nome_cliente}'. "
-                    f"Este cliente possui {total_ordens} ordem(ns) de serviÃ§o registrada(s). "
+                    f"⚠️ Não é possível excluir o cliente '{nome_cliente}'. "
+                    f"Este cliente possui {total_ordens} ordem(ns) de serviço registrada(s). "
                     f"<br><br>"
-                    f"<strong>Use a opÃ§Ã£o 'Inativar Cliente'</strong> para preservar o histÃ³rico de manutenÃ§Ã£o."
+                    f"<strong>Use a opção 'Inativar Cliente'</strong> para preservar o histórico de manutenção."
                 ),
                 "warning"
             )
             return redirect(url_for("lista_clientes"))
         
-        # Se chegou aqui, o cliente nÃ£o tem vendas nem ordens de serviÃ§o
-        # Pode ser excluÃ­do permanentemente
+        # Se chegou aqui, o cliente não tem vendas nem ordens de serviço
+        # Pode ser excluído permanentemente
         db.session.delete(cliente)
         db.session.commit()
 
         flash(
             Markup(
-                f"âœ… Cliente '{nome_cliente}' excluÃ­do permanentemente com sucesso! "
-                f"<br><small class='text-muted'>O cliente nÃ£o possuÃ­a vendas ou ordens de serviÃ§o registradas.</small>"
+                f"✅ Cliente '{nome_cliente}' excluído permanentemente com sucesso! "
+                f"<br><small class='text-muted'>O cliente não possuía vendas ou ordens de serviço registradas.</small>"
             ),
             "success"
         )
     except Exception as e:
         db.session.rollback()
-        flash(f"âŒ Erro ao excluir cliente: {str(e)}", "danger")
+        flash(f"❌ Erro ao excluir cliente: {str(e)}", "danger")
 
     return redirect(url_for("lista_clientes"))
 
@@ -6210,9 +6193,9 @@ def registrar_compra(id):
     """Registrar compra do cliente"""
     cliente = Cliente.query.get_or_404(id)
 
-    # Produtos de estoque para venda (mesma empresa)
-    # Para vendedor, aplica regra estrita: sÃ³ exibe itens com saldo e preÃ§o vÃ¡lidos.
-    from sqlalchemy import func, desc, case
+    # Produtos de estoque disponíveis para venda (mesma empresa)
+    # Exibe apenas os 10 mais vendidos para simplificar a escolha do vendedor
+    from sqlalchemy import func, desc
 
     vendas_subq = (
         db.session.query(
@@ -6228,49 +6211,34 @@ def registrar_compra(id):
         .subquery()
     )
 
-    produtos_query = Produto.query.filter_by(
-        empresa_id=cliente.empresa_id,
-        ativo=True,
-    )
-
-    if current_user.cargo == "vendedor":
-        produtos_query = produtos_query.filter(
-            Produto.estoque_atual > 0,
-            Produto.preco_venda > 0,
-        )
-
     produtos = (
-        produtos_query
+        Produto.query.filter_by(empresa_id=cliente.empresa_id, ativo=True)
         .outerjoin(vendas_subq, Produto.id == vendas_subq.c.produto_id)
-        .order_by(
-            case((Produto.estoque_atual > 0, 0), else_=1),
-            desc(func.coalesce(vendas_subq.c.total_vendido, 0)),
-            desc(Produto.estoque_atual),
-            Produto.nome.asc(),
-        )
+        .order_by(desc(vendas_subq.c.total_vendido), Produto.nome)
+        .limit(10)
         .all()
     )
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if not verificar_acesso_cliente(cliente):
         flash(
-            "VocÃª nÃ£o tem permissÃ£o para registrar compras para este cliente.",
+            "Você não tem permissão para registrar compras para este cliente.",
             "danger",
         )
         return redirect(url_for("lista_clientes"))
 
     form = CompraClienteForm()
-    # Garante que o campo cliente_id tenha uma opÃ§Ã£o vÃ¡lida para evitar erros
-    # de validaÃ§Ã£o do WTForms ("Not a valid choice") durante o submit
+    # Garante que o campo cliente_id tenha uma opção válida para evitar erros
+    # de validação do WTForms ("Not a valid choice") durante o submit
     form.cliente_id.choices = [(cliente.id, cliente.nome)]
     form.cliente_id.data = cliente.id
 
     if form.validate_on_submit():
         try:
-            # Verificar se pode comprar no mÃªs
+            # Verificar se pode comprar no mês
             if not cliente.pode_comprar_no_mes():
                 flash(
-                    "Cliente jÃ¡ atingiu o limite de compras para este mÃªs.",
+                    "Cliente já atingiu o limite de compras para este mês.",
                     "warning",
                 )
                 return redirect(url_for("ver_cliente", id=cliente.id))
@@ -6309,20 +6277,15 @@ def registrar_compra(id):
                 if not produto:
                     continue
 
-                preco_unitario = float(produto.preco_venda or 0)
-                if preco_unitario <= 0:
-                    raise ValueError(
-                        "Produto sem preÃ§o de venda cadastrado. Atualize o cadastro do produto."
-                    )
-
                 estoque_disponivel = float(produto.estoque_atual or 0)
-                if qtd > estoque_disponivel:
-                    raise ValueError(
-                        "Estoque insuficiente para esta venda. "
-                        f"Saldo disponÃ­vel: {estoque_disponivel:g}"
-                    )
+                if estoque_disponivel <= 0:
+                    continue
 
-                quantidade_utilizada = qtd
+                quantidade_utilizada = min(qtd, estoque_disponivel)
+                if quantidade_utilizada <= 0:
+                    continue
+
+                preco_unitario = float(produto.preco_venda or 0)
                 subtotal = quantidade_utilizada * preco_unitario
                 valor_total_itens += subtotal
 
@@ -6335,7 +6298,7 @@ def registrar_compra(id):
                     }
                 )
 
-            # Se nenhum item foi selecionado, nÃ£o Ã© possÃ­vel registrar a venda
+            # Se nenhum item foi selecionado, não é possível registrar a venda
             if not itens_venda:
                 flash(
                     "Selecione pelo menos um produto para registrar a venda.",
@@ -6359,7 +6322,7 @@ def registrar_compra(id):
                 valor=valor_compra,
                 forma_pagamento=form.forma_pagamento.data,
                 observacoes=form.observacoes.data,
-                data_compra=now_brasilia(),
+                data_compra=datetime.utcnow(),
             )
 
             db.session.add(compra)
@@ -6394,7 +6357,7 @@ def registrar_compra(id):
                 db.session.add(movimento)
 
             # Atualizar meta do vendedor com o valor total da compra
-            # utilizando a mesma data da compra para encontrar a meta do mÃªs
+            # utilizando a mesma data da compra para encontrar a meta do mês
             try:
                 _update_meta_for_compra(
                     cliente.vendedor_id,
@@ -6402,8 +6365,8 @@ def registrar_compra(id):
                     compra.data_compra,
                 )
             except Exception as e:
-                # Em caso de erro na atualizaÃ§Ã£o de meta, registramos log
-                # mas nÃ£o impedimos o registro da venda/estoque.
+                # Em caso de erro na atualização de meta, registramos log
+                # mas não impedimos o registro da venda/estoque.
                 app.logger.error(
                     f"Erro ao atualizar meta para venda {compra.id}: {e}"
                 )
@@ -6413,9 +6376,6 @@ def registrar_compra(id):
             flash("Compra registrada com sucesso!", "success")
             return redirect(url_for("ver_cliente", id=cliente.id))
 
-        except ValueError as e:
-            db.session.rollback()
-            flash(str(e), "danger")
         except Exception as e:
             db.session.rollback()
             flash(f"Erro ao registrar compra: {str(e)}", "danger")
@@ -6430,9 +6390,9 @@ def registrar_compra(id):
 @app.route("/clientes/relatorio")
 @login_required
 def relatorio_clientes():
-    """RelatÃ³rio de clientes por vendedor/supervisor"""
+    """Relatório de clientes por vendedor/supervisor"""
     
-    # CACHE: Cache key baseado em usuÃ¡rio (10 minutos, dados atualizam menos)
+    # CACHE: Cache key baseado em usuário (10 minutos, dados atualizam menos)
     cache_key = f"relatorio_clientes_{current_user.id}"
     
     if cache:
@@ -6442,24 +6402,24 @@ def relatorio_clientes():
     
     # Determinar escopo
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
-        # RelatÃ³rio do vendedor
+        # Relatório do vendedor
         vendedor = Vendedor.query.get(current_user.vendedor_id)
         vendedores = [vendedor]
-        titulo = f"RelatÃ³rio de Clientes - {vendedor.nome}"
+        titulo = f"Relatório de Clientes - {vendedor.nome}"
     elif current_user.cargo == "supervisor":
-        # RelatÃ³rio de todos vendedores do supervisor
+        # Relatório de todos vendedores do supervisor
         vendedores = current_user.vendedores
-        titulo = "RelatÃ³rio de Clientes - SupervisÃ£o"
+        titulo = "Relatório de Clientes - Supervisão"
     elif current_user.is_super_admin:
         # Todos vendedores
         vendedores = Vendedor.query.filter_by(ativo=True).all()
-        titulo = "RelatÃ³rio Geral de Clientes"
+        titulo = "Relatório Geral de Clientes"
     else:
         # Admin da empresa
         vendedores = Vendedor.query.filter_by(
             empresa_id=current_user.empresa_id, ativo=True
         ).all()
-        titulo = "RelatÃ³rio de Clientes da Empresa"
+        titulo = "Relatório de Clientes da Empresa"
 
     # Compilar dados
     relatorio = []
@@ -6501,11 +6461,11 @@ def relatorio_clientes():
 @app.route("/clientes/relatorio-vendas")
 @login_required
 def relatorio_vendas():
-    """RelatÃ³rio detalhado de vendas por cliente"""
+    """Relatório detalhado de vendas por cliente"""
     from sqlalchemy import extract
 
     # Filtros
-    ano = request.args.get("ano", now_brasilia().year, type=int)
+    ano = request.args.get("ano", datetime.now().year, type=int)
     vendedor_id = request.args.get("vendedor_id", type=int)
     supervisor_id = request.args.get("supervisor_id", type=int)
     cidade = request.args.get("cidade", "")
@@ -6532,7 +6492,7 @@ def relatorio_vendas():
         )
     )
 
-    # Aplicar filtros de permissÃ£o
+    # Aplicar filtros de permissão
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
         query = query.filter(Cliente.vendedor_id == current_user.vendedor_id)
     elif current_user.cargo == "supervisor":
@@ -6546,7 +6506,7 @@ def relatorio_vendas():
         if vendedores_ids:
             query = query.filter(Cliente.vendedor_id.in_(vendedores_ids))
         else:
-            # Retorna vazio se nÃ£o tiver vendedores
+            # Retorna vazio se não tiver vendedores
             query = query.filter(Cliente.id == -1)
     elif not current_user.is_super_admin:
         query = query.filter(Cliente.empresa_id == current_user.empresa_id)
@@ -6566,13 +6526,13 @@ def relatorio_vendas():
     # Executar query principal (clientes base)
     clientes_base = query.all()
 
-    # Se nÃ£o houver clientes, retorna relatÃ³rio vazio rapidamente
+    # Se não houver clientes, retorna relatório vazio rapidamente
     if not clientes_base:
         relatorio_dados = []
         total_compras_geral = 0
         total_valor_geral = 0
     else:
-        # OtimizaÃ§Ã£o: buscar compras em lote para evitar N+1 queries
+        # Otimização: buscar compras em lote para evitar N+1 queries
         cliente_ids = [row.id for row in clientes_base]
 
         # Compras do ano para todos os clientes filtrados
@@ -6587,7 +6547,7 @@ def relatorio_vendas():
         for compra in compras_ano_todos:
             compras_ano_por_cliente[compra.cliente_id].append(compra)
 
-        # Ãšltima compra (todas as datas) por cliente, via agregaÃ§Ã£o
+        # Última compra (todas as datas) por cliente, via agregação
         ultima_compra_rows = (
             db.session.query(
                 CompraCliente.cliente_id,
@@ -6622,7 +6582,7 @@ def relatorio_vendas():
                 sum(c.valor for c in compras_ano) if compras_ano else 0
             )
 
-            # Ãšltima compra (qualquer ano)
+            # Última compra (qualquer ano)
             ultima_data = ultima_compra_por_cliente.get(cliente.id)
 
             # Formas de pagamento usadas (apenas no ano filtrado)
@@ -6632,12 +6592,12 @@ def relatorio_vendas():
                 if c.forma_pagamento
             }
 
-            # Status replicando lÃ³gica de Cliente.get_status_cor
+            # Status replicando lógica de Cliente.get_status_cor
             if not ultima_data:
                 status_cor = "vermelho"
                 dias_sem_compra = None
             else:
-                dias_sem_compra = (now_brasilia() - ultima_data).days
+                dias_sem_compra = (datetime.now() - ultima_data).days
                 if dias_sem_compra <= 30:
                     status_cor = "verde"
                 elif dias_sem_compra <= 38:
@@ -6645,7 +6605,7 @@ def relatorio_vendas():
                 else:
                     status_cor = "vermelho"
 
-            # Filtrar por status se necessÃ¡rio
+            # Filtrar por status se necessário
             if status and status_cor != status:
                 continue
 
@@ -6690,12 +6650,12 @@ def relatorio_vendas():
             empresa_id=current_user.empresa_id, ativo=True
         ).all()
 
-    # Buscar supervisores (usuÃ¡rios com cargo='supervisor')
+    # Buscar supervisores (usuários com cargo='supervisor')
     supervisores = Usuario.query.filter_by(
         cargo="supervisor", ativo=True
     ).all()
 
-    # Buscar cidades e bairros Ãºnicos
+    # Buscar cidades e bairros únicos
     cidades = (
         db.session.query(Cliente.cidade)
         .filter(Cliente.cidade.isnot(None))
@@ -6736,36 +6696,36 @@ def relatorio_vendas():
 @app.route("/clientes/relatorio-vendas/exportar")
 @login_required
 def exportar_relatorio_vendas():
-    """Exportar RelatÃ³rio de Vendas por Cliente para Excel.
+    """Exportar Relatório de Vendas por Cliente para Excel.
 
-    Usa exatamente os mesmos filtros e a mesma lÃ³gica do relatÃ³rio em tela,
-    gerando uma planilha com as colunas principais de anÃ¡lise, mantendo a
-    experiÃªncia visual profissional para quem exporta os dados.
+    Usa exatamente os mesmos filtros e a mesma lógica do relatório em tela,
+    gerando uma planilha com as colunas principais de análise, mantendo a
+    experiência visual profissional para quem exporta os dados.
     """
     from sqlalchemy import extract
 
-    # Verificar dependÃªncias do Excel
+    # Verificar dependências do Excel
     if not EXCEL_AVAILABLE and not ensure_excel_available():
         flash(
-            "Erro: Bibliotecas Excel nÃ£o instaladas. Contate o administrador.",
+            "Erro: Bibliotecas Excel não instaladas. Contate o administrador.",
             "danger",
         )
         return redirect(url_for("relatorio_vendas"))
 
-    # Verificar permissÃ£o de exportaÃ§Ã£o (mesma regra de clientes)
+    # Verificar permissão de exportação (mesma regra de clientes)
     if not pode_exportar(current_user, "clientes"):
         cargos_permitidos = ", ".join(
             get_cargos_permitidos_exportacao("clientes")
         )
         flash(
-            f"Apenas {cargos_permitidos} podem exportar o relatÃ³rio de vendas.",
+            f"Apenas {cargos_permitidos} podem exportar o relatório de vendas.",
             "danger",
         )
         return redirect(url_for("relatorio_vendas"))
 
     try:
         # Filtros (mesmos da tela)
-        ano = request.args.get("ano", now_brasilia().year, type=int)
+        ano = request.args.get("ano", datetime.now().year, type=int)
         vendedor_id = request.args.get("vendedor_id", type=int)
         supervisor_id = request.args.get("supervisor_id", type=int)
         cidade = request.args.get("cidade", "")
@@ -6791,7 +6751,7 @@ def exportar_relatorio_vendas():
             )
         )
 
-        # Escopo por permissÃ£o
+        # Escopo por permissão
         if current_user.cargo == "vendedor" and current_user.vendedor_id:
             query = query.filter(Cliente.vendedor_id == current_user.vendedor_id)
         elif current_user.cargo == "supervisor":
@@ -6822,7 +6782,7 @@ def exportar_relatorio_vendas():
 
         clientes_base = query.all()
 
-        # Montar dados do relatÃ³rio (mesma regra da tela)
+        # Montar dados do relatório (mesma regra da tela)
         relatorio_dados = []
         total_compras_geral = 0
         total_valor_geral = 0
@@ -6870,7 +6830,7 @@ def exportar_relatorio_vendas():
                     else "-",
                     "status": status_cor,
                     "dias_sem_compra": (
-                        (now_brasilia() - ultima_compra.data_compra).days
+                        (datetime.now() - ultima_compra.data_compra).days
                         if ultima_compra
                         else None
                     ),
@@ -6904,7 +6864,7 @@ def exportar_relatorio_vendas():
             "Supervisor",
             f"Compras {ano}",
             "Valor Total (R$)",
-            "Ãšltima Compra",
+            "Última Compra",
             "Dias sem Compra",
             "Formas Pagamento",
             "Status",
@@ -6918,7 +6878,7 @@ def exportar_relatorio_vendas():
 
         status_map = {
             "verde": "Positivado",
-            "amarelo": "AtenÃ§Ã£o",
+            "amarelo": "Atenção",
             "vermelho": "Sem Compras",
         }
 
@@ -6968,7 +6928,7 @@ def exportar_relatorio_vendas():
             25,  # Supervisor
             14,  # Compras ano
             18,  # Valor total
-            16,  # Ãšltima compra
+            16,  # Última compra
             16,  # Dias sem compra
             28,  # Formas pagamento
             14,  # Status
@@ -6994,7 +6954,7 @@ def exportar_relatorio_vendas():
         )
 
     except Exception as e:
-        flash(f"Erro ao exportar relatÃ³rio de vendas: {str(e)}", "danger")
+        flash(f"Erro ao exportar relatório de vendas: {str(e)}", "danger")
         return redirect(url_for("relatorio_vendas"))
 
 @app.route("/clientes/exportar")
@@ -7002,10 +6962,10 @@ def exportar_relatorio_vendas():
 def exportar_clientes():
     """Exportar clientes para Excel - Formato Simples ou Estendido"""
     if not EXCEL_AVAILABLE and not ensure_excel_available():
-        flash("Erro: Bibliotecas Excel nÃ£o instaladas. Contate o administrador.", "danger")
+        flash("Erro: Bibliotecas Excel não instaladas. Contate o administrador.", "danger")
         return redirect(url_for("lista_clientes"))
     
-    # Verificar permissÃ£o de exportaÃ§Ã£o
+    # Verificar permissão de exportação
     if not pode_exportar(current_user, "clientes"):
         cargos_permitidos = ", ".join(get_cargos_permitidos_exportacao("clientes"))
         flash(
@@ -7018,7 +6978,7 @@ def exportar_clientes():
         # Obter formato solicitado (simples ou estendido)
         formato = request.args.get("formato", "simples")
 
-        # Buscar clientes (com filtros de permissÃ£o)
+        # Buscar clientes (com filtros de permissão)
         if current_user.cargo == "vendedor" and current_user.vendedor_id:
             clientes = Cliente.query.filter_by(
                 vendedor_id=current_user.vendedor_id,
@@ -7043,24 +7003,24 @@ def exportar_clientes():
         ws = wb.active
         ws.title = "Clientes"
 
-        # Estilo do cabeÃ§alho
+        # Estilo do cabeçalho
         header_fill = PatternFill(
             start_color="0066CC", end_color="0066CC", fill_type="solid"
         )
         header_font = Font(color="FFFFFF", bold=True)
         header_alignment = Alignment(horizontal="center", vertical="center")
 
-        # Definir cabeÃ§alhos conforme formato
+        # Definir cabeçalhos conforme formato
         if formato == "estendido":
             # Formato estendido - todos os campos conforme solicitado (27 colunas)
             headers = [
                 "Nome",
-                "RazÃ£o Social",
+                "Razão Social",
                 "CPF",
                 "CNPJ",
                 "Inscr.Estadual",
                 "Logradouro",
-                "MunicÃ­pio",
+                "Município",
                 "Bairro",
                 "Estado",
                 "CEP",
@@ -7069,16 +7029,16 @@ def exportar_clientes():
                 "Fone",
                 "Longitude",
                 "Latitude",
-                "CÃ³digo-BW",
+                "Código-BW",
                 "Id",
                 "Vendedor",
                 "Supervisor",
                 "Sigla",
-                "CÃ³digo-BP",
+                "Código-BP",
                 "Email",
                 "Dia de Visita",
                 "Formas de Pagamento",
-                "ObservaÃ§Ãµes",
+                "Observações",
                 "Status",
                 "Ativo",
             ]
@@ -7091,10 +7051,10 @@ def exportar_clientes():
                 "Email",
                 "Cidade",
                 "Bairro",
-                "Ponto de ReferÃªncia",
+                "Ponto de Referência",
                 "Dia de Visita",
                 "Formas de Pagamento",
-                "ObservaÃ§Ãµes",
+                "Observações",
             ]
 
         for col, header in enumerate(headers, 1):
@@ -7105,7 +7065,7 @@ def exportar_clientes():
 
         # Dados dos clientes
         for row, cliente in enumerate(clientes, 2):
-            # Buscar Ãºltima compra
+            # Buscar última compra
             ultima_compra = cliente.compras.order_by(
                 CompraCliente.data_compra.desc()
             ).first()
@@ -7140,12 +7100,12 @@ def exportar_clientes():
             if formato == "estendido":
                 # Formato estendido - todos os campos (27 colunas)
                 ws.cell(row=row, column=1, value=cliente.nome)  # Nome
-                ws.cell(row=row, column=2, value=cliente.razao_social or "")  # RazÃ£o Social
+                ws.cell(row=row, column=2, value=cliente.razao_social or "")  # Razão Social
                 ws.cell(row=row, column=3, value=cliente.cpf or "")  # CPF
                 ws.cell(row=row, column=4, value=cliente.cnpj or "")  # CNPJ
                 ws.cell(row=row, column=5, value=cliente.inscricao_estadual or "")  # Inscr.Estadual
                 ws.cell(row=row, column=6, value=cliente.logradouro or "")  # Logradouro
-                ws.cell(row=row, column=7, value=cliente.municipio or cliente.cidade or "")  # MunicÃ­pio
+                ws.cell(row=row, column=7, value=cliente.municipio or cliente.cidade or "")  # Município
                 ws.cell(row=row, column=8, value=cliente.bairro or "")  # Bairro
                 ws.cell(row=row, column=9, value=cliente.estado or "")  # Estado
                 ws.cell(row=row, column=10, value=cliente.cep or "")  # CEP
@@ -7154,18 +7114,18 @@ def exportar_clientes():
                 ws.cell(row=row, column=13, value=cliente.telefone or "")  # Fone
                 ws.cell(row=row, column=14, value=cliente.longitude or cliente.coordenada_x or "")  # Longitude
                 ws.cell(row=row, column=15, value=cliente.latitude or cliente.coordenada_y or "")  # Latitude
-                ws.cell(row=row, column=16, value=cliente.codigo_bw or "")  # CÃ³digo-BW
+                ws.cell(row=row, column=16, value=cliente.codigo_bw or "")  # Código-BW
                 ws.cell(row=row, column=17, value=cliente.id)  # Id
                 ws.cell(row=row, column=18, value=vendedor_nome)  # Vendedor
                 ws.cell(row=row, column=19, value=supervisor_nome)  # Supervisor
                 ws.cell(row=row, column=20, value=cliente.sigla or "")  # Sigla
-                ws.cell(row=row, column=21, value=cliente.codigo_bp or "")  # CÃ³digo-BP
+                ws.cell(row=row, column=21, value=cliente.codigo_bp or "")  # Código-BP
                 ws.cell(row=row, column=22, value=cliente.email or "")  # Email
                 ws.cell(row=row, column=23, value=cliente.dia_visita or "")  # Dia de Visita
                 ws.cell(row=row, column=24, value=formas_pagamento)  # Formas de Pagamento
-                ws.cell(row=row, column=25, value=cliente.observacoes or "")  # ObservaÃ§Ãµes
+                ws.cell(row=row, column=25, value=cliente.observacoes or "")  # Observações
                 ws.cell(row=row, column=26, value=status)  # Status
-                ws.cell(row=row, column=27, value="Sim" if cliente.ativo else "NÃ£o")  # Ativo
+                ws.cell(row=row, column=27, value="Sim" if cliente.ativo else "Não")  # Ativo
             else:
                 # Formato simples (11 colunas)
                 ws.cell(row=row, column=1, value=cliente.nome)
@@ -7187,12 +7147,12 @@ def exportar_clientes():
             # 27 colunas com larguras otimizadas
             column_widths = [
                 30,  # Nome
-                35,  # RazÃ£o Social
+                35,  # Razão Social
                 15,  # CPF
                 18,  # CNPJ
                 20,  # Inscr.Estadual
                 40,  # Logradouro
-                25,  # MunicÃ­pio
+                25,  # Município
                 20,  # Bairro
                 10,  # Estado
                 12,  # CEP
@@ -7201,16 +7161,16 @@ def exportar_clientes():
                 15,  # Fone
                 15,  # Longitude
                 15,  # Latitude
-                15,  # CÃ³digo-BW
+                15,  # Código-BW
                 10,  # Id
                 25,  # Vendedor
                 25,  # Supervisor
                 15,  # Sigla
-                15,  # CÃ³digo-BP
+                15,  # Código-BP
                 30,  # Email
                 15,  # Dia de Visita
                 25,  # Formas de Pagamento
-                40,  # ObservaÃ§Ãµes
+                40,  # Observações
                 12,  # Status
                 8,   # Ativo
             ]
@@ -7228,7 +7188,7 @@ def exportar_clientes():
         wb.save(output)
         output.seek(0)
 
-        # Gerar nome do arquivo com indicaÃ§Ã£o do formato
+        # Gerar nome do arquivo com indicação do formato
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"clientes_{formato}_{timestamp}.xlsx"
 
@@ -7246,20 +7206,20 @@ def exportar_clientes():
 @app.route("/clientes/modelo-importacao")
 @login_required
 def modelo_importacao_clientes():
-    """Baixar modelo em branco para importaÃ§Ã£o de clientes - Formato Simples ou Estendido"""
-    # Verificar permissÃ£o de importaÃ§Ã£o
+    """Baixar modelo em branco para importação de clientes - Formato Simples ou Estendido"""
+    # Verificar permissão de importação
     if not pode_importar(current_user, "clientes"):
         cargos_permitidos = ", ".join(get_cargos_permitidos_importacao("clientes"))
         flash(
-            f"Apenas {cargos_permitidos} podem baixar o modelo de importaÃ§Ã£o.",
+            f"Apenas {cargos_permitidos} podem baixar o modelo de importação.",
             "danger"
         )
         return redirect(url_for("lista_clientes"))
     
     if not EXCEL_AVAILABLE and not ensure_excel_available():
-        error_msg = "Erro: Bibliotecas Excel nÃ£o instaladas."
+        error_msg = "Erro: Bibliotecas Excel não instaladas."
         if EXCEL_ERROR_MESSAGE:
-            print(f"ðŸ“Š Erro Excel na rota modelo_importacao_clientes: {EXCEL_ERROR_MESSAGE}")
+            print(f"📊 Erro Excel na rota modelo_importacao_clientes: {EXCEL_ERROR_MESSAGE}")
             error_msg += f" Detalhes: {EXCEL_ERROR_MESSAGE}"
         flash(error_msg + " Contate o administrador.", "danger")
         return redirect(url_for("lista_clientes"))
@@ -7273,24 +7233,24 @@ def modelo_importacao_clientes():
         ws = wb.active
         ws.title = "Modelo Clientes"
 
-        # Estilo do cabeÃ§alho
+        # Estilo do cabeçalho
         header_fill = PatternFill(
             start_color="0066CC", end_color="0066CC", fill_type="solid"
         )
         header_font = Font(color="FFFFFF", bold=True)
         header_alignment = Alignment(horizontal="center", vertical="center")
 
-        # Definir cabeÃ§alhos e exemplos conforme formato
+        # Definir cabeçalhos e exemplos conforme formato
         if formato == "estendido":
             # Formato estendido - todos os campos (27 colunas)
             headers = [
                 "Nome",
-                "RazÃ£o Social",
+                "Razão Social",
                 "CPF",
                 "CNPJ",
                 "Inscr.Estadual",
                 "Logradouro",
-                "MunicÃ­pio",
+                "Município",
                 "Bairro",
                 "Estado",
                 "CEP",
@@ -7299,27 +7259,27 @@ def modelo_importacao_clientes():
                 "Fone",
                 "Longitude",
                 "Latitude",
-                "CÃ³digo-BW",
+                "Código-BW",
                 "Id",
                 "Vendedor",
                 "Supervisor",
                 "Sigla",
-                "CÃ³digo-BP",
+                "Código-BP",
                 "Email",
                 "Dia de Visita",
                 "Formas de Pagamento",
-                "ObservaÃ§Ãµes",
+                "Observações",
                 "Status",
                 "Ativo",
             ]
             exemplos = [
-                "JoÃ£o Silva",  # Nome
-                "Silva & Cia Ltda",  # RazÃ£o Social
+                "João Silva",  # Nome
+                "Silva & Cia Ltda",  # Razão Social
                 "123.456.789-00",  # CPF
                 "12.345.678/0001-90",  # CNPJ
                 "123.456.789.012",  # Inscr.Estadual
                 "Rua das Flores, 123",  # Logradouro
-                "SÃ£o Paulo",  # MunicÃ­pio
+                "São Paulo",  # Município
                 "Centro",  # Bairro
                 "SP",  # Estado
                 "01310-100",  # CEP
@@ -7328,27 +7288,27 @@ def modelo_importacao_clientes():
                 "(11) 3456-7890",  # Fone
                 "-46.633308",  # Longitude
                 "-23.550520",  # Latitude
-                "BW-123456",  # CÃ³digo-BW
+                "BW-123456",  # Código-BW
                 "",  # Id (deixar em branco para novo)
                 "Nome do Vendedor",  # Vendedor
                 "Nome do Supervisor",  # Supervisor
                 "SilvaGrill",  # Sigla
-                "BP-123456",  # CÃ³digo-BP
+                "BP-123456",  # Código-BP
                 "joao@email.com",  # Email
                 "segunda",  # Dia de Visita
                 "dinheiro, pix, cartao",  # Formas de Pagamento
-                "Cliente preferencial",  # ObservaÃ§Ãµes
+                "Cliente preferencial",  # Observações
                 "",  # Status (calculado automaticamente)
                 "Sim",  # Ativo
             ]
             column_widths = [
                 30,  # Nome
-                35,  # RazÃ£o Social
+                35,  # Razão Social
                 15,  # CPF
                 18,  # CNPJ
                 20,  # Inscr.Estadual
                 40,  # Logradouro
-                25,  # MunicÃ­pio
+                25,  # Município
                 20,  # Bairro
                 10,  # Estado
                 12,  # CEP
@@ -7357,16 +7317,16 @@ def modelo_importacao_clientes():
                 15,  # Fone
                 15,  # Longitude
                 15,  # Latitude
-                15,  # CÃ³digo-BW
+                15,  # Código-BW
                 10,  # Id
                 25,  # Vendedor
                 25,  # Supervisor
                 15,  # Sigla
-                15,  # CÃ³digo-BP
+                15,  # Código-BP
                 30,  # Email
                 15,  # Dia de Visita
                 25,  # Formas de Pagamento
-                40,  # ObservaÃ§Ãµes
+                40,  # Observações
                 12,  # Status
                 8,   # Ativo
             ]
@@ -7380,20 +7340,20 @@ def modelo_importacao_clientes():
                 "Email",
                 "Cidade",
                 "Bairro",
-                "Ponto de ReferÃªncia",
+                "Ponto de Referência",
                 "Dia de Visita",
                 "Formas de Pagamento",
-                "ObservaÃ§Ãµes",
+                "Observações",
             ]
             exemplos = [
-                "JoÃ£o Silva",
+                "João Silva",
                 "123.456.789-00",
                 "",
                 "(11) 98765-4321",
                 "joao@email.com",
-                "SÃ£o Paulo",
+                "São Paulo",
                 "Centro",
-                "PrÃ³ximo ao mercado",
+                "Próximo ao mercado",
                 "segunda",
                 "dinheiro, pix, cartao_credito",
                 "Cliente preferencial",
@@ -7421,7 +7381,7 @@ def modelo_importacao_clientes():
         wb.save(output)
         output.seek(0)
 
-        # Nome do arquivo com indicaÃ§Ã£o do formato
+        # Nome do arquivo com indicação do formato
         filename = f"modelo_importacao_clientes_{formato}.xlsx"
 
         return send_file(
@@ -7439,19 +7399,19 @@ def modelo_importacao_clientes():
 @login_required
 def importar_clientes():
     """Importar clientes via planilha Excel - Admin, Supervisor e RH"""
-    # Verificar permissÃµes: admin, supervisor e RH podem importar clientes
+    # Verificar permissões: admin, supervisor e RH podem importar clientes
     if not pode_importar(current_user, "clientes"):
         flash(
             "Acesso negado! Apenas Administradores, Supervisores e RH podem importar clientes em lote.",
             "danger",
         )
         flash(
-            "ðŸ’¡ Gerentes e Vendedores devem cadastrar clientes manualmente.",
+            "💡 Gerentes e Vendedores devem cadastrar clientes manualmente.",
             "info",
         )
         return redirect(url_for("lista_clientes"))
 
-    # Buscar vendedores disponÃ­veis para seleÃ§Ã£o
+    # Buscar vendedores disponíveis para seleção
     vendedores = (
         Vendedor.query.filter_by(
             empresa_id=current_user.empresa_id, ativo=True
@@ -7471,22 +7431,22 @@ def importar_clientes():
             vendedor_id = request.form.get("vendedor_id")
             if not vendedor_id:
                 flash(
-                    'Selecione um vendedor quando escolher "Atribuir a um vendedor especÃ­fico"!',
+                    'Selecione um vendedor quando escolher "Atribuir a um vendedor específico"!',
                     "danger",
                 )
                 return redirect(request.url)
 
-            # Validar se vendedor existe e pertence Ã  empresa
+            # Validar se vendedor existe e pertence à empresa
             vendedor = Vendedor.query.filter_by(
                 id=vendedor_id, empresa_id=current_user.empresa_id
             ).first()
             if not vendedor:
-                flash("Vendedor invÃ¡lido!", "danger")
+                flash("Vendedor inválido!", "danger")
                 return redirect(request.url)
         elif modo_vendedor == "planilha":
             usar_vendedor_planilha = True
         elif modo_vendedor == "depois":
-            vendedor_id = None  # SerÃ¡ None, clientes sem vendedor
+            vendedor_id = None  # Será None, clientes sem vendedor
 
         # Validar arquivo Excel
         arquivo, erro = validar_arquivo_excel(request)
@@ -7496,16 +7456,16 @@ def importar_clientes():
 
         # Verificar disponibilidade do Excel com mensagens detalhadas
         if not EXCEL_AVAILABLE and not ensure_excel_available():
-            error_msg = "âŒ Erro: Funcionalidade de importaÃ§Ã£o Excel indisponÃ­vel."
+            error_msg = "❌ Erro: Funcionalidade de importação Excel indisponível."
             
             if EXCEL_ERROR_MESSAGE:
-                print(f"ðŸ“Š Erro Excel: {EXCEL_ERROR_MESSAGE}")
+                print(f"📊 Erro Excel: {EXCEL_ERROR_MESSAGE}")
                 
                 # Detectar tipo de erro
                 if "libstdc++" in EXCEL_ERROR_MESSAGE or ".so" in EXCEL_ERROR_MESSAGE:
                     flash(error_msg, "danger")
-                    flash("ðŸ”§ Erro de biblioteca do sistema detectado. O administrador foi notificado.", "warning")
-                    flash("ðŸ’¡ Enquanto isso, cadastre clientes manualmente.", "info")
+                    flash("🔧 Erro de biblioteca do sistema detectado. O administrador foi notificado.", "warning")
+                    flash("💡 Enquanto isso, cadastre clientes manualmente.", "info")
                 else:
                     flash(error_msg + " Contate o administrador.", "danger")
             else:
@@ -7515,11 +7475,11 @@ def importar_clientes():
 
         try:
             # Ler Excel
-            print(f"ðŸ“‚ Lendo arquivo Excel: {arquivo.filename}")
+            print(f"📂 Lendo arquivo Excel: {arquivo.filename}")
             df = pd.read_excel(arquivo)
 
-            # Normalizar nomes das colunas: remover espaÃ§os e converter para
-            # minÃºsculas
+            # Normalizar nomes das colunas: remover espaços e converter para
+            # minúsculas
             df.columns = df.columns.str.strip().str.lower()
 
             # Mapear colunas (formato simples + formato estendido)
@@ -7531,7 +7491,7 @@ def importar_clientes():
                     "nome completo",
                     "cliente",
                     "razao social",
-                    "razÃ£o social",
+                    "razão social",
                 ],
                 "cpf": ["cpf", "documento cpf"],
                 "cnpj": ["cnpj", "documento cnpj"],
@@ -7539,7 +7499,7 @@ def importar_clientes():
                     "cpf/cnpj",
                     "cpf / cnpj",
                     "cnpj/cpf",
-                    "documento Ãºnico",
+                    "documento único",
                     "documento unico",
                     "cpf ou cnpj",
                     "documento",
@@ -7547,14 +7507,14 @@ def importar_clientes():
                 ],
                 "razao_social": [
                     "razao social",
-                    "razÃ£o social",
-                    "razÃ£o",
+                    "razão social",
+                    "razão",
                     "razao",
                 ],
                 "sigla": ["sigla", "apelido", "sigla/apelido"],
                 "inscricao_estadual": [
                     "inscr.estadual",
-                    "inscriÃ§Ã£o estadual",
+                    "inscrição estadual",
                     "inscricao estadual",
                     "ie",
                     "i.e.",
@@ -7562,17 +7522,17 @@ def importar_clientes():
                 ],
                 "codigo_bp": [
                     "codigo-bp",
-                    "cÃ³digo bp",
+                    "código bp",
                     "codigo bp",
                     "bp",
-                    "cÃ³digo erp",
+                    "código erp",
                     "codigo erp",
                     "cod bp",
                     "cod. bp",
                 ],
                 "logradouro": [
                     "logradouro",
-                    "endereÃ§o",
+                    "endereço",
                     "endereco",
                     "rua",
                     "avenida",
@@ -7605,7 +7565,7 @@ def importar_clientes():
                     "cel",
                     "cel 1",
                     "celular 1",
-                    "mÃ³vel",
+                    "móvel",
                     "movel",
                     "whatsapp",
                 ],
@@ -7615,15 +7575,15 @@ def importar_clientes():
                     "cel 2",
                     "cel2",
                     "celular2",
-                    "mÃ³vel 2",
+                    "móvel 2",
                     "movel 2",
                 ],
                 "email": ["email", "e-mail", "e mail", "e_mail"],
-                "municipio": ["municÃ­pio", "municipio", "cidade", "mun"],
+                "municipio": ["município", "municipio", "cidade", "mun"],
                 "cidade": ["cidade"],  # Mantido para compatibilidade
-                "bairro": ["bairro", "regiÃ£o", "regiao"],
+                "bairro": ["bairro", "região", "regiao"],
                 "estado": ["estado", "uf", "u.f.", "sigla estado"],
-                "cep": ["cep", "cÃ³digo postal", "codigo postal", "cod postal"],
+                "cep": ["cep", "código postal", "codigo postal", "cod postal"],
                 "coordenada_x": [
                     "coordenada-x",
                     "coordenada x",
@@ -7643,18 +7603,18 @@ def importar_clientes():
                 "longitude": ["longitude", "long", "lng"],
                 "latitude": ["latitude", "lat"],
                 "codigo_bw": [
-                    "cÃ³digo-bw",
+                    "código-bw",
                     "codigo-bw",
-                    "cÃ³digo bw",
+                    "código bw",
                     "codigo bw",
                     "bw",
                     "cod bw",
                     "cod-bw",
                 ],
                 "ponto_referencia": [
-                    "ponto de referÃªncia",
+                    "ponto de referência",
                     "ponto de referencia",
-                    "referÃªncia",
+                    "referência",
                     "referencia",
                     "ponto ref",
                 ],
@@ -7672,14 +7632,14 @@ def importar_clientes():
                     "forma de pagamento",
                 ],
                 "observacoes": [
-                    "observaÃ§Ãµes",
+                    "observações",
                     "observacoes",
                     "obs",
-                    "observaÃ§Ã£o",
+                    "observação",
                 ],
                 "vendedor": [
                     "vendedor",
-                    "vendedor responsÃ¡vel",
+                    "vendedor responsável",
                     "vendedor responsavel",
                     "id vendedor",
                     "vendedor id",
@@ -7687,7 +7647,7 @@ def importar_clientes():
                 ],
                 "supervisor": [
                     "supervisor",
-                    "supervisor responsÃ¡vel",
+                    "supervisor responsável",
                     "supervisor responsavel",
                     "id supervisor",
                     "supervisor id",
@@ -7704,11 +7664,11 @@ def importar_clientes():
                         rename_dict[col] = col_padrao
                         break
 
-            # Aplicar renomeaÃ§Ãµes
+            # Aplicar renomeações
             if rename_dict:
                 df.rename(columns=rename_dict, inplace=True)
 
-            # Validar colunas obrigatÃ³rias
+            # Validar colunas obrigatórias
             colunas_obrigatorias = ["nome"]
             colunas_faltando = [
                 col for col in colunas_obrigatorias if col not in df.columns
@@ -7720,7 +7680,7 @@ def importar_clientes():
                 if len(df.columns) > 10:
                     colunas_encontradas += "..."
 
-                msg = f'Coluna obrigatÃ³ria "Nome" nÃ£o encontrada na planilha! '
+                msg = f'Coluna obrigatória "Nome" não encontrada na planilha! '
                 msg += f'Certifique-se de que sua planilha tem uma coluna chamada "Nome". '
                 msg += f"Colunas detectadas: {colunas_encontradas}"
                 flash(msg, "danger")
@@ -7742,7 +7702,7 @@ def importar_clientes():
                         pulados += 1
                         continue
 
-                    # Helper para limpar nÃºmeros vindos do Excel (remove .0 de floats)
+                    # Helper para limpar números vindos do Excel (remove .0 de floats)
                     def limpar_numero_excel(valor):
                         if pd.isna(valor): return ""
                         s = str(valor).strip()
@@ -7765,20 +7725,20 @@ def importar_clientes():
                             elif len(doc) == 14:
                                 cnpj = doc
                             elif len(doc) > 0 and len(doc) < 11:
-                                # Menos de 11 dÃ­gitos, provavelmente CPF incompleto
+                                # Menos de 11 dígitos, provavelmente CPF incompleto
                                 cpf = doc.zfill(11)
                             elif len(doc) > 11 and len(doc) < 14:
                                 # Entre 11 e 14, provavelmente CNPJ incompleto
                                 cnpj = doc.zfill(14)
                             else:
-                                # Tamanho invÃ¡lido, mas vamos tentar salvar no campo mais provÃ¡vel
+                                # Tamanho inválido, mas vamos tentar salvar no campo mais provável
                                 # Se < 11, assume CPF. Se > 11, assume CNPJ.
                                 if len(doc) < 11:
                                     cpf = doc.zfill(11)
                                 else:
                                     cnpj = doc.zfill(14)
 
-                    # Se nÃ£o tiver coluna combinada, buscar CPF e CNPJ separados
+                    # Se não tiver coluna combinada, buscar CPF e CNPJ separados
                     if cpf is None and "cpf" in df.columns:
                         cpf_raw = row.get("cpf")
                         cpf_limpo = limpar_numero_excel(cpf_raw)
@@ -7786,12 +7746,12 @@ def importar_clientes():
                             if len(cpf_limpo) <= 11:
                                 cpf = cpf_limpo.zfill(11)
                             else:
-                                # Se tem mais de 11 dÃ­gitos no campo CPF, pode ser um erro ou CNPJ no lugar errado
-                                # Vamos tentar aproveitar se for 14 dÃ­gitos
+                                # Se tem mais de 11 dígitos no campo CPF, pode ser um erro ou CNPJ no lugar errado
+                                # Vamos tentar aproveitar se for 14 dígitos
                                 if len(cpf_limpo) == 14:
                                     cnpj = cpf_limpo
                                 else:
-                                    cpf = None # InvÃ¡lido
+                                    cpf = None # Inválido
 
                     if cnpj is None and "cnpj" in df.columns:
                         cnpj_raw = row.get("cnpj")
@@ -7800,7 +7760,7 @@ def importar_clientes():
                             if len(cnpj_limpo) <= 14:
                                 cnpj = cnpj_limpo.zfill(14)
                             else:
-                                cnpj = None # InvÃ¡lido
+                                cnpj = None # Inválido
 
                     # Verificar duplicidade e decidir se atualiza ou cria
                     # Usar no_autoflush para evitar flush prematuro
@@ -7813,7 +7773,7 @@ def importar_clientes():
                                 cpf=cpf, empresa_id=current_user.empresa_id
                             ).first()
 
-                        # Se nÃ£o encontrou por CPF, buscar por CNPJ
+                        # Se não encontrou por CPF, buscar por CNPJ
                         if not cliente_existente and cnpj:
                             cliente_existente = Cliente.query.filter_by(
                                 cnpj=cnpj, empresa_id=current_user.empresa_id
@@ -7837,7 +7797,7 @@ def importar_clientes():
                     formas_str = limpar_valor(row.get("formas_pagamento"))
                     formas_pagamento = []
                     if formas_str:
-                        # Aceitar separados por vÃ­rgula ou ponto-e-vÃ­rgula
+                        # Aceitar separados por vírgula ou ponto-e-vírgula
                         formas_list = re.split(r"[,;]", formas_str)
                         formas_validas = [
                             "dinheiro",
@@ -7895,7 +7855,7 @@ def importar_clientes():
                         # Tentar pegar vendedor da planilha
                         vendedor_valor = limpar_valor(row.get("vendedor"))
                         if vendedor_valor:
-                            # Pode ser ID numÃ©rico ou nome
+                            # Pode ser ID numérico ou nome
                             try:
                                 # Tentar como ID
                                 vendedor_id_planilha = int(vendedor_valor)
@@ -7909,7 +7869,7 @@ def importar_clientes():
                                         vendedor_encontrado.id
                                     )
                             except ValueError:
-                                # NÃ£o Ã© nÃºmero, tentar como nome
+                                # Não é número, tentar como nome
                                 vendedor_encontrado = Vendedor.query.filter(
                                     Vendedor.nome.ilike(f"%{vendedor_valor}%"),
                                     Vendedor.empresa_id ==
@@ -7938,7 +7898,7 @@ def importar_clientes():
                                 if supervisor_encontrado:
                                     cliente_supervisor_id = supervisor_encontrado.id
                             except ValueError:
-                                # NÃ£o Ã© nÃºmero, tentar como nome
+                                # Não é número, tentar como nome
                                 supervisor_encontrado = Usuario.query.filter(
                                     Usuario.nome.ilike(f"%{supervisor_valor}%"),
                                     Usuario.empresa_id == current_user.empresa_id,
@@ -7957,7 +7917,7 @@ def importar_clientes():
                         if inscricao_estadual: cliente.inscricao_estadual = inscricao_estadual
                         if codigo_bp: cliente.codigo_bp = codigo_bp
 
-                        # Atualizar endereÃ§o
+                        # Atualizar endereço
                         if logradouro: cliente.logradouro = logradouro
                         if municipio: cliente.municipio = municipio
                         if cidade: cliente.cidade = cidade
@@ -7977,7 +7937,7 @@ def importar_clientes():
                         if celular2: cliente.celular2 = celular2
                         if email: cliente.email = email
 
-                        # Atualizar cÃ³digos
+                        # Atualizar códigos
                         if codigo_bw: cliente.codigo_bw = codigo_bw
 
                         # Atualizar outros
@@ -7996,39 +7956,39 @@ def importar_clientes():
                         if formas_pagamento:
                             cliente.set_formas_pagamento_list(formas_pagamento)
 
-                        cliente.data_atualizacao = now_brasilia()
+                        cliente.data_atualizacao = datetime.utcnow()
                         atualizados += 1
 
                     else:
                         # CRIAR NOVO CLIENTE
-                        # Gerar cÃ³digo Ãºnico do cliente baseado no municÃ­pio
+                        # Gerar código único do cliente baseado no município
                         municipio_codigo = (
                             municipio
                             if municipio
                             else cidade if cidade else "SEM_CIDADE"
                         )
                         
-                        # Gerar cÃ³digo Ãºnico com verificaÃ§Ã£o de duplicaÃ§Ã£o
+                        # Gerar código único com verificação de duplicação
                         codigo_cliente = None
                         for tentativa in range(5):
                             try:
                                 codigo_cliente = Cliente.gerar_codigo_cliente(
                                     municipio_codigo, current_user.empresa_id
                                 )
-                                # Verificar se jÃ¡ existe
+                                # Verificar se já existe
                                 if not Cliente.query.filter_by(
                                     empresa_id=current_user.empresa_id,
                                     codigo_cliente=codigo_cliente
                                 ).first():
-                                    break  # CÃ³digo Ãºnico encontrado
-                                # Se chegou aqui, cÃ³digo jÃ¡ existe
+                                    break  # Código único encontrado
+                                # Se chegou aqui, código já existe
                                 import time
                                 time.sleep(0.05 * (tentativa + 1))
                             except Exception:
                                 pass
                         
                         if not codigo_cliente:
-                            # Fallback: gerar cÃ³digo baseado em timestamp
+                            # Fallback: gerar código baseado em timestamp
                             import time
                             timestamp = str(int(time.time() * 1000))[-8:]
                             codigo_cliente = f"{timestamp[:4]}-{timestamp[4:8]}"
@@ -8046,7 +8006,7 @@ def importar_clientes():
                             codigo_cliente=codigo_cliente,
                             logradouro=logradouro,
                             municipio=municipio,
-                            cidade=cidade,  # MantÃ©m para compatibilidade
+                            cidade=cidade,  # Mantém para compatibilidade
                             bairro=bairro,
                             estado=estado,
                             cep=cep,
@@ -8087,16 +8047,16 @@ def importar_clientes():
                         if isinstance(commit_error, IntegrityError):
                             if 'cpf' in error_msg.lower():
                                 if cpf:
-                                    erros.append(f"Linha {index + 2}: CPF {cpf} jÃ¡ cadastrado nesta empresa")
+                                    erros.append(f"Linha {index + 2}: CPF {cpf} já cadastrado nesta empresa")
                                 else:
-                                    erros.append(f"Linha {index + 2}: CPF jÃ¡ cadastrado nesta empresa")
+                                    erros.append(f"Linha {index + 2}: CPF já cadastrado nesta empresa")
                             elif 'cnpj' in error_msg.lower():
                                 if cnpj:
-                                    erros.append(f"Linha {index + 2}: CNPJ {cnpj} jÃ¡ cadastrado nesta empresa")
+                                    erros.append(f"Linha {index + 2}: CNPJ {cnpj} já cadastrado nesta empresa")
                                 else:
-                                    erros.append(f"Linha {index + 2}: CNPJ jÃ¡ cadastrado nesta empresa")
+                                    erros.append(f"Linha {index + 2}: CNPJ já cadastrado nesta empresa")
                             elif 'codigo_cliente' in error_msg:
-                                erros.append(f"Linha {index + 2}: CÃ³digo de cliente duplicado nesta empresa")
+                                erros.append(f"Linha {index + 2}: Código de cliente duplicado nesta empresa")
                             else:
                                 erros.append(f"Linha {index + 2}: Registro duplicado nesta empresa - {nome}")
                         else:
@@ -8111,11 +8071,11 @@ def importar_clientes():
                 except Exception as e:
                     db.session.rollback()
                     error_msg = str(e)
-                    # Mensagem mais especÃ­fica para o usuÃ¡rio
+                    # Mensagem mais específica para o usuário
                     if 'cpf' in error_msg.lower() and 'duplicate' in error_msg.lower():
-                        erros.append(f"Linha {index + 2}: CPF jÃ¡ cadastrado nesta empresa para {nome}")
+                        erros.append(f"Linha {index + 2}: CPF já cadastrado nesta empresa para {nome}")
                     elif 'cnpj' in error_msg.lower() and 'duplicate' in error_msg.lower():
-                        erros.append(f"Linha {index + 2}: CNPJ jÃ¡ cadastrado nesta empresa para {nome}")
+                        erros.append(f"Linha {index + 2}: CNPJ já cadastrado nesta empresa para {nome}")
                     else:
                         erros.append(f"Linha {index + 2}: {error_msg[:150]}")
 
@@ -8123,7 +8083,7 @@ def importar_clientes():
             total_processados = importados + atualizados
             if total_processados > 0:
                 msg_sucesso = (
-                    f"Processamento concluÃ­do! {importados} novos clientes importados e {atualizados} atualizados."
+                    f"Processamento concluído! {importados} novos clientes importados e {atualizados} atualizados."
                 )
                 if pulados > 0:
                     msg_sucesso += (
@@ -8132,17 +8092,17 @@ def importar_clientes():
                 flash(msg_sucesso, "success")
             elif pulados > 0 and not erros:
                 flash(
-                    f"âš ï¸ Nenhum cliente importado. {pulados} linha(s) vazia(s) foram ignoradas. Verifique se a planilha contÃ©m dados vÃ¡lidos.",
+                    f"⚠️ Nenhum cliente importado. {pulados} linha(s) vazia(s) foram ignoradas. Verifique se a planilha contém dados válidos.",
                     "warning",
                 )
 
             if erros:
-                # Mostrar apenas os primeiros 3 erros para nÃ£o sobrecarregar a
+                # Mostrar apenas os primeiros 3 erros para não sobrecarregar a
                 # interface
                 erros_msg = "<br>".join(erros[:3])
                 if len(erros) > 3:
                     erros_msg += f"<br>... e mais {len(erros) - 3} erro(s)"
-                flash(f"âš ï¸ Erros encontrados:<br>{erros_msg}", "warning")
+                flash(f"⚠️ Erros encontrados:<br>{erros_msg}", "warning")
 
             return redirect(url_for("lista_clientes"))
 
@@ -8154,7 +8114,7 @@ def importar_clientes():
     return render_template("clientes/importar.html", vendedores=vendedores)
 
 def verificar_acesso_cliente(cliente):
-    """Verifica se o usuÃ¡rio atual pode acessar o cliente"""
+    """Verifica se o usuário atual pode acessar o cliente"""
     if current_user.is_super_admin:
         return True
 
@@ -8175,34 +8135,21 @@ def verificar_acesso_cliente(cliente):
 @permission_required("pode_enviar_mensagens")
 def caixa_entrada():
     """Caixa de entrada - mensagens recebidas"""
-    try:
-        # Buscar mensagens recebidas nÃ£o arquivadas
-        mensagens = (
-            Mensagem.query.filter_by(
-                destinatario_id=current_user.id, arquivada_destinatario=False
-            )
-            .order_by(Mensagem.data_envio.desc())
-            .all()
+    # Buscar mensagens recebidas não arquivadas
+    mensagens = (
+        Mensagem.query.filter_by(
+            destinatario_id=current_user.id, arquivada_destinatario=False
         )
+        .order_by(Mensagem.data_envio.desc())
+        .all()
+    )
 
-        # Contar nÃ£o lidas
-        nao_lidas = Mensagem.query.filter_by(
-            destinatario_id=current_user.id,
-            lida=False,
-            arquivada_destinatario=False,
-        ).count()
-    except Exception as exc:
-        app.logger.exception(
-            "Falha ao carregar caixa de entrada para usuario_id=%s: %s",
-            getattr(current_user, "id", "?"),
-            exc,
-        )
-        flash(
-            "Nao foi possivel carregar suas mensagens agora. Tente novamente em instantes.",
-            "warning",
-        )
-        mensagens = []
-        nao_lidas = 0
+    # Contar não lidas
+    nao_lidas = Mensagem.query.filter_by(
+        destinatario_id=current_user.id,
+        lida=False,
+        arquivada_destinatario=False,
+    ).count()
 
     return render_template(
         "mensagens/caixa_entrada.html",
@@ -8214,7 +8161,7 @@ def caixa_entrada():
 @login_required
 @permission_required("pode_enviar_mensagens")
 def mensagens_enviadas():
-    """Mensagens enviadas pelo usuÃ¡rio"""
+    """Mensagens enviadas pelo usuário"""
     mensagens = (
         Mensagem.query.filter_by(
             remetente_id=current_user.id, arquivada_remetente=False
@@ -8237,21 +8184,21 @@ def nova_mensagem():
         prioridade = request.form.get("prioridade", "normal")
 
         if not destinatario_id or not assunto or not mensagem_texto:
-            flash("Preencha todos os campos obrigatÃ³rios!", "danger")
+            flash("Preencha todos os campos obrigatórios!", "danger")
             return redirect(url_for("nova_mensagem"))
 
         try:
-            # Verificar se destinatÃ¡rio existe e estÃ¡ na mesma empresa
+            # Verificar se destinatário existe e está na mesma empresa
             destinatario = Usuario.query.get(int(destinatario_id))
             if not destinatario:
-                flash("DestinatÃ¡rio nÃ£o encontrado!", "danger")
+                flash("Destinatário não encontrado!", "danger")
                 return redirect(url_for("nova_mensagem"))
 
-            # Verificar se Ã© da mesma empresa (exceto super admin)
+            # Verificar se é da mesma empresa (exceto super admin)
             if not current_user.is_super_admin:
                 if destinatario.empresa_id != current_user.empresa_id:
                     flash(
-                        "VocÃª sÃ³ pode enviar mensagens para usuÃ¡rios da sua empresa!",
+                        "Você só pode enviar mensagens para usuários da sua empresa!",
                         "danger",
                     )
                     return redirect(url_for("nova_mensagem"))
@@ -8276,7 +8223,7 @@ def nova_mensagem():
             db.session.rollback()
             flash(f"Erro ao enviar mensagem: {str(e)}", "danger")
 
-    # Buscar usuÃ¡rios da mesma empresa para o select
+    # Buscar usuários da mesma empresa para o select
     if current_user.is_super_admin:
         usuarios = (
             Usuario.query.filter(Usuario.id != current_user.id, Usuario.ativo)
@@ -8284,7 +8231,7 @@ def nova_mensagem():
             .all()
         )
     elif current_user.cargo == "supervisor":
-        # Supervisor vÃª apenas seus vendedores
+        # Supervisor vê apenas seus vendedores
         # Buscar IDs dos vendedores supervisionados
         vendedores_ids = (
             db.session.query(Vendedor.id)
@@ -8293,7 +8240,7 @@ def nova_mensagem():
         )
         vendedores_ids = [v[0] for v in vendedores_ids]
 
-        # Buscar usuÃ¡rios vinculados aos vendedores
+        # Buscar usuários vinculados aos vendedores
         usuarios = (
             Usuario.query.filter(
                 Usuario.vendedor_id.in_(vendedores_ids),
@@ -8304,7 +8251,7 @@ def nova_mensagem():
             .all()
         )
     elif current_user.cargo == "vendedor" and current_user.vendedor_id:
-        # Vendedor vÃª apenas vendedores da sua equipe
+        # Vendedor vê apenas vendedores da sua equipe
         vendedor_atual = Vendedor.query.get(current_user.vendedor_id)
         if vendedor_atual and vendedor_atual.equipe_id:
             # Buscar vendedores da mesma equipe
@@ -8315,7 +8262,7 @@ def nova_mensagem():
             )
             vendedores_ids = [v[0] for v in vendedores_equipe]
 
-            # Buscar usuÃ¡rios vinculados aos vendedores da equipe
+            # Buscar usuários vinculados aos vendedores da equipe
             usuarios = (
                 Usuario.query.filter(
                     Usuario.vendedor_id.in_(vendedores_ids),
@@ -8326,7 +8273,7 @@ def nova_mensagem():
                 .all()
             )
         else:
-            # Se nÃ£o tem equipe, nÃ£o pode enviar mensagens
+            # Se não tem equipe, não pode enviar mensagens
             usuarios = []
     else:
         usuarios = (
@@ -8348,8 +8295,8 @@ def ver_mensagem(id):
     """Visualizar mensagem"""
     mensagem = Mensagem.query.get_or_404(id)
 
-    # Verificar permissÃ£o:
-    # - Mensagens individuais: apenas remetente e destinatÃ¡rio
+    # Verificar permissão:
+    # - Mensagens individuais: apenas remetente e destinatário
     # - Mensagens de grupo: qualquer membro da equipe pode ver
     pode_ver = False
 
@@ -8357,16 +8304,16 @@ def ver_mensagem(id):
         mensagem.remetente_id == current_user.id or
         mensagem.destinatario_id == current_user.id
     ):
-        # Ã‰ remetente ou destinatÃ¡rio
+        # É remetente ou destinatário
         pode_ver = True
     elif mensagem.tipo == "grupo":
-        # Mensagem de grupo: verificar se usuÃ¡rio faz parte da mesma equipe
+        # Mensagem de grupo: verificar se usuário faz parte da mesma equipe
         # Buscar vendedor do remetente para identificar a equipe
         remetente = Usuario.query.get(mensagem.remetente_id)
         if remetente and remetente.vendedor_id:
             vendedor_remetente = Vendedor.query.get(remetente.vendedor_id)
             if vendedor_remetente and vendedor_remetente.equipe_id:
-                # Verificar se current_user estÃ¡ na mesma equipe
+                # Verificar se current_user está na mesma equipe
                 if current_user.vendedor_id:
                     vendedor_atual = Vendedor.query.get(
                         current_user.vendedor_id
@@ -8377,16 +8324,16 @@ def ver_mensagem(id):
                         vendedor_remetente.equipe_id
                     ):
                         pode_ver = True
-                # Supervisor da equipe tambÃ©m pode ver
+                # Supervisor da equipe também pode ver
                 elif current_user.cargo == "supervisor":
                     if vendedor_remetente.supervisor_id == current_user.id:
                         pode_ver = True
 
     if not pode_ver:
-        flash("VocÃª nÃ£o tem permissÃ£o para ver esta mensagem!", "danger")
+        flash("Você não tem permissão para ver esta mensagem!", "danger")
         return redirect(url_for("caixa_entrada"))
 
-    # Se for destinatÃ¡rio e nÃ£o lida, marcar como lida
+    # Se for destinatário e não lida, marcar como lida
     if mensagem.destinatario_id == current_user.id and not mensagem.lida:
         mensagem.marcar_como_lida()
 
@@ -8399,15 +8346,15 @@ def arquivar_mensagem(id):
     """Arquivar mensagem"""
     mensagem = Mensagem.query.get_or_404(id)
 
-    # Verificar se o usuÃ¡rio Ã© remetente ou destinatÃ¡rio
+    # Verificar se o usuário é remetente ou destinatário
     if (
         mensagem.remetente_id != current_user.id and
         mensagem.destinatario_id != current_user.id
     ):
-        flash("VocÃª nÃ£o tem permissÃ£o para arquivar esta mensagem!", "danger")
+        flash("Você não tem permissão para arquivar esta mensagem!", "danger")
         return redirect(url_for("caixa_entrada"))
 
-    # Arquivar conforme remetente ou destinatÃ¡rio
+    # Arquivar conforme remetente ou destinatário
     if mensagem.remetente_id == current_user.id:
         mensagem.arquivada_remetente = True
     if mensagem.destinatario_id == current_user.id:
@@ -8426,9 +8373,9 @@ def marcar_como_lida(id):
     """Marcar mensagem como lida"""
     mensagem = Mensagem.query.get_or_404(id)
 
-    # Apenas destinatÃ¡rio pode marcar como lida
+    # Apenas destinatário pode marcar como lida
     if mensagem.destinatario_id != current_user.id:
-        flash("VocÃª nÃ£o tem permissÃ£o para modificar esta mensagem!", "danger")
+        flash("Você não tem permissão para modificar esta mensagem!", "danger")
         return redirect(url_for("caixa_entrada"))
 
     mensagem.marcar_como_lida()
@@ -8442,12 +8389,12 @@ def deletar_mensagem(id):
     """Deletar mensagem"""
     mensagem = Mensagem.query.get_or_404(id)
 
-    # Verificar se o usuÃ¡rio Ã© remetente ou destinatÃ¡rio
+    # Verificar se o usuário é remetente ou destinatário
     if (
         mensagem.remetente_id != current_user.id and
         mensagem.destinatario_id != current_user.id
     ):
-        flash("VocÃª nÃ£o tem permissÃ£o para deletar esta mensagem!", "danger")
+        flash("Você não tem permissão para deletar esta mensagem!", "danger")
         return redirect(url_for("caixa_entrada"))
 
     # Deletar mensagem
@@ -8462,7 +8409,7 @@ def deletar_mensagem(id):
 @permission_required("pode_enviar_mensagens")
 def enviar_mensagem_equipe():
     """Enviar mensagem para todos da equipe"""
-    # Verificar se usuÃ¡rio Ã© vendedor ou supervisor
+    # Verificar se usuário é vendedor ou supervisor
     if current_user.cargo not in [
         "vendedor",
         "supervisor",
@@ -8482,14 +8429,14 @@ def enviar_mensagem_equipe():
         prioridade = request.form.get("prioridade", "normal")
 
         if not equipe_id or not assunto or not mensagem_texto:
-            flash("Preencha todos os campos obrigatÃ³rios!", "danger")
+            flash("Preencha todos os campos obrigatórios!", "danger")
             return redirect(url_for("enviar_mensagem_equipe"))
 
         try:
             # Buscar equipe
             equipe = Equipe.query.get(int(equipe_id))
             if not equipe:
-                flash("Equipe nÃ£o encontrada!", "danger")
+                flash("Equipe não encontrada!", "danger")
                 return redirect(url_for("enviar_mensagem_equipe"))
 
             # Buscar vendedores da equipe
@@ -8499,7 +8446,7 @@ def enviar_mensagem_equipe():
 
             enviados = 0
             for vendedor in vendedores:
-                # Buscar usuÃ¡rio do vendedor
+                # Buscar usuário do vendedor
                 usuario_vendedor = Usuario.query.filter_by(
                     vendedor_id=vendedor.id, ativo=True
                 ).first()
@@ -8525,7 +8472,7 @@ def enviar_mensagem_equipe():
             db.session.rollback()
             flash(f"Erro ao enviar mensagem: {str(e)}", "danger")
 
-    # Buscar equipes disponÃ­veis
+    # Buscar equipes disponíveis
     if current_user.is_super_admin:
         equipes = Equipe.query.filter_by(ativa=True).all()
     else:
@@ -8535,28 +8482,28 @@ def enviar_mensagem_equipe():
 
     return render_template("mensagens/enviar_equipe.html", equipes=equipes)
 
-# ===== FUNÃ‡Ã•ES AUXILIARES PARA METAS =====
+# ===== FUNÇÕES AUXILIARES PARA METAS =====
 
 def _prepare_meta_form(form):
-    """Prepara o formulÃ¡rio de meta, populando os vendedores."""
+    """Prepara o formulário de meta, populando os vendedores."""
     vendedores = filtrar_vendedores_por_escopo(current_user)
     form.vendedor_id.choices = [(v.id, v.nome) for v in vendedores]
 
 def _save_meta_from_form(form, meta=None):
-    """Salva uma meta (nova ou existente) a partir dos dados do formulÃ¡rio."""
+    """Salva uma meta (nova ou existente) a partir dos dados do formulário."""
     vendedor = Vendedor.query.get(form.vendedor_id.data)
     if not vendedor:
-        raise ValueError("Vendedor nÃ£o encontrado.")
+        raise ValueError("Vendedor não encontrado.")
 
     if not current_user.is_super_admin and vendedor.empresa_id != current_user.empresa_id:
-        raise PermissionError("VocÃª sÃ³ pode gerenciar metas da sua empresa.")
+        raise PermissionError("Você só pode gerenciar metas da sua empresa.")
 
-    if meta:  # EdiÃ§Ã£o
+    if meta:  # Edição
         meta.valor_meta = form.valor_meta.data
         meta.mes = form.mes.data
         meta.ano = form.ano.data
         meta.vendedor_id = form.vendedor_id.data
-    else:  # CriaÃ§Ã£o
+    else:  # Criação
         meta = Meta(
             valor_meta=form.valor_meta.data,
             mes=form.mes.data,
@@ -8569,10 +8516,10 @@ def _save_meta_from_form(form, meta=None):
     db.session.commit()
     return meta
 
-# ===== FUNÃ‡Ã•ES AUXILIARES PARA COMPRAS DE CLIENTES =====
+# ===== FUNÇÕES AUXILIARES PARA COMPRAS DE CLIENTES =====
 
 def _prepare_compra_cliente_form(form, cliente_id=None):
-    """Prepara o formulÃ¡rio de compra, populando clientes e produtos."""
+    """Prepara o formulário de compra, populando clientes e produtos."""
     clientes = filtrar_clientes_por_escopo(current_user)
     form.cliente_id.choices = [(c.id, c.nome) for c in clientes]
 
@@ -8587,11 +8534,11 @@ def _prepare_compra_cliente_form(form, cliente_id=None):
         form.cliente_id.data = cliente_id
 
 def _update_meta_for_compra(vendedor_id, valor_compra, data_compra, anular=False):
-    """Atualiza a receita alcanÃ§ada e a comissÃ£o na meta do vendedor.
+    """Atualiza a receita alcançada e a comissão na meta do vendedor.
 
-    Esta funÃ§Ã£o Ã© utilizada sempre que uma compra Ã© registrada ou anulada,
-    garantindo que o Ranking de Metas e os relatÃ³rios enxerguem a receita
-    real do vendedor no perÃ­odo e a comissÃ£o correspondente.
+    Esta função é utilizada sempre que uma compra é registrada ou anulada,
+    garantindo que o Ranking de Metas e os relatórios enxerguem a receita
+    real do vendedor no período e a comissão correspondente.
     """
     meta = Meta.query.filter_by(
         vendedor_id=vendedor_id,
@@ -8604,31 +8551,31 @@ def _update_meta_for_compra(vendedor_id, valor_compra, data_compra, anular=False
         else:
             meta.receita_alcancada = (meta.receita_alcancada or 0) + valor_compra
 
-        # Recalcular percentual de alcance e comissÃ£o da meta
+        # Recalcular percentual de alcance e comissão da meta
         try:
             meta.calcular_comissao()
         except Exception as e:
             app.logger.error(
-                f"Erro ao recalcular comissÃ£o da meta {meta.id}: {e}"
+                f"Erro ao recalcular comissão da meta {meta.id}: {e}"
             )
 
 def _save_compra_cliente_from_form(form, compra=None):
-    """Salva uma compra (nova ou existente) a partir dos dados do formulÃ¡rio."""
+    """Salva uma compra (nova ou existente) a partir dos dados do formulário."""
     cliente = Cliente.query.get(form.cliente_id.data)
     if not cliente:
-        raise ValueError("Cliente nÃ£o encontrado.")
+        raise ValueError("Cliente não encontrado.")
 
     if not current_user.is_super_admin and cliente.empresa_id != current_user.empresa_id:
-        raise PermissionError("VocÃª sÃ³ pode registrar compras para clientes da sua empresa.")
+        raise PermissionError("Você só pode registrar compras para clientes da sua empresa.")
 
     produto = Produto.query.get(form.produto_id.data)
     if not produto:
-        raise ValueError("Produto nÃ£o encontrado.")
+        raise ValueError("Produto não encontrado.")
 
     valor_total = produto.preco * form.quantidade.data
     data_compra = form.data_compra.data
 
-    if compra:  # EdiÃ§Ã£o
+    if compra:  # Edição
         # Reverter valor antigo da meta
         _update_meta_for_compra(compra.vendedor_id, compra.valor_total, compra.data_compra, anular=True)
 
@@ -8639,7 +8586,7 @@ def _save_compra_cliente_from_form(form, compra=None):
         compra.valor_total = valor_total
         compra.vendedor_id = cliente.vendedor_id
         compra.empresa_id = cliente.empresa_id
-    else:  # CriaÃ§Ã£o
+    else:  # Criação
         compra = CompraCliente(
             cliente_id=cliente.id,
             produto_id=produto.id,
@@ -8652,7 +8599,7 @@ def _save_compra_cliente_from_form(form, compra=None):
         db.session.add(compra)
     
     # Atualizar meta do vendedor com o novo valor e depois
-    # persistir tanto a compra quanto a meta em uma Ãºnica transaÃ§Ã£o
+    # persistir tanto a compra quanto a meta em uma única transação
     _update_meta_for_compra(cliente.vendedor_id, valor_total, data_compra)
     db.session.commit()
 
@@ -8664,10 +8611,10 @@ def _save_compra_cliente_from_form(form, compra=None):
 @login_required
 def importar_metas():
     """Importar metas via planilha Excel - Admin, Supervisor, RH e Gerente"""
-    # Verificar permissÃµes: admin, supervisor, RH e gerente podem importar metas
+    # Verificar permissões: admin, supervisor, RH e gerente podem importar metas
     if not pode_importar(current_user, "metas"):
         flash(
-            "VocÃª nÃ£o tem permissÃ£o para importar metas. Apenas Administradores, Supervisores, RH e Gerentes podem realizar esta aÃ§Ã£o.",
+            "Você não tem permissão para importar metas. Apenas Administradores, Supervisores, RH e Gerentes podem realizar esta ação.",
             "danger",
         )
         return redirect(url_for("dashboard"))
@@ -8681,17 +8628,17 @@ def importar_metas():
 
         # Verificar disponibilidade do Excel
         if not EXCEL_AVAILABLE and not ensure_excel_available():
-            flash("Erro: Bibliotecas Excel nÃ£o instaladas. Contate o administrador.", "danger")
+            flash("Erro: Bibliotecas Excel não instaladas. Contate o administrador.", "danger")
             return redirect(request.url)
 
         try:
             # Ler arquivo Excel
             df = pd.read_excel(arquivo)
 
-            # Validar colunas obrigatÃ³rias
+            # Validar colunas obrigatórias
             colunas_obrigatorias = [
                 "Vendedor Email",
-                "MÃªs",
+                "Mês",
                 "Ano",
                 "Meta Vendas",
             ]
@@ -8701,7 +8648,7 @@ def importar_metas():
 
             if colunas_faltando:
                 flash(
-                    f'Colunas obrigatÃ³rias faltando: {", ".join(colunas_faltando)}',
+                    f'Colunas obrigatórias faltando: {", ".join(colunas_faltando)}',
                     "danger",
                 )
                 return redirect(request.url)
@@ -8718,21 +8665,21 @@ def importar_metas():
                     ).first()
 
                     if not vendedor:
-                        erros.append(f"Linha {index + 2}: Vendedor com email {row['Vendedor Email']} nÃ£o encontrado")
+                        erros.append(f"Linha {index + 2}: Vendedor com email {row['Vendedor Email']} não encontrado")
                         continue
 
-                    # Verificar se usuÃ¡rio pode criar meta para este vendedor
+                    # Verificar se usuário pode criar meta para este vendedor
                     if (
                         not current_user.is_super_admin and
                         vendedor.empresa_id != current_user.empresa_id
                     ):
-                        erros.append(f"Linha {index + 2}: Sem permissÃ£o para criar meta para este vendedor")
+                        erros.append(f"Linha {index + 2}: Sem permissão para criar meta para este vendedor")
                         continue
 
-                    # Verificar se meta jÃ¡ existe
+                    # Verificar se meta já existe
                     meta_existente = Meta.query.filter_by(
                         vendedor_id=vendedor.id,
-                        mes=int(row["MÃªs"]),
+                        mes=int(row["Mês"]),
                         ano=int(row["Ano"]),
                     ).first()
 
@@ -8745,7 +8692,7 @@ def importar_metas():
                     # Criar meta
                     meta = Meta(
                         vendedor_id=vendedor.id,
-                        mes=int(row["MÃªs"]),
+                        mes=int(row["Mês"]),
                         ano=int(row["Ano"]),
                         valor_meta=float(row["Meta Vendas"]),
                     )
@@ -8762,10 +8709,10 @@ def importar_metas():
             if erros:
                 db.session.rollback()
                 flash(
-                    f"Erros encontrados durante importaÃ§Ã£o. Nenhuma meta foi importada.",
+                    f"Erros encontrados durante importação. Nenhuma meta foi importada.",
                     "danger",
                 )
-                for erro in erros[:10]:  # Mostrar atÃ© 10 erros
+                for erro in erros[:10]:  # Mostrar até 10 erros
                     flash(erro, "warning")
                 if len(erros) > 10:
                     flash(f"... e mais {len(erros) - 10} erro(s)", "warning")
@@ -8787,11 +8734,11 @@ def importar_metas():
 def lista_metas():
     """Lista todas as metas"""
     mes = request.args.get("mes", datetime.now().month, type=int)
-    ano = request.args.get("ano", now_brasilia().year, type=int)
+    ano = request.args.get("ano", datetime.now().year, type=int)
     ordenar = request.args.get("ordenar", "vendas", type=str)
     page = request.args.get("page", 1, type=int)
 
-    # Quantidade de registros por pÃ¡gina para manter a tela leve
+    # Quantidade de registros por página para manter a tela leve
     per_page = 20
 
     # Filtrar metas por empresa (exceto super admin)
@@ -8801,7 +8748,7 @@ def lista_metas():
 
     metas_todas = query.all()
 
-    # Aplicar ordenaÃ§Ã£o (suporta metas de valor e volume)
+    # Aplicar ordenação (suporta metas de valor e volume)
     if ordenar == "vendas":
         def _chave_vendas(m):
             if getattr(m, "tipo_meta", "valor") == "volume":
@@ -8817,7 +8764,7 @@ def lista_metas():
     else:
         metas_ordenadas = metas_todas
 
-    # Calcular totais globais (mantÃ©m cards monetÃ¡rios coerentes; metas de volume nÃ£o somam em R$)
+    # Calcular totais globais (mantém cards monetários coerentes; metas de volume não somam em R$)
     total_meta = sum(
         float(m.valor_meta or 0.0) if getattr(m, "tipo_meta", "valor") == "valor" else 0.0
         for m in metas_ordenadas
@@ -8828,11 +8775,11 @@ def lista_metas():
     )
     total_comissao = sum(float(m.comissao_total or 0.0) for m in metas_ordenadas)
 
-    # PaginaÃ§Ã£o em memÃ³ria (lista jÃ¡ estÃ¡ ordenada)
+    # Paginação em memória (lista já está ordenada)
     total_registros = len(metas_ordenadas)
     total_paginas = (total_registros + per_page - 1) // per_page if total_registros else 1
 
-    # Garantir que a pÃ¡gina esteja dentro dos limites
+    # Garantir que a página esteja dentro dos limites
     if page < 1:
         page = 1
     if page > total_paginas:
@@ -8852,7 +8799,7 @@ def lista_metas():
         "prev_num": page - 1,
         "next_num": page + 1 if page < total_paginas else None,
     }
-    # Faixas dinÃ¢micas de comissÃ£o para exibiÃ§Ã£o na legenda
+    # Faixas dinâmicas de comissão para exibição na legenda
     if current_user.is_super_admin:
         faixas_vendedor = (
             FaixaComissaoVendedor.query.filter(
@@ -8893,7 +8840,7 @@ def nova_meta():
     # Apenas admin, gerente e supervisor podem criar metas
     if current_user.cargo not in ["admin", "gerente", "supervisor"]:
         flash(
-            "VocÃª nÃ£o tem permissÃ£o para criar metas. Apenas Administradores, Gerentes e Supervisores podem realizar esta aÃ§Ã£o.",
+            "Você não tem permissão para criar metas. Apenas Administradores, Gerentes e Supervisores podem realizar esta ação.",
             "danger",
         )
         return redirect(url_for("dashboard"))
@@ -8910,7 +8857,7 @@ def nova_meta():
     form.vendedor_id.choices = [(v.id, v.nome) for v in vendedores]
 
     if form.validate_on_submit():
-        # Verificar se jÃ¡ existe meta para este vendedor neste perÃ­odo
+        # Verificar se já existe meta para este vendedor neste período
         meta_existente = Meta.query.filter_by(
             vendedor_id=form.vendedor_id.data,
             mes=form.mes.data,
@@ -8918,7 +8865,7 @@ def nova_meta():
         ).first()
 
         if meta_existente:
-            msg = "JÃ¡ existe uma meta para este vendedor " "neste perÃ­odo!"
+            msg = "Já existe uma meta para este vendedor " "neste período!"
             flash(msg, "warning")
             return render_template(
                 "metas/form.html", form=form, titulo="Nova Meta"
@@ -8934,7 +8881,7 @@ def nova_meta():
             observacoes=form.observacoes.data,
         )
 
-        # Calcular comissÃ£o
+        # Calcular comissão
         meta.calcular_comissao()
 
         db.session.add(meta)
@@ -8952,18 +8899,18 @@ def editar_meta(id):
     # Apenas admin, gerente e supervisor podem editar metas
     if current_user.cargo not in ["admin", "gerente", "supervisor"]:
         flash(
-            "VocÃª nÃ£o tem permissÃ£o para editar metas. Apenas Administradores, Gerentes e Supervisores podem realizar esta aÃ§Ã£o.",
+            "Você não tem permissão para editar metas. Apenas Administradores, Gerentes e Supervisores podem realizar esta ação.",
             "danger",
         )
         return redirect(url_for("dashboard"))
 
     meta = Meta.query.get_or_404(id)
 
-    # Verificar se a meta pertence Ã  empresa do usuÃ¡rio
+    # Verificar se a meta pertence à empresa do usuário
     # (exceto super admin)
     if not current_user.is_super_admin:
         if meta.vendedor.empresa_id != current_user.empresa_id:
-            msg = "VocÃª nÃ£o tem permissÃ£o " "para editar esta meta."
+            msg = "Você não tem permissão " "para editar esta meta."
             flash(msg, "danger")
             return redirect(url_for("lista_metas"))
 
@@ -8979,8 +8926,8 @@ def editar_meta(id):
     form.vendedor_id.choices = [(v.id, v.nome) for v in vendedores]
 
     if form.validate_on_submit():
-        # Verificar se hÃ¡ outra meta para este vendedor
-        # neste perÃ­odo (exceto a atual)
+        # Verificar se há outra meta para este vendedor
+        # neste período (exceto a atual)
         meta_existente = (
             Meta.query.filter_by(
                 vendedor_id=form.vendedor_id.data,
@@ -8992,7 +8939,7 @@ def editar_meta(id):
         )
 
         if meta_existente:
-            msg = "JÃ¡ existe outra meta para este vendedor " "neste perÃ­odo!"
+            msg = "Já existe outra meta para este vendedor " "neste período!"
             flash(msg, "warning")
             return render_template(
                 "metas/form.html", form=form, meta=meta, titulo="Editar Meta"
@@ -9006,7 +8953,7 @@ def editar_meta(id):
         meta.status_comissao = form.status_comissao.data
         meta.observacoes = form.observacoes.data
 
-        # Recalcular comissÃ£o
+        # Recalcular comissão
         meta.calcular_comissao()
 
         db.session.commit()
@@ -9024,18 +8971,18 @@ def deletar_meta(id):
     # Apenas admin, gerente e supervisor podem deletar metas
     if current_user.cargo not in ["admin", "gerente", "supervisor"]:
         flash(
-            "VocÃª nÃ£o tem permissÃ£o para deletar metas. Apenas Administradores, Gerentes e Supervisores podem realizar esta aÃ§Ã£o.",
+            "Você não tem permissão para deletar metas. Apenas Administradores, Gerentes e Supervisores podem realizar esta ação.",
             "danger",
         )
         return redirect(url_for("dashboard"))
 
     meta = Meta.query.get_or_404(id)
 
-    # Verificar se a meta pertence Ã  empresa do usuÃ¡rio
+    # Verificar se a meta pertence à empresa do usuário
     # (exceto super admin)
     if not current_user.is_super_admin:
         if meta.vendedor.empresa_id != current_user.empresa_id:
-            msg = "VocÃª nÃ£o tem permissÃ£o " "para deletar esta meta."
+            msg = "Você não tem permissão " "para deletar esta meta."
             flash(msg, "danger")
             return redirect(url_for("lista_metas"))
 
@@ -9047,9 +8994,9 @@ def deletar_meta(id):
 @app.route("/metas/exportar-pdf")
 @login_required
 def exportar_pdf_metas():
-    """Exportar relatÃ³rio de metas em PDF"""
+    """Exportar relatório de metas em PDF"""
     mes = request.args.get("mes", datetime.now().month, type=int)
-    ano = request.args.get("ano", now_brasilia().year, type=int)
+    ano = request.args.get("ano", datetime.now().year, type=int)
 
     query = Meta.query.filter_by(mes=mes, ano=ano).join(Vendedor)
 
@@ -9061,12 +9008,12 @@ def exportar_pdf_metas():
     try:
         pdf_buffer = gerar_pdf_metas(metas, mes, ano)
         if not pdf_buffer:
-            raise RuntimeError("GeraÃ§Ã£o de PDF retornou buffer vazio")
+            raise RuntimeError("Geração de PDF retornou buffer vazio")
 
         meses = [
             "Janeiro",
             "Fevereiro",
-            "MarÃ§o",
+            "Março",
             "Abril",
             "Maio",
             "Junho",
@@ -9088,7 +9035,7 @@ def exportar_pdf_metas():
     except Exception as e:
         app.logger.error(f"Erro ao gerar PDF de metas: {e}", exc_info=True)
         flash(
-            "NÃ£o foi possÃ­vel gerar o PDF. Verifique os logs e tente novamente.",
+            "Não foi possível gerar o PDF. Verifique os logs e tente novamente.",
             "danger",
         )
         return redirect(url_for("lista_metas"))
@@ -9096,7 +9043,7 @@ def exportar_pdf_metas():
 @app.route("/dashboard/exportar-pdf")
 @login_required
 def exportar_pdf_dashboard():
-    """Exportar relatÃ³rio do dashboard em PDF"""
+    """Exportar relatório do dashboard em PDF"""
     # Calcular resumo global
     mes_atual = datetime.now().month
     ano_atual = datetime.now().year
@@ -9134,7 +9081,7 @@ def exportar_pdf_dashboard():
     )
 
     for meta in metas_sorted:
-        # Tratar supervisor com seguranÃ§a
+        # Tratar supervisor com segurança
         try:
             supervisor_nome = (
                 meta.vendedor.supervisor.nome
@@ -9144,7 +9091,7 @@ def exportar_pdf_dashboard():
         except AttributeError:
             supervisor_nome = "Sem supervisor"
 
-        # Tratar equipe com seguranÃ§a
+        # Tratar equipe com segurança
         try:
             equipe_nome = (
                 meta.vendedor.equipe_obj.nome
@@ -9154,7 +9101,7 @@ def exportar_pdf_dashboard():
         except AttributeError:
             equipe_nome = "Sem Equipe"
 
-        # Calcular projeÃ§Ã£o do vendedor
+        # Calcular projeção do vendedor
         projecao_vendedor = calcular_projecao_mes(
             receita_atual=meta.receita_alcancada,
             meta_mes=meta.valor_meta,
@@ -9201,7 +9148,7 @@ def exportar_pdf_dashboard():
         ] += meta.receita_alcancada
         supervisores_dict[supervisor_nome]["meta_total"] += meta.valor_meta
 
-    # Calcular projeÃ§Ãµes e percentuais para equipes
+    # Calcular projeções e percentuais para equipes
     equipes = []
     for eq in equipes_dict.values():
         eq["percentual_alcance"] = (
@@ -9219,7 +9166,7 @@ def exportar_pdf_dashboard():
         equipes.append(eq)
     equipes.sort(key=lambda x: x["percentual_alcance"], reverse=True)
 
-    # Calcular projeÃ§Ãµes e percentuais para supervisores
+    # Calcular projeções e percentuais para supervisores
     supervisores = []
     for sup in supervisores_dict.values():
         sup["percentual_alcance"] = (
@@ -9234,7 +9181,7 @@ def exportar_pdf_dashboard():
             mes=mes_atual,
             dia_atual=hoje.day,
         )
-        # ComissÃ£o do supervisor baseada nas faixas de supervisor
+        # Comissão do supervisor baseada nas faixas de supervisor
         taxa_sup = _obter_taxa_por_alcance(
             "supervisor",
             current_user.empresa_id if current_user.cargo != "super_admin" else None,
@@ -9245,7 +9192,7 @@ def exportar_pdf_dashboard():
         supervisores.append(sup)
     supervisores.sort(key=lambda x: x["percentual_alcance"], reverse=True)
 
-    # Calcular projeÃ§Ã£o global
+    # Calcular projeção global
     total_receita = resumo["receita_total"]
     total_meta = resumo["meta_total"]
     projecao_global = calcular_projecao_mes(
@@ -9261,7 +9208,7 @@ def exportar_pdf_dashboard():
     resumo["projecao_global"] = projecao_global
 
     try:
-        # Log dos dados que serÃ£o enviados ao PDF
+        # Log dos dados que serão enviados ao PDF
         app.logger.info(f"Gerando PDF Dashboard - Vendedores: {len(vendedores)}, Equipes: {len(equipes)}, Supervisores: {len(supervisores)}")
 
         pdf_buffer = gerar_pdf_dashboard(
@@ -9270,12 +9217,12 @@ def exportar_pdf_dashboard():
 
         if not pdf_buffer:
             app.logger.error("PDF buffer retornou None")
-            raise RuntimeError("GeraÃ§Ã£o de PDF retornou buffer vazio")
+            raise RuntimeError("Geração de PDF retornou buffer vazio")
 
         meses = [
             "Janeiro",
             "Fevereiro",
-            "MarÃ§o",
+            "Março",
             "Abril",
             "Maio",
             "Junho",
@@ -9308,7 +9255,7 @@ def exportar_pdf_dashboard():
 def api_ranking():
     """API: Retorna ranking de vendedores"""
     mes = request.args.get("mes", datetime.now().month, type=int)
-    ano = request.args.get("ano", now_brasilia().year, type=int)
+    ano = request.args.get("ano", datetime.now().year, type=int)
 
     query = Meta.query.filter_by(mes=mes, ano=ano).join(Vendedor)
 
@@ -9342,12 +9289,12 @@ def api_vendedor_supervisor(vendedor_id):
     try:
         vendedor = Vendedor.query.get_or_404(vendedor_id)
 
-        # Verificar permissÃ£o
+        # Verificar permissão
         if (
             not current_user.is_super_admin and
             vendedor.empresa_id != current_user.empresa_id
         ):
-            return jsonify({"error": "Sem permissÃ£o"}), 403
+            return jsonify({"error": "Sem permissão"}), 403
 
         supervisor_nome = ""
         if vendedor.supervisor:
@@ -9363,10 +9310,10 @@ def api_vendedor_supervisor(vendedor_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-# ===== FUNÃ‡Ã•ES AUXILIARES PARA EQUIPES =====
+# ===== FUNÇÕES AUXILIARES PARA EQUIPES =====
 
 def _prepare_equipe_form(form):
-    """Prepara o formulÃ¡rio de equipe, populando os supervisores e vendedores."""
+    """Prepara o formulário de equipe, populando os supervisores e vendedores."""
     supervisores = Usuario.query.filter(
         Usuario.cargo == "supervisor",
         Usuario.ativo == True,
@@ -9380,22 +9327,22 @@ def _prepare_equipe_form(form):
     form.vendedores.choices = [(v.id, v.nome) for v in vendedores]
 
 def _save_equipe_from_form(form, equipe=None):
-    """Salva uma equipe (nova ou existente) a partir dos dados do formulÃ¡rio."""
+    """Salva uma equipe (nova ou existente) a partir dos dados do formulário."""
     if not current_user.is_super_admin and form.empresa_id.data != current_user.empresa_id:
-        raise PermissionError("VocÃª sÃ³ pode gerenciar equipes da sua empresa.")
+        raise PermissionError("Você só pode gerenciar equipes da sua empresa.")
 
-    if equipe:  # EdiÃ§Ã£o
+    if equipe:  # Edição
         equipe.nome = form.nome.data
         equipe.supervisor_id = form.supervisor_id.data
         equipe.empresa_id = form.empresa_id.data
-    else:  # CriaÃ§Ã£o
+    else:  # Criação
         equipe = Equipe(
             nome=form.nome.data,
             supervisor_id=form.supervisor_id.data,
             empresa_id=form.empresa_id.data,
         )
         db.session.add(equipe)
-        db.session.flush()  # Garante que o ID da equipe esteja disponÃ­vel
+        db.session.flush()  # Garante que o ID da equipe esteja disponível
 
     # Atualizar vendedores da equipe
     vendedores_selecionados = Vendedor.query.filter(
@@ -9422,7 +9369,7 @@ def lista_equipes():
             empresa_id=current_user.empresa_id, ativa=True
         )
 
-    # EstatÃ­sticas globais
+    # Estatísticas globais
     total_equipes = base_query.count()
     total_vendedores_alocados = 0
 
@@ -9438,13 +9385,13 @@ def lista_equipes():
         "total_vendedores": total_vendedores_alocados,
     }
 
-    # PaginaÃ§Ã£o ordenada por nome de equipe
+    # Paginação ordenada por nome de equipe
     pagination = base_query.order_by(Equipe.nome).paginate(
         page=page, per_page=15, error_out=False
     )
     equipes_pagina = pagination.items
 
-    # Adiciona estatÃ­sticas de cada equipe (apenas da pÃ¡gina)
+    # Adiciona estatísticas de cada equipe (apenas da página)
     equipes_data = []
     for equipe in equipes_pagina:
         vendedores_count = Vendedor.query.filter_by(
@@ -9514,11 +9461,11 @@ def editar_equipe(id):
     try:
         equipe = Equipe.query.get_or_404(id)
 
-        # Verificar se a equipe pertence Ã  empresa do usuÃ¡rio
+        # Verificar se a equipe pertence à empresa do usuário
         # (exceto super admin)
         if not current_user.is_super_admin:
             if equipe.empresa_id != current_user.empresa_id:
-                msg = "VocÃª nÃ£o tem permissÃ£o " "para editar esta equipe."
+                msg = "Você não tem permissão " "para editar esta equipe."
                 flash(msg, "danger")
                 return redirect(url_for("lista_equipes"))
 
@@ -9543,7 +9490,7 @@ def editar_equipe(id):
                 equipe.nome = form.nome.data
                 equipe.descricao = form.descricao.data
                 equipe.supervisor_id = form.supervisor_id.data
-                # Nota: empresa_id nÃ£o deve ser alterado na ediÃ§Ã£o
+                # Nota: empresa_id não deve ser alterado na edição
 
                 db.session.commit()
                 flash(f"Equipe {equipe.nome} atualizada com sucesso!", "success")
@@ -9559,7 +9506,7 @@ def editar_equipe(id):
             titulo="Editar Equipe",
         )
     except Exception as e:
-        flash(f"Equipe nÃ£o encontrada. {str(e)}", "danger")
+        flash(f"Equipe não encontrada. {str(e)}", "danger")
         return redirect(url_for("lista_equipes"))
 
 @app.route("/equipes/<int:id>/deletar", methods=["POST"])
@@ -9569,11 +9516,11 @@ def deletar_equipe(id):
     try:
         equipe = Equipe.query.get_or_404(id)
 
-        # Verificar se a equipe pertence Ã  empresa do usuÃ¡rio
+        # Verificar se a equipe pertence à empresa do usuário
         # (exceto super admin)
         if not current_user.is_super_admin:
             if equipe.empresa_id != current_user.empresa_id:
-                msg = "VocÃª nÃ£o tem permissÃ£o " "para deletar esta equipe."
+                msg = "Você não tem permissão " "para deletar esta equipe."
                 flash(msg, "danger")
                 return redirect(url_for("lista_equipes"))
 
@@ -9594,11 +9541,11 @@ def detalhes_equipe(id):
     """Ver detalhes da equipe com vendedores e metas"""
     equipe = Equipe.query.get_or_404(id)
 
-    # Verificar se a equipe pertence Ã  empresa do usuÃ¡rio
+    # Verificar se a equipe pertence à empresa do usuário
     # (exceto super admin)
     if not current_user.is_super_admin:
         if equipe.empresa_id != current_user.empresa_id:
-            msg = "VocÃª nÃ£o tem permissÃ£o " "para visualizar esta equipe."
+            msg = "Você não tem permissão " "para visualizar esta equipe."
             flash(msg, "danger")
             return redirect(url_for("lista_equipes"))
 
@@ -9607,7 +9554,7 @@ def detalhes_equipe(id):
     ).all()
     supervisor = Usuario.query.get(equipe.supervisor_id)
 
-    # Buscar metas do mÃªs atual para os vendedores da equipe
+    # Buscar metas do mês atual para os vendedores da equipe
     mes_atual = datetime.now().month
     ano_atual = datetime.now().year
 
@@ -9628,14 +9575,14 @@ def detalhes_equipe(id):
         ano=ano_atual,
     )
 
-# ===== CONFIGURAÃ‡Ã•ES DE COMISSÃƒO =====
+# ===== CONFIGURAÇÕES DE COMISSÃO =====
 
-# UtilitÃ¡rio: recalcular comissÃµes das metas do mÃªs atual da empresa
+# Utilitário: recalcular comissões das metas do mês atual da empresa
 def _recalcular_comissoes_mes_atual_empresa(empresa_id: int):
     try:
         if not empresa_id:
             return
-        hoje = now_brasilia()
+        hoje = datetime.utcnow()
         metas = (
             Meta.query.join(Vendedor)
             .filter(
@@ -9650,10 +9597,10 @@ def _recalcular_comissoes_mes_atual_empresa(empresa_id: int):
         db.session.commit()
     except Exception as e:
         app.logger.error(
-            f"Erro ao recalcular comissÃµes (empresa_id={empresa_id}): {e}"
+            f"Erro ao recalcular comissões (empresa_id={empresa_id}): {e}"
         )
 
-# UtilitÃ¡rio: obter taxa de comissÃ£o por percentual de alcance a partir das faixas
+# Utilitário: obter taxa de comissão por percentual de alcance a partir das faixas
 def _obter_taxa_por_alcance(tipo: str, empresa_id: int | None, percentual_alcance: float) -> float:
     try:
         modelo = FaixaComissaoSupervisor if tipo == "supervisor" else FaixaComissaoVendedor
@@ -9685,12 +9632,12 @@ def _obter_taxa_por_alcance(tipo: str, empresa_id: int | None, percentual_alcanc
 @app.route("/configuracoes/comissoes")
 @login_required
 def configuracoes_comissoes():
-    """Lista as faixas de comissÃ£o configuradas (vendedores e supervisores)"""
+    """Lista as faixas de comissão configuradas (vendedores e supervisores)"""
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado. Apenas administradores podem acessar.", "danger")
         return redirect(url_for("dashboard"))
 
-    # Busca faixas da empresa ou globais para VENDEDORES / SUPERVISORES / MANUTENÃ‡ÃƒO
+    # Busca faixas da empresa ou globais para VENDEDORES / SUPERVISORES / MANUTENÇÃO
     if current_user.cargo == "super_admin":
         faixas_vendedor = (
             FaixaComissaoVendedor.query.filter(
@@ -9730,7 +9677,7 @@ def configuracoes_comissoes():
             .all()
         )
 
-        # Se nÃ£o houver faixas customizadas, usa as globais
+        # Se não houver faixas customizadas, usa as globais
         if not faixas_vendedor:
             faixas_vendedor = (
                 FaixaComissaoVendedor.query.filter(
@@ -9765,7 +9712,7 @@ def configuracoes_comissoes():
                 .all()
             )
 
-    # Flag de sincronizaÃ§Ã£o automÃ¡tica (por empresa; super_admin usa chave global)
+    # Flag de sincronização automática (por empresa; super_admin usa chave global)
     empresa_contexto = None if current_user.cargo == "super_admin" else current_user.empresa_id
     sincronizacao_automatica = _get_sync_flag(empresa_contexto)
 
@@ -9780,20 +9727,20 @@ def configuracoes_comissoes():
 @app.route("/configuracoes/comissoes/criar", methods=["GET", "POST"])
 @login_required
 def criar_faixa_comissao():
-    """Cria nova faixa de comissÃ£o"""
+    """Cria nova faixa de comissão"""
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado.", "danger")
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
         try:
-            # ValidaÃ§Ã£o de dados
+            # Validação de dados
             # 'vendedor' | 'supervisor' | 'manutencao'
             tipo = request.form.get("tipo", "vendedor")
             alcance_min = request.form.get("alcance_min", "0")
             alcance_max = request.form.get("alcance_max", "100")
             taxa_comissao = request.form.get("taxa_comissao", "1")
-            # SincronizaÃ§Ã£o automÃ¡tica: opcional por configuraÃ§Ã£o
+            # Sincronização automática: opcional por configuração
             empresa_id_atual = (
                 current_user.empresa_id
                 if current_user.cargo != "super_admin"
@@ -9801,7 +9748,7 @@ def criar_faixa_comissao():
             )
             copiar_para_outro = _get_sync_flag(empresa_id_atual)
 
-            # ConversÃ£o segura
+            # Conversão segura
             alcance_min = float(alcance_min) if alcance_min else 0.0
             alcance_max = float(alcance_max) if alcance_max else 100.0
             taxa = float(taxa_comissao) / 100 if taxa_comissao else 0.01
@@ -9812,19 +9759,19 @@ def criar_faixa_comissao():
                 else 0
             )
 
-            # ValidaÃ§Ãµes
+            # Validações
             # Permitir faixa aberta quando alcance_max >= 1000 (representa "acima de")
             if alcance_max < 1000 and alcance_min >= alcance_max:
                 flash(
-                    "O alcance mÃ­nimo deve ser menor que o mÃ¡ximo.", "danger"
+                    "O alcance mínimo deve ser menor que o máximo.", "danger"
                 )
                 return redirect(url_for("criar_faixa_comissao"))
 
             if taxa <= 0:
-                flash("A taxa de comissÃ£o deve ser maior que zero.", "danger")
+                flash("A taxa de comissão deve ser maior que zero.", "danger")
                 return redirect(url_for("criar_faixa_comissao"))
 
-            # empresa_id_atual jÃ¡ definido
+            # empresa_id_atual já definido
 
             # Cria faixa do tipo selecionado
             if tipo == "vendedor":
@@ -9871,13 +9818,13 @@ def criar_faixa_comissao():
 
             db.session.commit()
 
-            tipo_nome = "vendedor" if tipo == "vendedor" else ("supervisor" if tipo == "supervisor" else "manutenÃ§Ã£o")
-            msg = f"Faixa de comissÃ£o para {tipo_nome} criada com sucesso!"
+            tipo_nome = "vendedor" if tipo == "vendedor" else ("supervisor" if tipo == "supervisor" else "manutenção")
+            msg = f"Faixa de comissão para {tipo_nome} criada com sucesso!"
             if copiar_para_outro and tipo in ("vendedor", "supervisor"):
                 outro_tipo = "supervisor" if tipo == "vendedor" else "vendedor"
-                msg += f" (copiada tambÃ©m para {outro_tipo})"
+                msg += f" (copiada também para {outro_tipo})"
             flash(msg, "success")
-            # Recalcular comissÃµes das metas do mÃªs atual (empresa do usuÃ¡rio)
+            # Recalcular comissões das metas do mês atual (empresa do usuário)
             if current_user.cargo != "super_admin":
                 _recalcular_comissoes_mes_atual_empresa(current_user.empresa_id)
             return redirect(url_for("configuracoes_comissoes"))
@@ -9888,7 +9835,7 @@ def criar_faixa_comissao():
             return redirect(url_for("criar_faixa_comissao"))
         except Exception as e:
             db.session.rollback()
-            app.logger.error(f"Erro ao criar faixa de comissÃ£o: {str(e)}")
+            app.logger.error(f"Erro ao criar faixa de comissão: {str(e)}")
             flash(
                 f"Erro ao criar faixa. Por favor, tente novamente.", "danger"
             )
@@ -9907,7 +9854,7 @@ def criar_faixa_comissao():
 )
 @login_required
 def editar_faixa_comissao(tipo, id):
-    """Edita faixa de comissÃ£o existente"""
+    """Edita faixa de comissão existente"""
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado.", "danger")
         return redirect(url_for("dashboard"))
@@ -9920,24 +9867,24 @@ def editar_faixa_comissao(tipo, id):
     elif tipo == "manutencao":
         faixa = FaixaComissaoManutencao.query.get_or_404(id)
     else:
-        flash("Tipo invÃ¡lido.", "danger")
+        flash("Tipo inválido.", "danger")
         return redirect(url_for("configuracoes_comissoes"))
 
-    # Verifica permissÃ£o
+    # Verifica permissão
     if (
         current_user.cargo != "super_admin" and
         faixa.empresa_id != current_user.empresa_id
     ):
-        flash("VocÃª nÃ£o tem permissÃ£o para editar esta faixa.", "danger")
+        flash("Você não tem permissão para editar esta faixa.", "danger")
         return redirect(url_for("configuracoes_comissoes"))
 
     if request.method == "POST":
         try:
-            # ValidaÃ§Ã£o de dados
+            # Validação de dados
             alcance_min = request.form.get("alcance_min", "0")
             alcance_max = request.form.get("alcance_max", "100")
             taxa_comissao = request.form.get("taxa_comissao", "1")
-            # SincronizaÃ§Ã£o automÃ¡tica: opcional por configuraÃ§Ã£o
+            # Sincronização automática: opcional por configuração
             empresa_id_atual = (
                 current_user.empresa_id
                 if current_user.cargo != "super_admin"
@@ -9945,7 +9892,7 @@ def editar_faixa_comissao(tipo, id):
             )
             copiar_para_outro = _get_sync_flag(empresa_id_atual)
 
-            # ConversÃ£o segura
+            # Conversão segura
             alcance_min = float(alcance_min) if alcance_min else 0.0
             alcance_max = float(alcance_max) if alcance_max else 100.0
             taxa = float(taxa_comissao) / 100 if taxa_comissao else 0.01
@@ -9956,18 +9903,18 @@ def editar_faixa_comissao(tipo, id):
                 else 0
             )
 
-            # ValidaÃ§Ãµes
+            # Validações
             # Permitir faixa aberta quando alcance_max >= 1000 (representa "acima de")
             if alcance_max < 1000 and alcance_min >= alcance_max:
                 flash(
-                    "O alcance mÃ­nimo deve ser menor que o mÃ¡ximo.", "danger"
+                    "O alcance mínimo deve ser menor que o máximo.", "danger"
                 )
                 return redirect(
                     url_for("editar_faixa_comissao", tipo=tipo, id=id)
                 )
 
             if taxa <= 0:
-                flash("A taxa de comissÃ£o deve ser maior que zero.", "danger")
+                flash("A taxa de comissão deve ser maior que zero.", "danger")
                 return redirect(
                     url_for("editar_faixa_comissao", tipo=tipo, id=id)
                 )
@@ -9982,7 +9929,7 @@ def editar_faixa_comissao(tipo, id):
             # Se solicitado, copia/atualiza para o outro tipo (apenas vendedor/supervisor)
             if copiar_para_outro and tipo in ("vendedor", "supervisor"):
                 if tipo == "vendedor":
-                    # Procura se jÃ¡ existe uma faixa supervisor correspondente
+                    # Procura se já existe uma faixa supervisor correspondente
                     faixa_outro = FaixaComissaoSupervisor.query.filter_by(
                         empresa_id=empresa_id_atual, ordem=ordem
                     ).first()
@@ -10009,12 +9956,12 @@ def editar_faixa_comissao(tipo, id):
 
             db.session.commit()
 
-            msg = "Faixa de comissÃ£o atualizada com sucesso!"
+            msg = "Faixa de comissão atualizada com sucesso!"
             if copiar_para_outro and tipo in ("vendedor", "supervisor"):
                 outro_tipo = "supervisor" if tipo == "vendedor" else "vendedor"
                 msg += f" (sincronizada com {outro_tipo})"
             flash(msg, "success")
-            # Recalcular comissÃµes das metas do mÃªs atual (empresa do usuÃ¡rio)
+            # Recalcular comissões das metas do mês atual (empresa do usuário)
             if current_user.cargo != "super_admin":
                 _recalcular_comissoes_mes_atual_empresa(current_user.empresa_id)
             return redirect(url_for("configuracoes_comissoes"))
@@ -10025,7 +9972,7 @@ def editar_faixa_comissao(tipo, id):
             return redirect(url_for("editar_faixa_comissao", tipo=tipo, id=id))
         except Exception as e:
             db.session.rollback()
-            app.logger.error(f"Erro ao atualizar faixa de comissÃ£o: {str(e)}")
+            app.logger.error(f"Erro ao atualizar faixa de comissão: {str(e)}")
             flash(
                 f"Erro ao atualizar faixa. Por favor, tente novamente.",
                 "danger",
@@ -10041,7 +9988,7 @@ def editar_faixa_comissao(tipo, id):
 )
 @login_required
 def deletar_faixa_comissao(tipo, id):
-    """Deleta faixa de comissÃ£o"""
+    """Deleta faixa de comissão"""
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado.", "danger")
         return redirect(url_for("dashboard"))
@@ -10054,15 +10001,15 @@ def deletar_faixa_comissao(tipo, id):
     elif tipo == "manutencao":
         faixa = FaixaComissaoManutencao.query.get_or_404(id)
     else:
-        flash("Tipo invÃ¡lido.", "danger")
+        flash("Tipo inválido.", "danger")
         return redirect(url_for("configuracoes_comissoes"))
 
-    # Verifica permissÃ£o
+    # Verifica permissão
     if (
         current_user.cargo != "super_admin" and
         faixa.empresa_id != current_user.empresa_id
     ):
-        flash("VocÃª nÃ£o tem permissÃ£o para deletar esta faixa.", "danger")
+        flash("Você não tem permissão para deletar esta faixa.", "danger")
         return redirect(url_for("configuracoes_comissoes"))
 
     try:
@@ -10071,7 +10018,7 @@ def deletar_faixa_comissao(tipo, id):
         ordem_alvo = faixa.ordem
         db.session.delete(faixa)
 
-        # SincronizaÃ§Ã£o automÃ¡tica de exclusÃ£o: remover faixa espelhada do outro tipo se habilitado
+        # Sincronização automática de exclusão: remover faixa espelhada do outro tipo se habilitado
         remover_espelho = _get_sync_flag(
             None if current_user.cargo == "super_admin" else current_user.empresa_id
         )
@@ -10091,14 +10038,14 @@ def deletar_faixa_comissao(tipo, id):
 
         db.session.commit()
 
-        tipo_nome = "vendedor" if tipo == "vendedor" else ("supervisor" if tipo == "supervisor" else "manutenÃ§Ã£o")
-        msg_sinc = " (faixa espelhada tambÃ©m removida)" if faixa_espelho else ""
+        tipo_nome = "vendedor" if tipo == "vendedor" else ("supervisor" if tipo == "supervisor" else "manutenção")
+        msg_sinc = " (faixa espelhada também removida)" if faixa_espelho else ""
         flash(
-            f"Faixa de comissÃ£o de {tipo_nome} excluÃ­da com sucesso!{msg_sinc}",
+            f"Faixa de comissão de {tipo_nome} excluída com sucesso!{msg_sinc}",
             "success",
         )
 
-        # Recalcular comissÃµes das metas do mÃªs atual (empresa do usuÃ¡rio)
+        # Recalcular comissões das metas do mês atual (empresa do usuário)
         if current_user.cargo != "super_admin":
             _recalcular_comissoes_mes_atual_empresa(current_user.empresa_id)
     except Exception as e:
@@ -10110,7 +10057,7 @@ def deletar_faixa_comissao(tipo, id):
 @app.route("/configuracoes/comissoes/manutencao/vincular", methods=["POST"])
 @login_required
 def vincular_faixa_manutencao_tecnicos():
-    """Vincula uma faixa de manutenÃ§Ã£o a todos os tÃ©cnicos da empresa atual."""
+    """Vincula uma faixa de manutenção a todos os técnicos da empresa atual."""
     if current_user.cargo not in ["admin", "super_admin"]:
         flash("Acesso negado.", "danger")
         return redirect(url_for("dashboard"))
@@ -10123,12 +10070,12 @@ def vincular_faixa_manutencao_tecnicos():
     try:
         faixa = FaixaComissaoManutencao.query.get(int(faixa_id))
         if not faixa:
-            flash("Faixa nÃ£o encontrada.", "danger")
+            flash("Faixa não encontrada.", "danger")
             return redirect(url_for("configuracoes_comissoes"))
 
         empresa_id_alvo = None if current_user.cargo == "super_admin" else current_user.empresa_id
 
-        # Filtra tÃ©cnicos da empresa (ou todos, se super admin)
+        # Filtra técnicos da empresa (ou todos, se super admin)
         tecnicos_query = Tecnico.query
         if empresa_id_alvo is not None:
             tecnicos_query = tecnicos_query.filter_by(empresa_id=empresa_id_alvo)
@@ -10138,10 +10085,10 @@ def vincular_faixa_manutencao_tecnicos():
             t.faixa_manutencao_id = faixa.id
 
         db.session.commit()
-        flash(f"Faixa de manutenÃ§Ã£o vinculada a {len(tecnicos)} tÃ©cnicos.", "success")
+        flash(f"Faixa de manutenção vinculada a {len(tecnicos)} técnicos.", "success")
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Erro ao vincular faixa para tÃ©cnicos: {e}")
+        app.logger.error(f"Erro ao vincular faixa para técnicos: {e}")
         flash("Erro ao vincular faixa. Tente novamente.", "danger")
 
     return redirect(url_for("configuracoes_comissoes"))
@@ -10149,7 +10096,7 @@ def vincular_faixa_manutencao_tecnicos():
 @app.route("/api/comissoes/faixas")
 @login_required
 def api_faixas_comissoes():
-    """API JSON para obter faixas de comissÃ£o (DEPRECADO - usar rotas especÃ­ficas por tipo)"""
+    """API JSON para obter faixas de comissão (DEPRECADO - usar rotas específicas por tipo)"""
     tipo = request.args.get("tipo", "vendedor")
 
     if tipo == "supervisor":
@@ -10181,7 +10128,7 @@ def api_faixas_comissoes():
 
     return jsonify([faixa.to_dict() for faixa in faixas])
 
-# ===== SincronizaÃ§Ã£o automÃ¡tica: helpers e rota =====
+# ===== Sincronização automática: helpers e rota =====
 
 def _sync_chave(empresa_id: int | None) -> str:
     return (
@@ -10195,7 +10142,7 @@ def _get_sync_flag(empresa_id: int | None) -> bool:
         chave = _sync_chave(empresa_id)
         cfg = Configuracao.query.filter_by(chave=chave).first()
         if not cfg or not cfg.valor:
-            return True  # padrÃ£o: ativo
+            return True  # padrão: ativo
         return str(cfg.valor).strip().lower() in ("1", "true", "on", "yes")
     except Exception:
         return True
@@ -10221,11 +10168,11 @@ def configurar_sincronizacao_comissoes():
     try:
         _set_sync_flag(empresa_contexto, enabled)
         if enabled:
-            flash("SincronizaÃ§Ã£o automÃ¡tica ativada.", "success")
+            flash("Sincronização automática ativada.", "success")
         else:
-            flash("SincronizaÃ§Ã£o automÃ¡tica desativada.", "warning")
+            flash("Sincronização automática desativada.", "warning")
     except Exception as e:
-        flash(f"Erro ao salvar sincronizaÃ§Ã£o: {e}", "danger")
+        flash(f"Erro ao salvar sincronização: {e}", "danger")
     return redirect(url_for("configuracoes_comissoes"))
 
 # ===== COMANDOS CLI =====
@@ -10238,7 +10185,7 @@ def init_db():
 
 @app.cli.command()
 def create_admin():
-    """Cria um usuÃ¡rio administrador"""
+    """Cria um usuário administrador"""
     admin = Usuario(
         nome="Administrador", email="admin@metas.com", cargo="admin"
     )
@@ -10250,17 +10197,17 @@ def create_admin():
     print("   Email: admin@metas.com")
     print("   Senha: admin123")
 
-# InicializaÃ§Ã£o automÃ¡tica do banco de dados  # Apenas se nÃ£o estiver sendo importado por outro script
+# Inicialização automática do banco de dados  # Apenas se não estiver sendo importado por outro script
 if __name__ != "__main__" and os.environ.get("SKIP_INIT") != "1":
     with app.app_context():
         try:
             db.create_all()
             print("[OK] Tabelas do banco de dados criadas/verificadas!")
 
-            # Iniciar sistema de backup automÃ¡tico (com try/except para nÃ£o
+            # Iniciar sistema de backup automático (com try/except para não
             # bloquear o app)
             try:
-                # SÃ³ iniciar scheduler se nÃ£o estiver em modo de init
+                # Só iniciar scheduler se não estiver em modo de init
                 if not os.environ.get("INIT_DB_ONLY"):
                     iniciar_backup_automatico()
             except Exception as e:
@@ -10268,13 +10215,13 @@ if __name__ != "__main__" and os.environ.get("SKIP_INIT") != "1":
         except Exception as e:
             print(f"[AVISO] Aviso na inicializacao do BD: {e}")
 
-# ===== ROTAS DE CONFIGURAÃ‡ÃƒO DE BACKUP =====
+# ===== ROTAS DE CONFIGURAÇÃO DE BACKUP =====
 
 @app.route("/super-admin/backups/config")
 @super_admin_required
 def backup_config_page():
-    """PÃ¡gina de configuraÃ§Ã£o de backups automÃ¡ticos"""
-    # Obter prÃ³xima execuÃ§Ã£o do backup
+    """Página de configuração de backups automáticos"""
+    # Obter próxima execução do backup
     proxima_execucao = None
     if scheduler.get_job("backup_automatico"):
         job = scheduler.get_job("backup_automatico")
@@ -10290,7 +10237,7 @@ def backup_config_page():
 @app.route("/super-admin/backups/config/salvar", methods=["POST"])
 @super_admin_required
 def salvar_config_backup():
-    """Salva configuraÃ§Ãµes de backup automÃ¡tico"""
+    """Salva configurações de backup automático"""
     try:
         backup_config["enabled"] = request.form.get("enabled") == "on"
         backup_config["frequency"] = request.form.get("frequency", "daily")
@@ -10300,21 +10247,21 @@ def salvar_config_backup():
             request.form.get("auto_cleanup") == "on"
         )
 
-        # Reiniciar scheduler com novas configuraÃ§Ãµes
+        # Reiniciar scheduler com novas configurações
         if scheduler.get_job("backup_automatico"):
             scheduler.remove_job("backup_automatico")
 
         if backup_config["enabled"]:
             iniciar_backup_automatico()
             flash(
-                "ConfiguraÃ§Ãµes de backup salvas e agendamento atualizado!",
+                "Configurações de backup salvas e agendamento atualizado!",
                 "success",
             )
         else:
-            flash("âš ï¸ Backup automÃ¡tico desativado.", "warning")
+            flash("⚠️ Backup automático desativado.", "warning")
 
     except Exception as e:
-        flash(f"Erro ao salvar configuraÃ§Ãµes: {str(e)}", "danger")
+        flash(f"Erro ao salvar configurações: {str(e)}", "danger")
 
     return redirect(url_for("backup_config_page"))
 
@@ -10359,7 +10306,7 @@ def limpar_todos_clientes():
     return redirect(url_for("super_admin_backups"))
 
 # ====================================================================
-# ROTAS DE METAS AVANÃ‡ADAS  # ====================================================================
+# ROTAS DE METAS AVANÇADAS  # ====================================================================
 
 @app.route("/metas/configurar", methods=["GET", "POST"])
 @login_required
@@ -10367,12 +10314,12 @@ def configurar_metas():
     """Interface para configurar metas com balanceamento"""
     from calculo_balanceamento import calcular_meta_balanceada
 
-    # Verificar permissÃ£o (apenas supervisor, admin, super_admin)
+    # Verificar permissão (apenas supervisor, admin, super_admin)
     if current_user.cargo not in ["supervisor", "admin", "super_admin"]:
-        flash("VocÃª nÃ£o tem permissÃ£o para configurar metas.", "danger")
+        flash("Você não tem permissão para configurar metas.", "danger")
         return redirect(url_for("dashboard"))
 
-    # Buscar vendedores disponÃ­veis
+    # Buscar vendedores disponíveis
     if current_user.cargo == "supervisor":
         vendedores = Vendedor.query.filter_by(
             supervisor_id=current_user.id, ativo=True
@@ -10403,14 +10350,14 @@ def configurar_metas():
         # Se foi solicitado salvar
         if "salvar" in request.form:
             try:
-                # Verificar se jÃ¡ existe meta para este vendedor/mÃªs/ano
+                # Verificar se já existe meta para este vendedor/mês/ano
                 meta_existente = Meta.query.filter_by(
                     vendedor_id=vendedor_id, mes=mes, ano=ano
                 ).first()
 
                 if meta_existente:
                     flash(
-                        "JÃ¡ existe uma meta para este vendedor neste mÃªs/ano. Exclua a meta existente primeiro.",
+                        "Já existe uma meta para este vendedor neste mês/ano. Exclua a meta existente primeiro.",
                         "warning",
                     )
                 else:
@@ -10461,7 +10408,7 @@ def configurar_metas():
                 db.session.rollback()
                 flash(f"Erro ao criar meta: {str(e)}", "danger")
 
-    # Anos disponÃ­veis (atual e prÃ³ximos 2)
+    # Anos disponíveis (atual e próximos 2)
     ano_atual = datetime.now().year
     anos = [ano_atual, ano_atual + 1, ano_atual + 2]
 
@@ -10475,7 +10422,7 @@ def configurar_metas():
 @app.route("/relatorios/metas-avancado")
 @login_required
 def relatorio_metas_avancado():
-    """RelatÃ³rio avanÃ§ado de metas com grÃ¡ficos"""
+    """Relatório avançado de metas com gráficos"""
     from calculo_balanceamento import obter_ranking_meses
 
     # Filtros
@@ -10483,13 +10430,13 @@ def relatorio_metas_avancado():
     vendedor_id = request.args.get("vendedor_id", type=int)
     supervisor_id = request.args.get("supervisor_id", type=int)
     tipo_meta = request.args.get("tipo_meta", "")
-    ano = request.args.get("ano", now_brasilia().year, type=int)
+    ano = request.args.get("ano", datetime.now().year, type=int)
     mes = request.args.get("mes", type=int)
 
     # Query base (garante que meta.vendedor exista para o template)
     query = Meta.query.join(Vendedor)
 
-    # Aplicar filtros de permissÃ£o
+    # Aplicar filtros de permissão
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
         query = query.filter(Meta.vendedor_id == current_user.vendedor_id)
     elif current_user.cargo == "supervisor":
@@ -10500,7 +10447,7 @@ def relatorio_metas_avancado():
     # Aplicar filtros adicionais
     if vendedor_id:
         query = query.filter(Meta.vendedor_id == vendedor_id)
-    # Filtro por supervisor (quando fornecido ou quando visÃ£o Ã© supervisor)
+    # Filtro por supervisor (quando fornecido ou quando visão é supervisor)
     if supervisor_id:
         query = query.filter(Vendedor.supervisor_id == supervisor_id)
     if tipo_meta:
@@ -10513,25 +10460,25 @@ def relatorio_metas_avancado():
     # Buscar metas
     metas = query.order_by(Meta.ano.desc(), Meta.mes.desc()).all()
 
-    # Recalcular comissÃµes se necessÃ¡rio
+    # Recalcular comissões se necessário
     for meta in metas:
         if meta.comissao_total is None or meta.comissao_total == 0:
             try:
                 meta.calcular_comissao()
             except Exception as e:
                 app.logger.warning(
-                    f"Falha ao recalcular comissÃ£o para Meta id={getattr(meta, 'id', None)}: {e}",
+                    f"Falha ao recalcular comissão para Meta id={getattr(meta, 'id', None)}: {e}",
                     exc_info=True,
                 )
 
-    # EstatÃ­sticas gerais (independente da visÃ£o)
+    # Estatísticas gerais (independente da visão)
     total_metas = len(metas)
     metas_atingidas = sum(1 for m in metas if (m.percentual_alcance or 0) >= 100)
     taxa_sucesso = (
         (metas_atingidas / total_metas * 100) if total_metas > 0 else 0
     )
 
-    # ComissÃ£o total
+    # Comissão total
     comissao_total = sum(m.comissao_total or 0 for m in metas)
 
     # Buscar vendedores para filtro
@@ -10559,12 +10506,12 @@ def relatorio_metas_avancado():
             empresa_id=current_user.empresa_id, cargo="supervisor", ativo=True
         ).all()
 
-    # Ranking de meses (somente na visÃ£o por vendedor e com vendedor selecionado)
+    # Ranking de meses (somente na visão por vendedor e com vendedor selecionado)
     ranking = None
     if visao == "vendedor" and vendedor_id:
         ranking = obter_ranking_meses(vendedor_id, ano)
 
-    # AgregaÃ§Ã£o por Supervisor quando solicitado
+    # Agregação por Supervisor quando solicitado
     supervisores_resumo = []
     if visao == "supervisor":
         # Agrupar metas por supervisor
@@ -10596,7 +10543,7 @@ def relatorio_metas_avancado():
                 grupos[sup_id]["volume_realizado_total"] += int(m.volume_alcancado or 0)
             grupos[sup_id]["comissao_total_vendedores"] += float(m.comissao_total or 0.0)
 
-        # Calcular percentual e comissÃ£o do supervisor pelas faixas
+        # Calcular percentual e comissão do supervisor pelas faixas
         empresa_id_ctx = None if current_user.is_super_admin else current_user.empresa_id
         for g in grupos.values():
             if (g["tipo_meta"] or "valor") == "valor":
@@ -10613,7 +10560,7 @@ def relatorio_metas_avancado():
                     if g["volume_meta_total"] > 0
                     else 0
                 )
-                # Para metas de volume, comissionar pela soma das comissÃµes dos vendedores
+                # Para metas de volume, comissionar pela soma das comissões dos vendedores
                 taxa_sup = None
                 comissao_sup = g["comissao_total_vendedores"]
 
@@ -10621,7 +10568,7 @@ def relatorio_metas_avancado():
                 "id": g["supervisor_id"],
                 "nome": g["supervisor_nome"],
                 "tipo_meta": g["tipo_meta"],
-                "periodo": f"{mes:02d}/{ano}" if (mes and ano) else "â€”",
+                "periodo": f"{mes:02d}/{ano}" if (mes and ano) else "—",
                 "meta_total": g["meta_total"] if (g["tipo_meta"] == "valor") else g["volume_meta_total"],
                 "realizado_total": g["realizado_total"] if (g["tipo_meta"] == "valor") else g["volume_realizado_total"],
                 "percentual_alcance": alcance,
@@ -10632,7 +10579,7 @@ def relatorio_metas_avancado():
         # Ordenar por percentual
         supervisores_resumo.sort(key=lambda x: x["percentual_alcance"], reverse=True)
 
-    # Anos disponÃ­veis
+    # Anos disponíveis
     anos_disponiveis = (
         db.session.query(Meta.ano).distinct().order_by(Meta.ano.desc()).all()
     )
@@ -10669,15 +10616,15 @@ def relatorio_metas_avancado():
 @app.route("/relatorios/metas-avancado/export")
 @login_required
 def exportar_pdf_metas_avancado():
-    """Exporta o RelatÃ³rio de Metas AvanÃ§ado em PDF nas visÃµes Vendedor ou Supervisor."""
+    """Exporta o Relatório de Metas Avançado em PDF nas visões Vendedor ou Supervisor."""
     visao = request.args.get("visao", "vendedor")
     vendedor_id = request.args.get("vendedor_id", type=int)
     supervisor_id = request.args.get("supervisor_id", type=int)
     tipo_meta = request.args.get("tipo_meta", "")
-    ano = request.args.get("ano", now_brasilia().year, type=int)
+    ano = request.args.get("ano", datetime.now().year, type=int)
     mes = request.args.get("mes", datetime.now().month, type=int)
 
-    # Construir query semelhante Ã  pÃ¡gina
+    # Construir query semelhante à página
     query = Meta.query
 
     # Escopo por cargo
@@ -10703,7 +10650,7 @@ def exportar_pdf_metas_avancado():
 
     metas = query.order_by(Meta.ano.desc(), Meta.mes.desc()).all()
 
-    # Recalcular comissÃµes quando necessÃ¡rio
+    # Recalcular comissões quando necessário
     for meta in metas:
         if meta.comissao_total is None or meta.comissao_total == 0:
             try:
@@ -10713,7 +10660,7 @@ def exportar_pdf_metas_avancado():
 
     try:
         if visao == "supervisor":
-            # AgregaÃ§Ã£o por supervisor (mesmo cÃ¡lculo da pÃ¡gina)
+            # Agregação por supervisor (mesmo cálculo da página)
             grupos = {}
             for m in metas:
                 sup_id = m.vendedor.supervisor_id if m.vendedor else None
@@ -10758,7 +10705,7 @@ def exportar_pdf_metas_avancado():
                     "id": g["supervisor_id"],
                     "nome": g["supervisor_nome"],
                     "tipo_meta": g["tipo_meta"],
-                    "periodo": f"{mes:02d}/{ano}" if (mes and ano) else "â€”",
+                    "periodo": f"{mes:02d}/{ano}" if (mes and ano) else "—",
                     "meta_total": g["meta_total"] if (g["tipo_meta"] == "valor") else g["volume_meta_total"],
                     "realizado_total": g["realizado_total"] if (g["tipo_meta"] == "valor") else g["volume_realizado_total"],
                     "percentual_alcance": alcance,
@@ -10769,46 +10716,46 @@ def exportar_pdf_metas_avancado():
             supervisores_resumo.sort(key=lambda x: x["percentual_alcance"], reverse=True)
 
             pdf_buffer = gerar_pdf_metas_supervisor(supervisores_resumo, mes, ano)
-            meses = ["Janeiro","Fevereiro","MarÃ§o","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+            meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
             nome_periodo = f"_{meses[mes-1]}_{ano}" if (mes and ano and 1 <= mes <= 12) else ""
             filename = f"Relatorio_Metas_Supervisores{nome_periodo}.pdf"
         else:
-            # VisÃ£o Vendedor: usar gerador existente
+            # Visão Vendedor: usar gerador existente
             pdf_buffer = gerar_pdf_metas(metas, mes, ano)
-            meses = ["Janeiro","Fevereiro","MarÃ§o","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+            meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
             nome_periodo = f"_{meses[mes-1]}_{ano}" if (mes and ano and 1 <= mes <= 12) else ""
             filename = f"Relatorio_Metas_Vendedores{nome_periodo}.pdf"
 
         return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
     except Exception as e:
-        app.logger.error(f"Erro ao exportar PDF de metas avanÃ§ado: {e}", exc_info=True)
-        flash("NÃ£o foi possÃ­vel gerar o PDF. Verifique os logs e tente novamente.", "danger")
+        app.logger.error(f"Erro ao exportar PDF de metas avançado: {e}", exc_info=True)
+        flash("Não foi possível gerar o PDF. Verifique os logs e tente novamente.", "danger")
         return redirect(url_for("relatorio_metas_avancado", **request.args))
 
 @app.route("/api/metas/dados-grafico/<int:vendedor_id>")
 @login_required
 def api_dados_grafico_metas(vendedor_id):
-    """API para retornar dados de grÃ¡ficos de metas"""
+    """API para retornar dados de gráficos de metas"""
     from calculo_balanceamento import (
         obter_dados_grafico_evolucao,
         obter_ranking_meses,
     )
 
     periodo_meses = request.args.get("periodo", 12, type=int)
-    ano = request.args.get("ano", now_brasilia().year, type=int)
+    ano = request.args.get("ano", datetime.now().year, type=int)
 
-    # Verificar permissÃ£o
+    # Verificar permissão
     if (
         current_user.cargo == "vendedor" and
         current_user.vendedor_id != vendedor_id
     ):
-        return jsonify({"error": "Sem permissÃ£o"}), 403
+        return jsonify({"error": "Sem permissão"}), 403
     elif current_user.cargo == "supervisor":
         vendedor = Vendedor.query.get_or_404(vendedor_id)
         if vendedor.supervisor_id != current_user.id:
-            return jsonify({"error": "Sem permissÃ£o"}), 403
+            return jsonify({"error": "Sem permissão"}), 403
 
-    # Dados de evoluÃ§Ã£o
+    # Dados de evolução
     evolucao = obter_dados_grafico_evolucao(vendedor_id, periodo_meses)
 
     # Ranking de meses
@@ -10817,17 +10764,17 @@ def api_dados_grafico_metas(vendedor_id):
     return jsonify({"evolucao": evolucao, "ranking": ranking})
 
 # ====================================================================
-# FIM DAS ROTAS DE METAS AVANÃ‡ADAS  # ====================================================================
+# FIM DAS ROTAS DE METAS AVANÇADAS  # ====================================================================
 
 # ====================================================================
-# ROTAS DE ORDENS DE SERVIÃ‡O (MANUTENÃ‡ÃƒO)  # ====================================================================
+# ROTAS DE ORDENS DE SERVIÇO (MANUTENÇÃO)  # ====================================================================
 
 @app.route("/os")
 @login_required
 def lista_ordens_servico():
-    """Lista todas as ordens de serviÃ§o com filtros"""
-    # Verificar permissÃµes: admin, gerente_manutencao, supervisor_manutencao,
-    # administrativo, tecnico e auxiliar (apenas visualizaÃ§Ã£o)
+    """Lista todas as ordens de serviço com filtros"""
+    # Verificar permissões: admin, gerente_manutencao, supervisor_manutencao,
+    # administrativo, tecnico e auxiliar (apenas visualização)
     cargos_permitidos = [
         "admin",
         "gerente_manutencao",
@@ -10838,7 +10785,7 @@ def lista_ordens_servico():
     ]
     if current_user.cargo not in cargos_permitidos:
         flash(
-            "Acesso negado! VocÃª nÃ£o tem permissÃ£o para acessar ordens de serviÃ§o.",
+            "Acesso negado! Você não tem permissão para acessar ordens de serviço.",
             "danger",
         )
         return redirect(url_for("dashboard"))
@@ -10850,15 +10797,15 @@ def lista_ordens_servico():
     busca = request.args.get("busca", "")
     page = request.args.get("page", 1, type=int)
 
-    # Quantidade de registros por pÃ¡gina (equilÃ­brio entre performance e usabilidade)
+    # Quantidade de registros por página (equilíbrio entre performance e usabilidade)
     per_page = 15
 
     # Query base
     query = OrdemServico.query.filter_by(empresa_id=current_user.empresa_id)
 
-    # Aplicar filtros de permissÃ£o por cargo
+    # Aplicar filtros de permissão por cargo
     if current_user.cargo == "tecnico":
-        # TÃ©cnico sÃ³ vÃª suas prÃ³prias OS
+        # Técnico só vê suas próprias OS
         tecnico = Tecnico.query.filter_by(
             usuario_id=current_user.id, empresa_id=current_user.empresa_id
         ).first()
@@ -10866,7 +10813,7 @@ def lista_ordens_servico():
             query = query.filter_by(tecnico_id=tecnico.id)
         else:
             flash(
-                "âš ï¸ VocÃª nÃ£o estÃ¡ vinculado a um tÃ©cnico no sistema.", "warning"
+                "⚠️ Você não está vinculado a um técnico no sistema.", "warning"
             )
             query = query.filter_by(id=0)  # Sem resultados
 
@@ -10886,7 +10833,7 @@ def lista_ordens_servico():
             )
         )
 
-    # EstatÃ­sticas por status (baseadas no conjunto filtrado, antes da paginaÃ§Ã£o)
+    # Estatísticas por status (baseadas no conjunto filtrado, antes da paginação)
     stats_query = query
     stats = {
         "aguardando_aprovacao": stats_query.filter_by(status="aguardando_aprovacao").count(),
@@ -10895,13 +10842,13 @@ def lista_ordens_servico():
         "total": stats_query.count(),
     }
 
-    # PaginaÃ§Ã£o: ordenar por data de abertura (mais recentes primeiro)
+    # Paginação: ordenar por data de abertura (mais recentes primeiro)
     pagination = query.order_by(OrdemServico.data_abertura.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     ordens = pagination.items
 
-    # Buscar tÃ©cnicos para o filtro
+    # Buscar técnicos para o filtro
     tecnicos = (
         Tecnico.query.filter_by(empresa_id=current_user.empresa_id, ativo=True)
         .order_by(Tecnico.nome)
@@ -10925,11 +10872,11 @@ def lista_ordens_servico():
 @app.route("/os/nova", methods=["GET", "POST"])
 @login_required
 def nova_ordem_servico():
-    """Criar nova ordem de serviÃ§o - Administrativo"""
+    """Criar nova ordem de serviço - Administrativo"""
     # Apenas administrativo e admin podem criar OS
     if current_user.cargo not in ["admin", "administrativo"]:
         flash(
-            "Acesso negado! Apenas Administrativo pode criar ordens de serviÃ§o.",
+            "Acesso negado! Apenas Administrativo pode criar ordens de serviço.",
             "danger",
         )
         return redirect(url_for("lista_ordens_servico"))
@@ -10946,46 +10893,46 @@ def nova_ordem_servico():
         (c.id, f"{c.nome} - {c.cpf or c.cnpj}") for c in clientes
     ]
 
-    # Preencher choices de tÃ©cnicos (necessÃ¡rio para validaÃ§Ã£o do SelectField)
+    # Preencher choices de técnicos (necessário para validação do SelectField)
     tecnicos = Tecnico.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
-    form.tecnico_id.choices = [(0, "Selecione o tÃ©cnico (Opcional)")] + [
+    form.tecnico_id.choices = [(0, "Selecione o técnico (Opcional)")] + [
         (t.id, t.nome) for t in tecnicos
     ]
 
     if form.validate_on_submit():
-        # Usar mÃ³dulo de serviÃ§o para reduzir acoplamento
+        # Usar módulo de serviço para reduzir acoplamento
         try:
             from modules.os_service import criar_os
             ok, os_obj, erro = criar_os(form, current_user)
             if ok and os_obj:
                 return redirect(url_for("visualizar_ordem_servico", id=os_obj.id))
             else:
-                flash(f"Erro ao criar ordem de serviÃ§o: {erro}", "danger")
+                flash(f"Erro ao criar ordem de serviço: {erro}", "danger")
         except Exception as e:
-            flash(f"Erro ao criar ordem de serviÃ§o: {str(e)}", "danger")
+            flash(f"Erro ao criar ordem de serviço: {str(e)}", "danger")
 
     return render_template("os/nova.html", form=form)
 
 @app.route("/os/<int:id>")
 @login_required
 def visualizar_ordem_servico(id):
-    """Visualizar detalhes da ordem de serviÃ§o"""
+    """Visualizar detalhes da ordem de serviço"""
     os = OrdemServico.query.get_or_404(id)
 
     # Verificar empresa
     if os.empresa_id != current_user.empresa_id:
-        flash("Ordem de serviÃ§o nÃ£o encontrada.", "danger")
+        flash("Ordem de serviço não encontrada.", "danger")
         return redirect(url_for("lista_ordens_servico"))
 
-    # Verificar permissÃ£o (tÃ©cnico sÃ³ vÃª suas prÃ³prias OS; auxiliar vÃª
-    # apenas OS da prÃ³pria empresa, validaÃ§Ã£o extra pode ser aplicada depois)
+    # Verificar permissão (técnico só vê suas próprias OS; auxiliar vê
+    # apenas OS da própria empresa, validação extra pode ser aplicada depois)
     if current_user.cargo == "tecnico":
         tecnico = Tecnico.query.filter_by(
             usuario_id=current_user.id, empresa_id=current_user.empresa_id
         ).first()
         if not tecnico or os.tecnico_id != tecnico.id:
             flash(
-                "VocÃª nÃ£o tem permissÃ£o para visualizar esta ordem de serviÃ§o.",
+                "Você não tem permissão para visualizar esta ordem de serviço.",
                 "danger",
             )
             return redirect(url_for("lista_ordens_servico"))
@@ -10998,11 +10945,11 @@ def visualizar_ordem_servico(id):
 @app.route("/os/<int:id>/aprovar", methods=["GET", "POST"])
 @login_required
 def aprovar_ordem_servico(id):
-    """Aprovar ou reprovar ordem de serviÃ§o - Supervisor de ManutenÃ§Ã£o"""
-    # Apenas gerente/supervisor de manutenÃ§Ã£o e admin podem aprovar
+    """Aprovar ou reprovar ordem de serviço - Supervisor de Manutenção"""
+    # Apenas gerente/supervisor de manutenção e admin podem aprovar
     if current_user.cargo not in ["admin", "gerente_manutencao", "supervisor_manutencao"]:
         flash(
-            "Acesso negado! Apenas Supervisor de ManutenÃ§Ã£o pode aprovar ordens.",
+            "Acesso negado! Apenas Supervisor de Manutenção pode aprovar ordens.",
             "danger",
         )
         return redirect(url_for("lista_ordens_servico"))
@@ -11011,20 +10958,20 @@ def aprovar_ordem_servico(id):
 
     # Verificar empresa
     if os.empresa_id != current_user.empresa_id:
-        flash("Ordem de serviÃ§o nÃ£o encontrada.", "danger")
+        flash("Ordem de serviço não encontrada.", "danger")
         return redirect(url_for("lista_ordens_servico"))
 
     # Verificar se pode aprovar
     if not os.pode_aprovar(current_user):
         flash(
-            "Esta ordem de serviÃ§o nÃ£o pode ser aprovada no momento.",
+            "Esta ordem de serviço não pode ser aprovada no momento.",
             "danger",
         )
         return redirect(url_for("visualizar_ordem_servico", id=os.id))
 
     form = OrdemServicoAvaliarForm()
 
-    # Preencher choices de tÃ©cnicos
+    # Preencher choices de técnicos
     tecnicos = (
         Tecnico.query.filter_by(
             empresa_id=current_user.empresa_id, ativo=True, disponivel=True
@@ -11032,7 +10979,7 @@ def aprovar_ordem_servico(id):
         .order_by(Tecnico.nome)
         .all()
     )
-    form.tecnico_id.choices = [(0, "Selecione o tÃ©cnico")] + [
+    form.tecnico_id.choices = [(0, "Selecione o técnico")] + [
         (t.id, f'{t.nome} - {t.especialidades or "Geral"}') for t in tecnicos
     ]
 
@@ -11043,27 +10990,27 @@ def aprovar_ordem_servico(id):
             if ok:
                 return redirect(url_for("visualizar_ordem_servico", id=os.id))
             else:
-                flash(erro or "Erro ao processar ordem de serviÃ§o.", "danger")
+                flash(erro or "Erro ao processar ordem de serviço.", "danger")
         except Exception as e:
-            flash(f"Erro ao processar ordem de serviÃ§o: {str(e)}", "danger")
+            flash(f"Erro ao processar ordem de serviço: {str(e)}", "danger")
 
     return render_template("os/aprovar.html", form=form, os=os)
 
 @app.route("/os/<int:id>/atualizar", methods=["GET", "POST"])
 @login_required
 def atualizar_ordem_servico(id):
-    """Atualizar andamento da ordem de serviÃ§o - TÃ©cnico"""
+    """Atualizar andamento da ordem de serviço - Técnico"""
     os = OrdemServico.query.get_or_404(id)
 
     # Verificar empresa
     if os.empresa_id != current_user.empresa_id:
-        flash("Ordem de serviÃ§o nÃ£o encontrada.", "danger")
+        flash("Ordem de serviço não encontrada.", "danger")
         return redirect(url_for("lista_ordens_servico"))
 
     # Verificar se pode editar
     if not os.pode_editar(current_user):
         flash(
-            "VocÃª nÃ£o tem permissÃ£o para atualizar esta ordem de serviÃ§o.",
+            "Você não tem permissão para atualizar esta ordem de serviço.",
             "danger",
         )
         return redirect(url_for("visualizar_ordem_servico", id=os.id))
@@ -11077,9 +11024,9 @@ def atualizar_ordem_servico(id):
             if ok:
                 return redirect(url_for("visualizar_ordem_servico", id=os.id))
             else:
-                flash(erro or "Erro ao atualizar ordem de serviÃ§o.", "danger")
+                flash(erro or "Erro ao atualizar ordem de serviço.", "danger")
         except Exception as e:
-            flash(f"Erro ao atualizar ordem de serviÃ§o: {str(e)}", "danger")
+            flash(f"Erro ao atualizar ordem de serviço: {str(e)}", "danger")
     else:
         # Preencher form com dados atuais
         form.status.data = os.status
@@ -11094,25 +11041,25 @@ def atualizar_ordem_servico(id):
 @app.route("/os/<int:id>/avaliar", methods=["GET", "POST"])
 @login_required
 def avaliar_ordem_servico(id):
-    """Cliente avalia a ordem de serviÃ§o concluÃ­da"""
+    """Cliente avalia a ordem de serviço concluída"""
     os = OrdemServico.query.get_or_404(id)
 
     # Verificar empresa
     if os.empresa_id != current_user.empresa_id:
-        flash("Ordem de serviÃ§o nÃ£o encontrada.", "danger")
+        flash("Ordem de serviço não encontrada.", "danger")
         return redirect(url_for("lista_ordens_servico"))
 
-    # Verificar se estÃ¡ concluÃ­da
+    # Verificar se está concluída
     if os.status != "concluida":
         flash(
-            "Apenas ordens de serviÃ§o concluÃ­das podem ser avaliadas.",
+            "Apenas ordens de serviço concluídas podem ser avaliadas.",
             "danger",
         )
         return redirect(url_for("visualizar_ordem_servico", id=os.id))
 
-    # Verificar se jÃ¡ foi avaliada
+    # Verificar se já foi avaliada
     if os.avaliacao_cliente:
-        flash("âš ï¸ Esta ordem de serviÃ§o jÃ¡ foi avaliada.", "info")
+        flash("⚠️ Esta ordem de serviço já foi avaliada.", "info")
         return redirect(url_for("visualizar_ordem_servico", id=os.id))
 
     form = OrdemServicoAvaliacaoForm()
@@ -11124,14 +11071,14 @@ def avaliar_ordem_servico(id):
             if ok:
                 return redirect(url_for("visualizar_ordem_servico", id=os.id))
             else:
-                flash(erro or "Erro ao registrar avaliaÃ§Ã£o.", "danger")
+                flash(erro or "Erro ao registrar avaliação.", "danger")
         except Exception as e:
-            flash(f"Erro ao registrar avaliaÃ§Ã£o: {str(e)}", "danger")
+            flash(f"Erro ao registrar avaliação: {str(e)}", "danger")
 
     return render_template("os/avaliar.html", form=form, os=os)
 
 # ====================================================================
-# FIM DAS ROTAS DE ORDENS DE SERVIÃ‡O  # ====================================================================
+# FIM DAS ROTAS DE ORDENS DE SERVIÇO  # ====================================================================
 
 """
 =================================================================
@@ -11142,9 +11089,9 @@ ROTAS DE ESTOQUE E PRODUTOS
 @app.route("/estoque")
 @login_required
 def lista_estoque():
-    """Dashboard de estoque com resumo e estatÃ­sticas"""
+    """Dashboard de estoque com resumo e estatísticas"""
     if not current_user.pode_acessar_estoque and current_user.cargo != "admin":
-        flash("VocÃª nÃ£o tem permissÃ£o para acessar o estoque.", "danger")
+        flash("Você não tem permissão para acessar o estoque.", "danger")
         return redirect(url_for("dashboard"))
 
     total_produtos = Produto.query.filter_by(
@@ -11206,7 +11153,7 @@ def lista_estoque():
 def lista_produtos():
     """Lista todos os produtos do estoque"""
     if not current_user.pode_acessar_estoque and current_user.cargo != "admin":
-        flash("VocÃª nÃ£o tem permissÃ£o para acessar o estoque.", "danger")
+        flash("Você não tem permissão para acessar o estoque.", "danger")
         return redirect(url_for("dashboard"))
 
     busca = request.args.get("busca", "")
@@ -11267,7 +11214,7 @@ def novo_produto():
         not current_user.pode_gerenciar_produtos and
         current_user.cargo != "admin"
     ):
-        flash("VocÃª nÃ£o tem permissÃ£o para cadastrar produtos.", "danger")
+        flash("Você não tem permissão para cadastrar produtos.", "danger")
         return redirect(url_for("lista_produtos"))
 
     form = ProdutoForm()
@@ -11279,7 +11226,7 @@ def novo_produto():
             ).first()
 
             if existe:
-                flash("JÃ¡ existe um produto com este cÃ³digo!", "danger")
+                flash("Já existe um produto com este código!", "danger")
                 return render_template(
                     "estoque/produto_form.html",
                     form=form,
@@ -11328,13 +11275,13 @@ def novo_produto():
 def visualizar_produto(id):
     """Visualizar detalhes do produto"""
     if not current_user.pode_acessar_estoque and current_user.cargo != "admin":
-        flash("VocÃª nÃ£o tem permissÃ£o para acessar o estoque.", "danger")
+        flash("Você não tem permissão para acessar o estoque.", "danger")
         return redirect(url_for("dashboard"))
 
     produto = Produto.query.get_or_404(id)
 
     if produto.empresa_id != current_user.empresa_id:
-        flash("Produto nÃ£o encontrado.", "danger")
+        flash("Produto não encontrado.", "danger")
         return redirect(url_for("lista_produtos"))
 
     movimentacoes = (
@@ -11374,13 +11321,13 @@ def editar_produto(id):
         not current_user.pode_gerenciar_produtos and
         current_user.cargo != "admin"
     ):
-        flash("VocÃª nÃ£o tem permissÃ£o para editar produtos.", "danger")
+        flash("Você não tem permissão para editar produtos.", "danger")
         return redirect(url_for("visualizar_produto", id=id))
 
     produto = Produto.query.get_or_404(id)
 
     if produto.empresa_id != current_user.empresa_id:
-        flash("Produto nÃ£o encontrado.", "danger")
+        flash("Produto não encontrado.", "danger")
         return redirect(url_for("lista_produtos"))
 
     form = ProdutoForm(obj=produto)
@@ -11393,7 +11340,7 @@ def editar_produto(id):
                 ).first()
 
                 if existe:
-                    flash("JÃ¡ existe um produto com este cÃ³digo!", "danger")
+                    flash("Já existe um produto com este código!", "danger")
                     return render_template(
                         "estoque/produto_form.html",
                         form=form,
@@ -11439,8 +11386,8 @@ def editar_produto(id):
 @app.route("/estoque/produtos/download-template")
 @login_required
 def download_template_produtos():
-    """Gera e baixa o template Excel para importaÃ§Ã£o de produtos"""
-    # Verificar permissÃ£o usando helper
+    """Gera e baixa o template Excel para importação de produtos"""
+    # Verificar permissão usando helper
     if not pode_importar(current_user, "produtos"):
         cargos_permitidos = ", ".join(get_cargos_permitidos_importacao("produtos"))
         flash(
@@ -11450,7 +11397,7 @@ def download_template_produtos():
         return redirect(url_for("lista_produtos"))
 
     if not EXCEL_AVAILABLE and not ensure_excel_available():
-        flash("Erro: Bibliotecas Excel nÃ£o instaladas. Contate o administrador.", "danger")
+        flash("Erro: Bibliotecas Excel não instaladas. Contate o administrador.", "danger")
         return redirect(url_for("lista_produtos"))
 
     try:
@@ -11478,26 +11425,26 @@ def download_template_produtos():
             bottom=Side(style="thin"),
         )
 
-        # CabeÃ§alhos conforme imagem
+        # Cabeçalhos conforme imagem
         headers = [
-            "CÃ³digo",
+            "Código",
             "Nome",
-            "ReferÃªncia",
-            "CÃ³digo de barra",
+            "Referência",
+            "Código de barra",
             "NCM",
             "Data Hora",
             "Qte entrada",
-            "Qte saÃ­da",
+            "Qte saída",
             "O.S",
             "Administrativo",
-            "TÃ©cnico",
+            "Técnico",
             "Vendedor",
             "Supervisor",
             "Gerente",
             "Status",
         ]
 
-        # Aplicar cabeÃ§alhos
+        # Aplicar cabeçalhos
         for col, header in enumerate(headers, start=1):
             cell = ws.cell(row=1, column=col)
             cell.value = header
@@ -11551,25 +11498,25 @@ def download_template_produtos():
             cell.border = border
             cell.alignment = Alignment(horizontal="left", vertical="center")
 
-        # Adicionar instruÃ§Ãµes em nova aba
-        ws_info = wb.create_sheet("InstruÃ§Ãµes")
+        # Adicionar instruções em nova aba
+        ws_info = wb.create_sheet("Instruções")
         ws_info.column_dimensions["A"].width = 80
 
         instrucoes = [
-            "INSTRUÃ‡Ã•ES PARA IMPORTAÃ‡ÃƒO DE PRODUTOS",
+            "INSTRUÇÕES PARA IMPORTAÇÃO DE PRODUTOS",
             "",
             "1. Preencha os dados na aba 'Produtos'",
-            "2. Campos obrigatÃ³rios: CÃ³digo, Nome",
-            "3. Campos numÃ©ricos: Qte entrada, Qte saÃ­da (deixar vazio ou 0 se nÃ£o aplicÃ¡vel)",
-            "4. O.S: Preencher manualmente quando necessÃ¡rio",
+            "2. Campos obrigatórios: Código, Nome",
+            "3. Campos numéricos: Qte entrada, Qte saída (deixar vazio ou 0 se não aplicável)",
+            "4. O.S: Preencher manualmente quando necessário",
             "5. Status: Ativo ou Inativo",
-            "6. Produtos com cÃ³digo jÃ¡ cadastrado serÃ£o ignorados",
-            "7. Novos produtos receberÃ£o ID Ãºnico automaticamente",
-            "8. Data Hora serÃ¡ preenchida automaticamente no momento da importaÃ§Ã£o",
+            "6. Produtos com código já cadastrado serão ignorados",
+            "7. Novos produtos receberão ID único automaticamente",
+            "8. Data Hora será preenchida automaticamente no momento da importação",
             "",
-            "COLUNAS DE FUNCIONÃRIOS:",
-            "- Use 'Sim' ou deixe vazio nas colunas de funcionÃ¡rios",
-            "- Estas colunas sÃ£o opcionais e servem para controle",
+            "COLUNAS DE FUNCIONÁRIOS:",
+            "- Use 'Sim' ou deixe vazio nas colunas de funcionários",
+            "- Estas colunas são opcionais e servem para controle",
         ]
 
         for row, texto in enumerate(instrucoes, start=1):
@@ -11580,7 +11527,7 @@ def download_template_produtos():
             elif texto.startswith("COLUNAS"):
                 cell.font = Font(bold=True, size=12)
 
-        # Salvar em memÃ³ria
+        # Salvar em memória
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
@@ -11594,7 +11541,7 @@ def download_template_produtos():
 
     except ImportError:
         flash(
-            "Biblioteca openpyxl nÃ£o instalada. Execute: pip install openpyxl",
+            "Biblioteca openpyxl não instalada. Execute: pip install openpyxl",
             "danger",
         )
         return redirect(url_for("lista_produtos"))
@@ -11606,7 +11553,7 @@ def download_template_produtos():
 @login_required
 def importar_produtos():
     """Importa produtos do arquivo Excel"""
-    # Verificar permissÃ£o usando helper
+    # Verificar permissão usando helper
     if not pode_importar(current_user, "produtos"):
         cargos_permitidos = ", ".join(get_cargos_permitidos_importacao("produtos"))
         flash(
@@ -11617,10 +11564,10 @@ def importar_produtos():
 
     # Verificar disponibilidade do Excel (pandas/openpyxl)
     if not EXCEL_AVAILABLE and not ensure_excel_available():
-        error_msg = "âŒ Erro: Funcionalidade de importaÃ§Ã£o Excel indisponÃ­vel."
+        error_msg = "❌ Erro: Funcionalidade de importação Excel indisponível."
         if EXCEL_ERROR_MESSAGE:
-            # Log detalhado no backend; para o usuÃ¡rio mantemos mensagem amigÃ¡vel
-            print(f"ðŸ“Š Erro Excel (importar_produtos): {EXCEL_ERROR_MESSAGE}")
+            # Log detalhado no backend; para o usuário mantemos mensagem amigável
+            print(f"📊 Erro Excel (importar_produtos): {EXCEL_ERROR_MESSAGE}")
             flash(error_msg + " Contate o administrador.", "danger")
         else:
             flash(error_msg + " Contate o administrador.", "danger")
@@ -11638,7 +11585,7 @@ def importar_produtos():
 
         if not arquivo.filename.endswith((".xlsx", ".xls")):
             flash(
-                "Formato de arquivo invÃ¡lido. Use .xlsx ou .xls", "danger"
+                "Formato de arquivo inválido. Use .xlsx ou .xls", "danger"
             )
             return redirect(url_for("lista_produtos"))
 
@@ -11650,7 +11597,7 @@ def importar_produtos():
         produtos_duplicados = []
         erros = []
 
-        # Processar linhas (pular cabeÃ§alho)
+        # Processar linhas (pular cabeçalho)
         for row_num, row in enumerate(
             ws.iter_rows(min_row=2, values_only=True), start=2
         ):
@@ -11662,14 +11609,14 @@ def importar_produtos():
                 codigo_barra = str(row[3]).strip() if row[3] else None
                 ncm = str(row[4]).strip() if row[4] else None
 
-                # Validar campos obrigatÃ³rios
+                # Validar campos obrigatórios
                 if not codigo or not nome:
                     erros.append(
-                        f"Linha {row_num}: CÃ³digo e Nome sÃ£o obrigatÃ³rios"
+                        f"Linha {row_num}: Código e Nome são obrigatórios"
                     )
                     continue
 
-                # Verificar se jÃ¡ existe
+                # Verificar se já existe
                 existe = Produto.query.filter_by(
                     codigo=codigo, empresa_id=current_user.empresa_id
                 ).first()
@@ -11682,7 +11629,7 @@ def importar_produtos():
                     if ncm: existe.ncm = ncm
 
                     # Atualizar timestamp
-                    existe.data_atualizacao = now_brasilia()
+                    existe.data_atualizacao = datetime.utcnow()
 
                     produtos_criados.append(f"{codigo} - {nome} (Atualizado)")
                     continue
@@ -11694,14 +11641,14 @@ def importar_produtos():
                     referencia=referencia,
                     codigo_barra=codigo_barra,
                     ncm=ncm,
-                    categoria="Outro",  # Categoria padrÃ£o
-                    unidade="UN",  # Unidade padrÃ£o
+                    categoria="Outro",  # Categoria padrão
+                    unidade="UN",  # Unidade padrão
                     empresa_id=current_user.empresa_id,
                     estoque_atual=0,
                     estoque_minimo=0,
                     custo_medio=0,
                     preco_venda=0,
-                    preco_servico=0,  # Inicializar preÃ§o do serviÃ§o
+                    preco_servico=0,  # Inicializar preço do serviço
                     ativo=True,
                 )
 
@@ -11711,7 +11658,7 @@ def importar_produtos():
             except Exception as e:
                 erros.append(f"Linha {row_num}: {str(e)}")
 
-        # Commit das alteraÃ§Ãµes
+        # Commit das alterações
         if produtos_criados:
             db.session.commit()
 
@@ -11720,7 +11667,7 @@ def importar_produtos():
         if produtos_criados:
             mensagens.append(f"{len(produtos_criados)} produto(s) importado(s) com sucesso!")
         if produtos_duplicados:
-            mensagens.append(f"âš ï¸ {len(produtos_duplicados)} produto(s) jÃ¡ cadastrado(s) (ignorados)")
+            mensagens.append(f"⚠️ {len(produtos_duplicados)} produto(s) já cadastrado(s) (ignorados)")
         if erros:
             mensagens.append(f"{len(erros)} erro(s) encontrado(s)")
 
@@ -11730,11 +11677,11 @@ def importar_produtos():
 
         # Flash warnings e erros - mostrar apenas quantidade
         if produtos_duplicados:
-            # Mostrar apenas os primeiros 3 cÃ³digos de forma compacta
+            # Mostrar apenas os primeiros 3 códigos de forma compacta
             codigos_mostrar = [
                 p.split(" - ")[0] for p in produtos_duplicados[:3]
             ]
-            msg_duplicados = f"âš ï¸ {len(produtos_duplicados)} produto(s) jÃ¡ cadastrado(s): {', '.join(codigos_mostrar)}"
+            msg_duplicados = f"⚠️ {len(produtos_duplicados)} produto(s) já cadastrado(s): {', '.join(codigos_mostrar)}"
             if len(produtos_duplicados) > 3:
                 msg_duplicados += f" e mais {len(produtos_duplicados) - 3} produto(s)"
             flash(msg_duplicados, "warning")
@@ -11746,7 +11693,7 @@ def importar_produtos():
 
     except ImportError:
         flash(
-            "Biblioteca openpyxl nÃ£o instalada. Execute: pip install openpyxl",
+            "Biblioteca openpyxl não instalada. Execute: pip install openpyxl",
             "danger",
         )
         return redirect(url_for("lista_produtos"))
@@ -11758,7 +11705,7 @@ def importar_produtos():
 @app.route("/estoque/movimentacao/nova", methods=["GET", "POST"])
 @login_required
 def nova_movimentacao():
-    """Registrar nova movimentaÃ§Ã£o de estoque"""
+    """Registrar nova movimentação de estoque"""
     from permissoes_estoque import (
         get_motivos_permitidos,
         usuario_pode_usar_motivo,
@@ -11768,7 +11715,7 @@ def nova_movimentacao():
         not current_user.pode_movimentar_estoque and
         current_user.cargo != "admin"
     ):
-        flash("VocÃª nÃ£o tem permissÃ£o para movimentar estoque.", "danger")
+        flash("Você não tem permissão para movimentar estoque.", "danger")
         return redirect(url_for("lista_estoque"))
 
     form = EstoqueMovimentoForm()
@@ -11804,7 +11751,7 @@ def nova_movimentacao():
         (os.id, f"{os.numero_os} - {os.titulo}") for os in ordens
     ]
 
-    # Configurar motivos baseado no cargo do usuÃ¡rio e tipo de movimento
+    # Configurar motivos baseado no cargo do usuário e tipo de movimento
     tipo_movimento = request.form.get("tipo", "entrada")
     motivos_permitidos = get_motivos_permitidos(
         current_user.cargo, tipo_movimento
@@ -11813,12 +11760,12 @@ def nova_movimentacao():
 
     if form.validate_on_submit():
         try:
-            # Validar permissÃ£o do motivo selecionado
+            # Validar permissão do motivo selecionado
             if not usuario_pode_usar_motivo(
                 current_user.cargo, form.tipo.data, form.motivo.data
             ):
                 flash(
-                    "VocÃª nÃ£o tem permissÃ£o para usar este motivo de movimentaÃ§Ã£o!",
+                    "Você não tem permissão para usar este motivo de movimentação!",
                     "danger",
                 )
                 return render_template(
@@ -11827,34 +11774,15 @@ def nova_movimentacao():
 
             produto = Produto.query.get(form.produto_id.data)
             if not produto:
-                flash("Produto nÃ£o encontrado!", "danger")
+                flash("Produto não encontrado!", "danger")
                 return render_template(
                     "estoque/movimentacao_form.html", form=form
                 )
 
             if form.tipo.data == "saida":
                 if form.quantidade.data > produto.estoque_atual:
-                    if form.motivo.data == "venda":
-                        msg_estoque = (
-                            "Estoque insuficiente para esta venda. "
-                            f"Saldo disponÃ­vel: {produto.estoque_atual:g}"
-                        )
-                    else:
-                        msg_estoque = (
-                            "Quantidade insuficiente para esta movimentaÃ§Ã£o. "
-                            f"Saldo disponÃ­vel: {produto.estoque_atual:g}"
-                        )
                     flash(
-                        msg_estoque,
-                        "danger",
-                    )
-                    return render_template(
-                        "estoque/movimentacao_form.html", form=form
-                    )
-
-                if form.motivo.data == "venda" and float(produto.preco_venda or 0) <= 0:
-                    flash(
-                        "Produto sem preÃ§o de venda cadastrado. Atualize o cadastro do produto.",
+                        f"Quantidade insuficiente! Estoque atual: {produto.estoque_atual}",
                         "danger",
                     )
                     return render_template(
@@ -11905,26 +11833,26 @@ def nova_movimentacao():
             db.session.commit()
 
             flash(
-                f"MovimentaÃ§Ã£o registrada com sucesso! Estoque atual: {produto.estoque_atual}",
+                f"Movimentação registrada com sucesso! Estoque atual: {produto.estoque_atual}",
                 "success",
             )
             return redirect(url_for("visualizar_produto", id=produto.id))
 
         except Exception as e:
             db.session.rollback()
-            flash(f"Erro ao registrar movimentaÃ§Ã£o: {str(e)}", "danger")
+            flash(f"Erro ao registrar movimentação: {str(e)}", "danger")
 
     return render_template("estoque/movimentacao_form.html", form=form)
 
 @app.route("/api/estoque/motivos-permitidos/<tipo_movimento>")
 @login_required
 def get_motivos_permitidos_api(tipo_movimento):
-    """API para obter motivos permitidos baseado no cargo do usuÃ¡rio"""
+    """API para obter motivos permitidos baseado no cargo do usuário"""
     from permissoes_estoque import get_motivos_permitidos
     from flask import jsonify
 
     if tipo_movimento not in ["entrada", "saida"]:
-        return jsonify({"error": "Tipo de movimento invÃ¡lido"}), 400
+        return jsonify({"error": "Tipo de movimento inválido"}), 400
 
     motivos = get_motivos_permitidos(current_user.cargo, tipo_movimento)
 
@@ -11939,7 +11867,7 @@ def get_motivos_permitidos_api(tipo_movimento):
 @app.route("/estoque/permissoes")
 @login_required
 def permissoes_estoque():
-    """PÃ¡gina com documentaÃ§Ã£o da hierarquia de permissÃµes"""
+    """Página com documentação da hierarquia de permissões"""
     if current_user.cargo not in ["admin", "gerente"]:
         flash("Acesso restrito a administradores e gerentes.", "danger")
         return redirect(url_for("lista_estoque"))
@@ -11949,9 +11877,9 @@ def permissoes_estoque():
 @app.route("/estoque/movimentacoes")
 @login_required
 def lista_movimentacoes():
-    """Lista todas as movimentaÃ§Ãµes de estoque"""
+    """Lista todas as movimentações de estoque"""
     if not current_user.pode_acessar_estoque and current_user.cargo != "admin":
-        flash("VocÃª nÃ£o tem permissÃ£o para acessar o estoque.", "danger")
+        flash("Você não tem permissão para acessar o estoque.", "danger")
         return redirect(url_for("dashboard"))
 
     tipo = request.args.get("tipo", "")
@@ -11969,22 +11897,11 @@ def lista_movimentacoes():
     if motivo:
         query = query.filter_by(motivo=motivo)
     if produto_id:
-        try:
-            query = query.filter_by(produto_id=int(produto_id))
-        except ValueError:
-            flash("Filtro de produto invÃ¡lido.", "warning")
+        query = query.filter_by(produto_id=produto_id)
     if data_inicio:
-        try:
-            data_inicio_dt = datetime.strptime(data_inicio, "%Y-%m-%d")
-            query = query.filter(EstoqueMovimento.data_movimento >= data_inicio_dt)
-        except ValueError:
-            flash("Data inÃ­cio invÃ¡lida. Use o formato correto.", "warning")
+        query = query.filter(EstoqueMovimento.data_movimento >= data_inicio)
     if data_fim:
-        try:
-            data_fim_dt = datetime.strptime(data_fim, "%Y-%m-%d") + timedelta(days=1)
-            query = query.filter(EstoqueMovimento.data_movimento < data_fim_dt)
-        except ValueError:
-            flash("Data fim invÃ¡lida. Use o formato correto.", "warning")
+        query = query.filter(EstoqueMovimento.data_movimento <= data_fim)
 
     movimentacoes = query.order_by(
         EstoqueMovimento.data_movimento.desc()
@@ -11996,44 +11913,10 @@ def lista_movimentacoes():
         .all()
     )
 
-    # ReconstrÃ³i saldo apÃ³s cada movimentaÃ§Ã£o considerando todo o histÃ³rico
-    # dos produtos exibidos, mesmo quando a lista estÃ¡ filtrada.
-    saldo_apos_movimentacao = {}
-    if movimentacoes:
-        produto_ids_movimentados = {mov.produto_id for mov in movimentacoes}
-        saldos_correntes = {
-            produto.id: float(produto.estoque_atual or 0)
-            for produto in produtos
-            if produto.id in produto_ids_movimentados
-        }
-        ids_visiveis = {mov.id for mov in movimentacoes}
-
-        movimentos_historico = (
-            EstoqueMovimento.query.filter_by(empresa_id=current_user.empresa_id)
-            .filter(EstoqueMovimento.produto_id.in_(produto_ids_movimentados))
-            .order_by(EstoqueMovimento.data_movimento.desc(), EstoqueMovimento.id.desc())
-            .all()
-        )
-
-        for mov in movimentos_historico:
-            saldo_apos = saldos_correntes.get(
-                mov.produto_id,
-                float((mov.produto.estoque_atual if mov.produto else 0) or 0),
-            )
-
-            if mov.id in ids_visiveis:
-                saldo_apos_movimentacao[mov.id] = saldo_apos
-
-            if mov.tipo == "entrada":
-                saldos_correntes[mov.produto_id] = saldo_apos - float(mov.quantidade or 0)
-            else:
-                saldos_correntes[mov.produto_id] = saldo_apos + float(mov.quantidade or 0)
-
     return render_template(
         "estoque/movimentacoes.html",
         movimentacoes=movimentacoes,
         produtos=produtos,
-        saldo_apos_movimentacao=saldo_apos_movimentacao,
         filtros={
             "tipo": tipo,
             "motivo": motivo,
@@ -12044,16 +11927,16 @@ def lista_movimentacoes():
     )
 
 # ====================================================================
-# ROTA DE DIAGNÃ“STICO DO SISTEMA
+# ROTA DE DIAGNÓSTICO DO SISTEMA
 # ====================================================================
 
 @app.route("/diagnostico-excel")
 @login_required
 def diagnostico_excel():
-    """Endpoint de diagnÃ³stico para verificar status das bibliotecas Excel"""
+    """Endpoint de diagnóstico para verificar status das bibliotecas Excel"""
     # Apenas admin pode acessar
     if current_user.cargo != "admin":
-        flash("Acesso negado! Apenas administradores podem acessar o diagnÃ³stico.", "danger")
+        flash("Acesso negado! Apenas administradores podem acessar o diagnóstico.", "danger")
         return redirect(url_for("dashboard"))
     
     diagnostico = {
@@ -12094,19 +11977,11 @@ def diagnostico_excel():
 
 @app.errorhandler(500)
 def handle_500(error):
-    """Handler de erro 500 com diagnÃ³stico de conexÃ£o"""
+    """Handler de erro 500 com diagnóstico de conexão"""
     try:
         app.logger.error(f"Erro 500: {error}")
-
-        # Nunca depender diretamente do proxy current_user sem protecao,
-        # pois falhas de sessao/DB podem gerar erro em cascata na propria tela de erro.
-        is_authenticated = False
-        try:
-            is_authenticated = bool(getattr(current_user, "is_authenticated", False))
-        except Exception as auth_err:
-            app.logger.error(f"Falha ao ler autenticacao no handler 500: {auth_err}")
         
-        # DiagnÃ³stico de conexÃ£o com banco
+        # Diagnóstico de conexão com banco
         db_status = "desconhecido"
         db_error = None
         try:
@@ -12117,23 +11992,22 @@ def handle_500(error):
         except Exception as db_err:
             db_status = "erro"
             db_error = str(db_err)
-            app.logger.error(f"Erro de conexÃ£o com banco: {db_error}")
+            app.logger.error(f"Erro de conexão com banco: {db_error}")
         
-        # Passar informaÃ§Ãµes para o template
+        # Passar informações para o template
         return render_template(
             'errors/500.html',
             db_status=db_status,
-            db_error=db_error,
-            is_authenticated=is_authenticated,
+            db_error=db_error
         ), 500
     except Exception as e:
         app.logger.error(f"Erro no handler 500: {e}")
-        return render_template('errors/500.html', is_authenticated=False), 500
+        return render_template('errors/500.html'), 500
 
 if __name__ == "__main__":
     # Se estiver rodando no Railway, executar fix do banco antes
     if os.environ.get('RAILWAY_ENVIRONMENT'):
-        print("\nðŸš‚ Ambiente Railway detectado - verificando banco de dados...")
+        print("\n🚂 Ambiente Railway detectado - verificando banco de dados...")
         try:
             import subprocess
             import sys
@@ -12144,26 +12018,25 @@ if __name__ == "__main__":
                 timeout=30
             )
             if result.returncode == 0:
-                print("âœ… Banco de dados verificado/corrigido com sucesso")
+                print("✅ Banco de dados verificado/corrigido com sucesso")
             else:
-                print(f"âš ï¸ Aviso ao verificar banco: {result.stderr}")
+                print(f"⚠️ Aviso ao verificar banco: {result.stderr}")
         except Exception as e:
-            print(f"âš ï¸ Erro ao verificar banco: {e}")
+            print(f"⚠️ Erro ao verificar banco: {e}")
     
     print("\n" + "=" * 70)
-    print("ðŸš€ SISTEMA DE GESTÃƒO DE METAS E COMISSÃ•ES - VERSÃƒO COMPLETA")
+    print("🚀 SISTEMA DE GESTÃO DE METAS E COMISSÕES - VERSÃO COMPLETA")
     print("=" * 70)
-    print("\nâœ¨ Novos Recursos:")
-    print("   ðŸ” Sistema de autenticaÃ§Ã£o (Login/Registro)")
-    print("   ðŸ’¾ Banco de dados SQLite/PostgreSQL")
-    print("   ðŸ‘¥ Gerenciamento de vendedores")
-    print("   ðŸ“Š Gerenciamento de metas")
-    print("   ðŸŽ¯ CÃ¡lculo automÃ¡tico de comissÃµes")
-    print("   â° Backup automÃ¡tico agendado")
+    print("\n✨ Novos Recursos:")
+    print("   🔐 Sistema de autenticação (Login/Registro)")
+    print("   💾 Banco de dados SQLite/PostgreSQL")
+    print("   👥 Gerenciamento de vendedores")
+    print("   📊 Gerenciamento de metas")
+    print("   🎯 Cálculo automático de comissões")
+    print("   ⏰ Backup automático agendado")
     print("\n[OK] Servidor iniciado com sucesso!")
     print("=> Acesse: http://127.0.0.1:5001/login")
     print("[KEY] Pressione CTRL+C para parar o servidor\n")
     print("=" * 70 + "\n")
 
     app.run(debug=True, port=5001)
-

@@ -1,7 +1,6 @@
 # config.py - Sistema VendaCerta
 import os
 from datetime import timedelta
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 # Obter o diretório base do projeto
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -70,25 +69,6 @@ class Config:
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
             print("[CONFIG] Corrigido: postgres:// -> postgresql://")
-
-        # Railway (host publico proxy.rlwy.net) normalmente exige SSL.
-        # Tambem respeita PGSSLMODE/DB_SSLMODE quando informado pelo ambiente.
-        try:
-            parsed = urlparse(database_url)
-            hostname = parsed.hostname or ""
-            sslmode = os.environ.get('PGSSLMODE') or os.environ.get('DB_SSLMODE')
-
-            if not sslmode and hostname.endswith('proxy.rlwy.net'):
-                sslmode = 'require'
-
-            if sslmode and parsed.scheme.startswith('postgresql'):
-                query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
-                if 'sslmode' not in query_params:
-                    query_params['sslmode'] = sslmode
-                    database_url = urlunparse(parsed._replace(query=urlencode(query_params)))
-                    print(f"[CONFIG] SSL habilitado na conexao PostgreSQL (sslmode={sslmode})")
-        except Exception as ssl_err:
-            print(f"[CONFIG] Aviso ao ajustar sslmode: {ssl_err}")
         
         # Valida formato básico
         if database_url.startswith('postgresql://'):

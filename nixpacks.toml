@@ -30,4 +30,4 @@ dependsOn = ["install"]
 cmds = [". .venv/bin/activate && python init_railway.py"]
 
 [start]
-cmd = ". .venv/bin/activate && export SKIP_INIT=1 SKIP_DB_INIT_ON_START=1 RUN_DB_INIT_ON_START=0 SKIP_DB_BOOT_CHECK=1 PYTHONPATH=${PYTHONPATH:-}:$(pwd) && exec gunicorn wsgi:app --bind 0.0.0.0:${PORT:-8080} --workers ${GUNICORN_WORKERS:-2} --threads ${GUNICORN_THREADS:-4} --timeout ${GUNICORN_TIMEOUT:-120} --keep-alive ${GUNICORN_KEEP_ALIVE:-5} --log-level ${GUNICORN_LOG_LEVEL:-info} --access-logfile - --error-logfile -"
+cmd = "ls -la /app && chmod +x /app/startup.sh && /app/startup.sh"
