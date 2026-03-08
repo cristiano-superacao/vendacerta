@@ -3,6 +3,7 @@
 
 import os
 import re
+import hashlib
 from pathlib import Path
 
 def verificar_rotas():
@@ -185,21 +186,23 @@ def verificar_duplicidades():
     print("🔍 VERIFICANDO DUPLICIDADES")
     print("="*70)
     
-    # Verificar templates duplicados
+    encontrou_duplicidade = False
+
+    # Verificar templates com conteudo duplicado real
     templates_dir = Path("templates")
     if templates_dir.exists():
-        templates = {}
+        por_hash = {}
         for template in templates_dir.glob("**/*.html"):
-            nome = template.name
-            if nome in templates:
-                print(f"⚠️  Template duplicado: {nome}")
-                print(f"   - {templates[nome]}")
-                print(f"   - {template}")
-            else:
-                templates[nome] = template
-        
-        if not any("⚠️" in str(x) for x in templates.keys()):
-            print("\n✅ Nenhum template duplicado encontrado")
+            content = template.read_text(encoding="utf-8", errors="ignore")
+            digest = hashlib.md5(content.encode("utf-8")).hexdigest()
+            por_hash.setdefault(digest, []).append(template)
+
+        for paths in por_hash.values():
+            if len(paths) > 1:
+                encontrou_duplicidade = True
+                print("⚠️  Templates com conteúdo duplicado:")
+                for p in paths:
+                    print(f"   - {p}")
     
     # Verificar scripts duplicados
     scripts_dir = Path("scripts")
@@ -209,8 +212,12 @@ def verificar_duplicidades():
             nome = script.name
             if nome in scripts:
                 print(f"⚠️  Script duplicado: {nome}")
+                encontrou_duplicidade = True
             else:
                 scripts[nome] = script
+
+    if not encontrou_duplicidade:
+        print("\n✅ Nenhuma duplicidade real detectada")
 
 def gerar_relatorio():
     """Gera relatório completo"""

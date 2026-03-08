@@ -1,93 +1,117 @@
 import re
 from pathlib import Path
 
-# Ler app.py
-with open('app.py', 'r', encoding='utf-8') as f:
-    lines = f.readlines()
 
-# Encontrar todas as rotas e seus templates
-rotas_templates = []
-current_route = None
-in_function = False
+REPO_ROOT = Path(__file__).resolve().parents[1]
+APP_FILE = REPO_ROOT / "app.py"
+TEMPLATES_DIR = REPO_ROOT / "templates"
 
-for i, line in enumerate(lines):
-    # Detectar decorator de rota
-    route_match = re.match(r"@app\.route\(['\"]([^'\"]+)['\"]", line)
-    if route_match:
-        current_route = route_match.group(1)
-        in_function = True
-        continue
 
-    # Detectar render_template dentro da função
-    if in_function and current_route:
-        template_match = re.search(r"render_template\(['\"]([^'\"]+)['\"]", line)
-        if template_match:
-            template_name = template_match.group(1)
-            rotas_templates.append({
-                'rota': current_route,
-                'template': template_name,
-                'linha': i + 1
-            })
+def _extract_routes_and_templates(lines):
+    route_pattern = re.compile(r"@app\.route\(\s*['\"]([^'\"]+)['\"]")
+    template_pattern = re.compile(r"render_template\(\s*['\"]([^'\"]+)['\"]")
 
-    # Detectar fim de função (nova definição de função ou decorator)
-    if re.match(r"^@app\.|^def ", line):
-        if not route_match:  # Se não for um novo decorator de rota
-            in_function = False
-            current_route = None
+    route_by_func = {}
+    current_routes = []
 
-# Listar templates existentes
-templates_dir = Path('templates')
-templates_exist = set()
+    # 1) Mapeia funcao -> rotas decoradas
+    for idx, raw in enumerate(lines):
+        line = raw.strip()
+        m_route = route_pattern.search(line)
+        if m_route:
+            current_routes.append(m_route.group(1))
+            continue
 
-for html_file in templates_dir.rglob('*.html'):
-    rel_path = html_file.relative_to(templates_dir).as_posix()
-    templates_exist.add(rel_path)
+        m_def = re.match(r"def\s+(\w+)\s*\(", line)
+        if m_def and current_routes:
+            route_by_func[m_def.group(1)] = current_routes[:]
+            current_routes.clear()
 
-# Agrupar por template
-templates_dict = {}
-for item in rotas_templates:
-    template = item['template']
-    if template not in templates_dict:
-        templates_dict[template] = []
-    templates_dict[template].append(item['rota'])
+    # 2) Mapeia funcao -> templates usados no corpo da funcao
+    templates_by_func = {}
+    current_func = None
 
-# Verificar quais templates estão faltando
-print("="*80)
-print(f"ANÁLISE DE {len(set([r['rota'] for r in rotas_templates]))} ROTAS DO APP.PY")
-print("="*80)
-print()
+    for raw in lines:
+        line = raw.rstrip("\n")
+        stripped = line.strip()
 
-missing_templates = []
+        m_def = re.match(r"def\s+(\w+)\s*\(", stripped)
+        if m_def:
+            current_func = m_def.group(1)
+            templates_by_func.setdefault(current_func, set())
+            continue
 
-for template in sorted(templates_dict.keys()):
-    exists = template in templates_exist
-    status = "✅ OK" if exists else "❌ FALTANDO"
+        if stripped.startswith("@app.route"):
+            current_func = None
+            continue
 
-    if not exists:
-        missing_templates.append({
-            'template': template,
-            'rotas': templates_dict[template]
-        })
-        print(f"{status} - Template: {template}")
-        for rota in templates_dict[template]:
-            print(f"           Rota: {rota}")
-        print()
+        if current_func:
+            for tpl in template_pattern.findall(stripped):
+                templates_by_func[current_func].add(tpl)
 
-print("="*80)
-print("RESUMO")
-print("="*80)
-print(f"Total de templates únicos usados: {len(templates_dict)}")
-print(f"Templates existentes: {len([t for t in templates_dict.keys() if t in templates_exist])}")
-print(f"Templates faltando: {len(missing_templates)}")
-print()
+    # 3) Monta pares rota-template
+    pairs = []
+    for func_name, routes in route_by_func.items():
+        used_templates = sorted(templates_by_func.get(func_name, set()))
+        for route in routes:
+            for tpl in used_templates:
+                pairs.append({"rota": route, "template": tpl, "funcao": func_name})
 
-if missing_templates:
-    print("="*80)
-    print("LISTA DE TEMPLATES FALTANDO:")
-    print("="*80)
-    for item in missing_templates:
-        print(f"\n- Rota: {', '.join(item['rotas'])}")
-        print(f"  Template esperado: {item['template']}")
-        print(f"  Status: FALTANDO")
-else:
-    print("✅ Todos os templates necessários estão presentes!")
+    return pairs, route_by_func
+
+
+def main():
+    if not APP_FILE.exists():
+        print(f"❌ app.py não encontrado em: {APP_FILE}")
+        return
+
+    lines = APP_FILE.read_text(encoding="utf-8", errors="ignore").splitlines()
+    rotas_templates, route_by_func = _extract_routes_and_templates(lines)
+
+    templates_exist = {
+        html_file.relative_to(TEMPLATES_DIR).as_posix()
+        for html_file in TEMPLATES_DIR.rglob("*.html")
+    } if TEMPLATES_DIR.exists() else set()
+
+    templates_dict = {}
+    for item in rotas_templates:
+        templates_dict.setdefault(item["template"], set()).add(item["rota"])
+
+    print("=" * 80)
+    print(f"ANÁLISE DE {len(route_by_func)} ROTAS DO APP.PY")
+    print("=" * 80)
+    print()
+
+    missing_templates = []
+    for template in sorted(templates_dict):
+        if template not in templates_exist:
+            missing_templates.append(
+                {"template": template, "rotas": sorted(templates_dict[template])}
+            )
+            print(f"❌ FALTANDO - Template: {template}")
+            for rota in sorted(templates_dict[template]):
+                print(f"           Rota: {rota}")
+            print()
+
+    print("=" * 80)
+    print("RESUMO")
+    print("=" * 80)
+    print(f"Total de templates únicos usados: {len(templates_dict)}")
+    print(f"Templates existentes: {len([t for t in templates_dict if t in templates_exist])}")
+    print(f"Templates faltando: {len(missing_templates)}")
+    print()
+
+    if missing_templates:
+        print("=" * 80)
+        print("LISTA DE TEMPLATES FALTANDO:")
+        print("=" * 80)
+        for item in missing_templates:
+            print(f"\n- Rota: {', '.join(item['rotas'])}")
+            print(f"  Template esperado: {item['template']}")
+            print("  Status: FALTANDO")
+    else:
+        print("✅ Todos os templates necessários estão presentes!")
+
+
+if __name__ == "__main__":
+    main()
