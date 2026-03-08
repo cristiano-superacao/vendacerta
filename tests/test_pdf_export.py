@@ -4,6 +4,8 @@
 Teste da Exportação de PDF do Dashboard
 """
 
+import os
+
 from pdf_generator import gerar_pdf_dashboard
 from calculo_projecao import calcular_projecao_mes
 from datetime import datetime
@@ -151,12 +153,17 @@ def test_pdf_completo():
         )
         
         if pdf_buffer:
-            # Salvar PDF de teste
             pdf_buffer.seek(0)
-            with open('test_dashboard.pdf', 'wb') as f:
-                f.write(pdf_buffer.read())
+            pdf_bytes = pdf_buffer.read()
+            assert pdf_bytes.startswith(b"%PDF"), "Buffer gerado não parece ser um PDF válido"
+            assert len(pdf_bytes) > 1000, "PDF gerado muito pequeno; pode indicar falha na geração"
+
+            if os.getenv("WRITE_TEST_PDF") == "1":
+                with open("test_dashboard.pdf", "wb") as f:
+                    f.write(pdf_bytes)
             print("✅ PDF gerado com sucesso!")
-            print(f"📄 Arquivo salvo: test_dashboard.pdf")
+            if os.getenv("WRITE_TEST_PDF") == "1":
+                print("📄 Arquivo salvo: test_dashboard.pdf")
             print(f"📊 Resumo:")
             print(f"   - Total Vendedores: {resumo['total_vendedores']}")
             print(f"   - Receita: R$ {resumo['receita_total']:,.2f}")

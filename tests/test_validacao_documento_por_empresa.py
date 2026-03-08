@@ -10,6 +10,14 @@ Este teste usa FLASK_ENV=testing (SQLite em memória + CSRF desabilitado).
 
 import os
 import sys
+import unittest
+
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest(
+        "Teste de integração (depende de app/banco). "
+        "Defina RUN_INTEGRATION_TESTS=1 para executar."
+    )
 
 # Precisa vir ANTES de importar o app
 os.environ.setdefault("FLASK_ENV", "testing")

@@ -1,6 +1,17 @@
 """
 Teste rápido para verificar campo preco_servico
 """
+
+import os
+import unittest
+
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest(
+        "Teste de integração (depende de app/banco). "
+        "Defina RUN_INTEGRATION_TESTS=1 para executar."
+    )
+
 from app import app, db
 from models import Produto
 

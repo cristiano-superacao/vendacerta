@@ -2,8 +2,17 @@
 Script de teste para verificar as novas funcionalidades de metas avançadas
 """
 
-import sys
 import os
+import unittest
+
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest(
+        "Teste de integração (metas avançadas; depende de app/banco). "
+        "Defina RUN_INTEGRATION_TESTS=1 para executar."
+    )
+
+import sys
 
 def main():
     # Adicionar o diretório atual ao path

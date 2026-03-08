@@ -4,6 +4,16 @@ Script para testar melhorias de performance do sistema
 Compara antes/depois das otimizações
 """
 
+import os
+import unittest
+
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest(
+        "Teste de performance (depende de app/banco com dados). "
+        "Defina RUN_INTEGRATION_TESTS=1 para executar."
+    )
+
 from app import app, db
 from models import Usuario, Vendedor, Meta, Equipe
 from datetime import datetime

@@ -12,6 +12,7 @@ Uso:
 import os
 import sys
 from sqlalchemy import create_engine, inspect
+from sqlalchemy.exc import OperationalError
 
 from db_utils import get_database_url
 
@@ -57,6 +58,16 @@ def main():
             sys.exit(3)
         print("✅ Schema OK: todas as colunas obrigatórias existem.")
         sys.exit(0)
+    except OperationalError as e:
+        if not os.getenv("DATABASE_URL"):
+            print(
+                "⚠️  PostgreSQL local indisponível e DATABASE_URL não configurada; "
+                "pulando validação de schema.\n"
+                "    Dica: defina DATABASE_URL e rode novamente para validar o schema."
+            )
+            sys.exit(0)
+        print(f"❌ Erro: {e}")
+        sys.exit(1)
     except Exception as e:
         print(f"❌ Erro: {e}")
         sys.exit(1)

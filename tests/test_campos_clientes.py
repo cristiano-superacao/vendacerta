@@ -1,6 +1,17 @@
 """
 Script de teste para verificar se todos os campos de clientes estão funcionando
 """
+
+import os
+import unittest
+
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest(
+        "Teste de integração (depende de app/banco com dados). "
+        "Defina RUN_INTEGRATION_TESTS=1 para executar."
+    )
+
 from app import app, db
 from models import Cliente, Vendedor
 import json

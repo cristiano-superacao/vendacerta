@@ -4,6 +4,16 @@ Script para testar o sistema localmente antes do deploy
 Verifica todas as funcionalidades principais
 """
 
+import os
+import unittest
+
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest(
+        "Teste de integração local (depende de app/banco). "
+        "Defina RUN_INTEGRATION_TESTS=1 para executar."
+    )
+
 from app import app, db
 from models import Usuario, Vendedor, Cliente, Meta, Equipe
 from datetime import datetime

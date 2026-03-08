@@ -2,6 +2,16 @@
 Script de teste para criar tabelas
 """
 
+import os
+import unittest
+
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest(
+        "Teste de integração (criação de tabelas). "
+        "Defina RUN_INTEGRATION_TESTS=1 para executar."
+    )
+
 
 def main():
     from app import app, db
