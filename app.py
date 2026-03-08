@@ -4263,39 +4263,82 @@ def relatorio_visitas_clientes():
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
         vendedores_ids = [current_user.vendedor_id]
     elif current_user.cargo == "supervisor":
-        vendedores_ids = [v.id for v in current_user.vendedores]
+        # Evita depender de relacionamento opcional no modelo de usuario.
+        vendedores_ids = [
+            v.id
+            for v in Vendedor.query.filter_by(
+                supervisor_id=current_user.id,
+                ativo=True,
+            ).all()
+        ]
     elif current_user.is_super_admin:
         vendedores_ids = [v.id for v in Vendedor.query.filter_by(ativo=True).all()]
     else:
-        vendedores_ids = [
-            v.id
-            for v in Vendedor.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
-        ]
+        empresa_id = getattr(current_user, "empresa_id", None)
+        if empresa_id:
+            vendedores_ids = [
+                v.id
+                for v in Vendedor.query.filter_by(empresa_id=empresa_id, ativo=True).all()
+            ]
+        else:
+            vendedores_ids = [v.id for v in Vendedor.query.filter_by(ativo=True).all()]
+
+    data_inicio_str = request.args.get("data_inicio")
+    data_fim_str = request.args.get("data_fim")
+
+    try:
+        data_inicio = (
+            datetime.strptime(data_inicio_str, "%Y-%m-%d").date()
+            if data_inicio_str
+            else (datetime.utcnow().date() - timedelta(days=30))
+        )
+        data_fim = (
+            datetime.strptime(data_fim_str, "%Y-%m-%d").date()
+            if data_fim_str
+            else datetime.utcnow().date()
+        )
+    except ValueError:
+        data_inicio = datetime.utcnow().date() - timedelta(days=30)
+        data_fim = datetime.utcnow().date()
+
+    if data_inicio > data_fim:
+        data_inicio, data_fim = data_fim, data_inicio
+
+    data_inicio_fmt = data_inicio.strftime("%Y-%m-%d")
+    data_fim_fmt = data_fim.strftime("%Y-%m-%d")
 
     if not vendedores_ids:
         return render_template(
             "clientes/relatorio_visitas.html",
             produtividade=[],
             justificativas=[],
-            data_inicio=None,
-            data_fim=None,
+            data_inicio=data_inicio_fmt,
+            data_fim=data_fim_fmt,
         )
 
-    data_inicio_str = request.args.get("data_inicio")
-    data_fim_str = request.args.get("data_fim")
-
     try:
-        data_inicio = datetime.strptime(data_inicio_str, "%Y-%m-%d").date() if data_inicio_str else (datetime.utcnow().date() - timedelta(days=30))
-        data_fim = datetime.strptime(data_fim_str, "%Y-%m-%d").date() if data_fim_str else datetime.utcnow().date()
-    except ValueError:
-        data_inicio = datetime.utcnow().date() - timedelta(days=30)
-        data_fim = datetime.utcnow().date()
-
-    visitas = VisitaCliente.query.filter(
-        VisitaCliente.vendedor_id.in_(vendedores_ids),
-        VisitaCliente.data_visita >= data_inicio,
-        VisitaCliente.data_visita <= data_fim,
-    ).all()
+        visitas = VisitaCliente.query.filter(
+            VisitaCliente.vendedor_id.in_(vendedores_ids),
+            VisitaCliente.data_visita >= data_inicio,
+            VisitaCliente.data_visita <= data_fim,
+        ).all()
+    except Exception as exc:
+        app.logger.exception(
+            "Falha ao carregar relatorio de visitas para usuario_id=%s: %s",
+            getattr(current_user, "id", "?"),
+            exc,
+        )
+        flash(
+            "Nao foi possivel carregar o relatorio de visitas agora. Tente novamente em instantes.",
+            "warning",
+        )
+        return render_template(
+            "clientes/relatorio_visitas.html",
+            produtividade=[],
+            justificativas=[],
+            data_inicio=data_inicio_fmt,
+            data_fim=data_fim_fmt,
+        )
 
     produtividade_map = {}
     for visita in visitas:
@@ -4353,8 +4396,8 @@ def relatorio_visitas_clientes():
         "clientes/relatorio_visitas.html",
         produtividade=produtividade,
         justificativas=justificativas,
-        data_inicio=data_inicio,
-        data_fim=data_fim,
+        data_inicio=data_inicio_fmt,
+        data_fim=data_fim_fmt,
     )
 
 # ===== ROTAS DE VENDEDORES =====
