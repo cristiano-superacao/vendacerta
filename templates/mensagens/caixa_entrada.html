@@ -86,7 +86,7 @@
 
                                         <p class="mb-1 text-muted small">
                                             <i class="bi bi-person me-1"></i>
-                                            De: <strong>{{ mensagem.remetente.nome }}</strong>
+                                            De: <strong>{{ mensagem.remetente.nome if mensagem.remetente else 'Sistema' }}</strong>
                                         </p>
 
                                         <p class="mb-0 text-muted text-truncate">

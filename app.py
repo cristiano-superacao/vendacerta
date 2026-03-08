@@ -8743,21 +8743,34 @@ def verificar_acesso_cliente(cliente):
 @permission_required("pode_enviar_mensagens")
 def caixa_entrada():
     """Caixa de entrada - mensagens recebidas"""
-    # Buscar mensagens recebidas não arquivadas
-    mensagens = (
-        Mensagem.query.filter_by(
-            destinatario_id=current_user.id, arquivada_destinatario=False
+    try:
+        # Buscar mensagens recebidas não arquivadas
+        mensagens = (
+            Mensagem.query.filter_by(
+                destinatario_id=current_user.id, arquivada_destinatario=False
+            )
+            .order_by(Mensagem.data_envio.desc())
+            .all()
         )
-        .order_by(Mensagem.data_envio.desc())
-        .all()
-    )
 
-    # Contar não lidas
-    nao_lidas = Mensagem.query.filter_by(
-        destinatario_id=current_user.id,
-        lida=False,
-        arquivada_destinatario=False,
-    ).count()
+        # Contar não lidas
+        nao_lidas = Mensagem.query.filter_by(
+            destinatario_id=current_user.id,
+            lida=False,
+            arquivada_destinatario=False,
+        ).count()
+    except Exception as exc:
+        app.logger.exception(
+            "Falha ao carregar caixa de entrada para usuario_id=%s: %s",
+            getattr(current_user, "id", "?"),
+            exc,
+        )
+        flash(
+            "Nao foi possivel carregar suas mensagens agora. Tente novamente em instantes.",
+            "warning",
+        )
+        mensagens = []
+        nao_lidas = 0
 
     return render_template(
         "mensagens/caixa_entrada.html",
