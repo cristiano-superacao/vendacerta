@@ -3858,6 +3858,70 @@ def vendedor_dashboard():
     dia_visita_label = DIA_VISITA_LABELS.get(dia_codigo, "Domingo")
     dia_liberado_hoje = bool(dia_codigo and dia_codigo in dias_permitidos)
 
+    # Evolucao dos ultimos 7 dias de rota (taxa de positivacao)
+    weekday_to_codigo = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6}
+    dia_curto = {
+        0: "Dom",
+        1: "Seg",
+        2: "Ter",
+        3: "Qua",
+        4: "Qui",
+        5: "Sex",
+        6: "Sab",
+    }
+    serie_positivacao_7d = []
+
+    for dias_atras in range(6, -1, -1):
+        data_ref = data_hoje - timedelta(days=dias_atras)
+        weekday_ref = data_ref.weekday()
+        codigo_ref = weekday_to_codigo.get(weekday_ref)
+        dia_liberado_ref = bool(codigo_ref and codigo_ref in dias_permitidos)
+
+        total_ref = 0
+        visitados_ref = 0
+        vendas_ref = 0
+        taxa_ref = 0.0
+
+        if dia_liberado_ref:
+            aliases_ref = DIA_VISITA_ALIASES.get(codigo_ref, [])
+            if aliases_ref:
+                clientes_ref = (
+                    Cliente.query.filter(
+                        Cliente.vendedor_id == vendedor.id,
+                        Cliente.ativo.is_(True),
+                        Cliente.dia_visita.in_(aliases_ref),
+                    )
+                    .with_entities(Cliente.id)
+                    .all()
+                )
+                cliente_ids_ref = [c.id for c in clientes_ref]
+                total_ref = len(cliente_ids_ref)
+
+                status_ref = _status_clientes_por_data(cliente_ids_ref, vendedor.id, data_ref)
+                vendas_ref = sum(
+                    1 for cid in cliente_ids_ref if status_ref.get(cid) == "VENDA"
+                )
+                sem_pedido_ref = sum(
+                    1 for cid in cliente_ids_ref if status_ref.get(cid) == "SEM_PEDIDO"
+                )
+                visitados_ref = vendas_ref + sem_pedido_ref
+                taxa_ref = (
+                    round((vendas_ref / visitados_ref) * 100, 1)
+                    if visitados_ref > 0
+                    else 0.0
+                )
+
+        serie_positivacao_7d.append(
+            {
+                "label": f"{dia_curto.get(data_ref.weekday(), '-')}/{data_ref.strftime('%d')}",
+                "taxa": taxa_ref,
+                "visitados": visitados_ref,
+                "vendas": vendas_ref,
+                "total": total_ref,
+                "dia_liberado": dia_liberado_ref,
+            }
+        )
+
     # Obter mês e ano atuais
     hoje = datetime.now()
     mes_atual = hoje.month
@@ -3882,6 +3946,7 @@ def vendedor_dashboard():
             taxa_positivacao_hoje=taxa_positivacao_hoje,
             dia_visita_label=dia_visita_label,
             dia_liberado_hoje=dia_liberado_hoje,
+            serie_positivacao_7d=serie_positivacao_7d,
         )
 
     # Garantir que percentual de alcance e comissão estejam atualizados
@@ -3990,6 +4055,7 @@ def vendedor_dashboard():
         taxa_positivacao_hoje=taxa_positivacao_hoje,
         dia_visita_label=dia_visita_label,
         dia_liberado_hoje=dia_liberado_hoje,
+        serie_positivacao_7d=serie_positivacao_7d,
     )
 
 
