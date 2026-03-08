@@ -3204,11 +3204,7 @@ def dashboard():
                     ),
                     "comissao_total": meta.comissao_total or 0.0,
                     "comissao_total_formatada": (
-                        f"R$ {(meta.comissao_total or 0.0):,.2f}".replace(
-                            ",", "X"
-                        )
-                        .replace(".", ",")
-                        .replace("X", ".")
+                        formatar_moeda(meta.comissao_total or 0.0)
                     ),
                     "status_comissao": meta.status_comissao or "Pendente",
                     # Dados de projeção
@@ -3436,20 +3432,14 @@ def dashboard():
             "total_vendedores": len(vendedores_data),
             "total_receita": total_receita,
             "total_receita_formatada": (
-                f"R$ {total_receita:,.2f}".replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
+                formatar_moeda(total_receita)
             ),
             "total_meta": total_meta,
             "total_meta_formatada": (
-                f"R$ {total_meta:,.2f}".replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
+                formatar_moeda(total_meta)
             ),
             "total_comissao_formatada": (
-                f"R$ {total_comissao:,.2f}".replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
+                formatar_moeda(total_comissao)
             ),
             "alcance_equipe": (
                 (total_receita / total_meta * 100) if total_meta > 0 else 0
@@ -4596,7 +4586,11 @@ def importar_vendedores():
                         nome=row["nome"],
                         email=row["email"],
                         telefone=str(row["telefone"]),
-                        cpf=str(row["cpf"]).replace(".", "").replace("-", ""),
+                        cpf=(
+                            limpar_cpf(str(row["cpf"]))
+                            if pd.notna(row["cpf"])
+                            else None
+                        ),
                         empresa_id=empresa_id,
                         supervisor_id=supervisor_id,
                         equipe_id=equipe_id,
