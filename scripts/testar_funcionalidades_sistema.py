@@ -67,6 +67,11 @@ def run():
     # Garante base mínima consistente antes do smoke test.
     seed(reset=False)
 
+    public_modules = [
+        "/",
+        "/login",
+    ]
+
     modules = [
         "/dashboard",
         "/clientes",
@@ -88,13 +93,21 @@ def run():
     print(f"Data/Hora (Brasilia): {now_br().strftime('%d/%m/%Y %H:%M:%S')}")
 
     with app.test_client() as client:
+        failures = []
+
+        for path in public_modules:
+            ok, status = check_route(client, path)
+            mark = "OK" if ok else "FALHA"
+            print(f"[{mark}] {path} (status={status})")
+            if not ok:
+                failures.append(path)
+
         if not login(client, "admin@vendacerta.demo", "Admin@123"):
             print("[ERRO] Nao foi possivel autenticar com usuario de seed.")
             raise SystemExit(1)
 
         print("[OK] Login admin realizado")
 
-        failures = []
         for path in modules:
             ok, status = check_route(client, path)
             mark = "OK" if ok else "FALHA"

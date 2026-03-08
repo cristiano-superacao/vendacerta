@@ -3202,8 +3202,15 @@ def upload_backup():
 @app.route("/")
 def index():
     """Rota inicial - redireciona para login ou dashboard"""
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+    except Exception as exc:
+        app.logger.error(f"Falha ao resolver sessao na rota '/': {exc}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
     return redirect(url_for('login'))
 
 @app.route("/dashboard")
@@ -12682,6 +12689,14 @@ def handle_500(error):
     """Handler de erro 500 com diagnÃ³stico de conexÃ£o"""
     try:
         app.logger.error(f"Erro 500: {error}")
+
+        # Nunca depender diretamente do proxy current_user sem protecao,
+        # pois falhas de sessao/DB podem gerar erro em cascata na propria tela de erro.
+        is_authenticated = False
+        try:
+            is_authenticated = bool(getattr(current_user, "is_authenticated", False))
+        except Exception as auth_err:
+            app.logger.error(f"Falha ao ler autenticacao no handler 500: {auth_err}")
         
         # DiagnÃ³stico de conexÃ£o com banco
         db_status = "desconhecido"
@@ -12700,11 +12715,12 @@ def handle_500(error):
         return render_template(
             'errors/500.html',
             db_status=db_status,
-            db_error=db_error
+            db_error=db_error,
+            is_authenticated=is_authenticated,
         ), 500
     except Exception as e:
         app.logger.error(f"Erro no handler 500: {e}")
-        return render_template('errors/500.html'), 500
+        return render_template('errors/500.html', is_authenticated=False), 500
 
 if __name__ == "__main__":
     # Se estiver rodando no Railway, executar fix do banco antes
