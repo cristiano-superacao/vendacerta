@@ -3838,51 +3838,6 @@ def vendedor_dashboard():
         return redirect(url_for("dashboard"))
 
     vendedor = current_user.vendedor
-    data_hoje = today_brasilia()
-
-    # Indicadores operacionais do dia (visitas e positivacao)
-    dia_codigo = _dia_codigo_hoje()
-    dias_permitidos = _obter_dias_permitidos_vendedor(vendedor.id)
-    clientes_rota_hoje = []
-
-    if dia_codigo and dia_codigo in dias_permitidos:
-        aliases_hoje = DIA_VISITA_ALIASES.get(dia_codigo, [])
-        if aliases_hoje:
-            clientes_rota_hoje = (
-                Cliente.query.filter(
-                    Cliente.vendedor_id == vendedor.id,
-                    Cliente.ativo.is_(True),
-                    Cliente.dia_visita.in_(aliases_hoje),
-                )
-                .with_entities(Cliente.id)
-                .all()
-            )
-
-    cliente_ids_hoje = [c.id for c in clientes_rota_hoje]
-    status_hoje = _status_clientes_por_data(cliente_ids_hoje, vendedor.id, data_hoje)
-
-    visitas_venda = sum(1 for cid in cliente_ids_hoje if status_hoje.get(cid) == "VENDA")
-    visitas_sem_pedido = sum(
-        1 for cid in cliente_ids_hoje if status_hoje.get(cid) == "SEM_PEDIDO"
-    )
-    visitas_realizadas = visitas_venda + visitas_sem_pedido
-    total_rota_hoje = len(cliente_ids_hoje)
-    nao_visitados = max(total_rota_hoje - visitas_realizadas, 0)
-    taxa_positivacao_hoje = (
-        round((visitas_venda / visitas_realizadas) * 100, 1)
-        if visitas_realizadas > 0
-        else 0.0
-    )
-
-    resumo_visitas_hoje = {
-        "total_rota": total_rota_hoje,
-        "visitados": visitas_realizadas,
-        "vendas": visitas_venda,
-        "sem_pedido": visitas_sem_pedido,
-        "nao_visitados": nao_visitados,
-    }
-    dia_visita_label = DIA_VISITA_LABELS.get(dia_codigo, "Domingo")
-    dia_liberado_hoje = bool(dia_codigo and dia_codigo in dias_permitidos)
 
     # Obter mÃªs e ano atuais
     hoje = datetime.now()
@@ -3903,11 +3858,6 @@ def vendedor_dashboard():
             projecao=None,
             ranking_equipe=[],
             historico=[],
-            hoje=hoje,
-            resumo_visitas_hoje=resumo_visitas_hoje,
-            taxa_positivacao_hoje=taxa_positivacao_hoje,
-            dia_visita_label=dia_visita_label,
-            dia_liberado_hoje=dia_liberado_hoje,
         )
 
     # Garantir que percentual de alcance e comissÃ£o estejam atualizados
@@ -4012,10 +3962,6 @@ def vendedor_dashboard():
         ranking_equipe=ranking_equipe,
         historico=historico,
         hoje=hoje,
-        resumo_visitas_hoje=resumo_visitas_hoje,
-        taxa_positivacao_hoje=taxa_positivacao_hoje,
-        dia_visita_label=dia_visita_label,
-        dia_liberado_hoje=dia_liberado_hoje,
     )
 
 
