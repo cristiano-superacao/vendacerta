@@ -547,6 +547,70 @@ class CompraClienteForm(FlaskForm):
 
     observacoes = TextAreaField('Observações', validators=[Optional()])
 
+
+class VisitaClienteForm(FlaskForm):
+    """Formulário para registrar visita do vendedor."""
+    status = SelectField(
+        'Status da Visita',
+        choices=[
+            ('VENDA', '✔ Pedido feito'),
+            ('SEM_PEDIDO', '⚠ Sem pedido'),
+            ('NAO_VISITADO', '⭕ Não visitado'),
+        ],
+        validators=[DataRequired(message='Status da visita é obrigatório')],
+    )
+
+    motivo_sem_pedido = SelectField(
+        'Motivo (sem pedido)',
+        choices=[
+            ('', 'Selecione...'),
+            ('Cliente fechado', 'Cliente fechado'),
+            ('Cliente sem estoque', 'Cliente sem estoque'),
+            ('Cliente comprou concorrente', 'Cliente comprou concorrente'),
+            ('Cliente em reforma', 'Cliente em reforma'),
+            ('Cliente não estava aberto', 'Cliente não estava aberto'),
+            ('Outro', 'Outro'),
+        ],
+        validators=[Optional()],
+    )
+
+    justificativa = TextAreaField('Justificativa', validators=[Optional(), Length(max=500)])
+    latitude = StringField('Latitude', validators=[Optional(), Length(max=50)])
+    longitude = StringField('Longitude', validators=[Optional(), Length(max=50)])
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+
+        if self.status.data == 'SEM_PEDIDO':
+            if not self.motivo_sem_pedido.data:
+                self.motivo_sem_pedido.errors.append('Selecione um motivo para visita sem pedido.')
+                return False
+
+            if self.motivo_sem_pedido.data == 'Outro' and not (self.justificativa.data or '').strip():
+                self.justificativa.errors.append('Descreva a justificativa quando o motivo for "Outro".')
+                return False
+
+        return True
+
+
+class VendedorDiasPermitidosForm(FlaskForm):
+    """Configuração de dias permitidos para visitas do vendedor."""
+    dias_permitidos = SelectMultipleField(
+        'Dias permitidos',
+        choices=[
+            ('1', 'Segunda-feira'),
+            ('2', 'Terça-feira'),
+            ('3', 'Quarta-feira'),
+            ('4', 'Quinta-feira'),
+            ('5', 'Sexta-feira'),
+            ('6', 'Sábado'),
+        ],
+        validators=[Optional()],
+    )
+
+    submit = SubmitField('Salvar Configuração')
+
 class FiltroClienteForm(FlaskForm):
     """Formulário de filtros para listagem de clientes"""
     status = SelectField('Status', choices=[

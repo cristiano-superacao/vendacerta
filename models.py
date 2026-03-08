@@ -1159,6 +1159,96 @@ class CompraCliente(db.Model):
             'observacoes': self.observacoes
         }
 
+
+class VendedorConfig(db.Model):
+    """Configuração de dias permitidos para visita por vendedor."""
+    __tablename__ = 'vendedor_config'
+
+    id = db.Column(db.Integer, primary_key=True)
+    vendedor_id = db.Column(
+        db.Integer,
+        db.ForeignKey('vendedores.id'),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    dias_permitidos = db.Column(db.Text, default='[1, 2, 3, 4, 5, 6]')
+    data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    vendedor = db.relationship('Vendedor', backref=db.backref('config_visita', uselist=False))
+
+    def get_dias_permitidos(self):
+        """Retorna dias permitidos normalizados (1-6)."""
+        try:
+            dias = json.loads(self.dias_permitidos or '[]')
+        except Exception:
+            dias = []
+
+        normalizados = []
+        for dia in dias:
+            try:
+                valor = int(dia)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= valor <= 6 and valor not in normalizados:
+                normalizados.append(valor)
+
+        return normalizados or [1, 2, 3, 4, 5, 6]
+
+    def set_dias_permitidos(self, dias):
+        """Define dias permitidos (1-6) no formato JSON."""
+        normalizados = []
+        for dia in (dias or []):
+            try:
+                valor = int(dia)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= valor <= 6 and valor not in normalizados:
+                normalizados.append(valor)
+
+        if not normalizados:
+            normalizados = [1, 2, 3, 4, 5, 6]
+
+        self.dias_permitidos = json.dumps(normalizados)
+
+
+class VisitaCliente(db.Model):
+    """Registro de visita do vendedor ao cliente por data."""
+    __tablename__ = 'visitas'
+
+    __table_args__ = (
+        db.Index('idx_visita_vendedor_data', 'vendedor_id', 'data_visita'),
+        db.Index('idx_visita_cliente_data', 'cliente_id', 'data_visita'),
+        db.UniqueConstraint('cliente_id', 'vendedor_id', 'data_visita', name='uq_visita_cliente_vendedor_data'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False, index=True)
+    vendedor_id = db.Column(db.Integer, db.ForeignKey('vendedores.id'), nullable=False, index=True)
+    data_visita = db.Column(db.Date, nullable=False, index=True)
+
+    # VENDA, SEM_PEDIDO, NAO_VISITADO
+    status = db.Column(db.String(20), nullable=False, default='NAO_VISITADO', index=True)
+    justificativa = db.Column(db.Text)
+
+    # Referência opcional ao pedido/compra do dia
+    pedido_id = db.Column(db.Integer, db.ForeignKey('compras_clientes.id'), nullable=True, index=True)
+
+    checkin_at = db.Column(db.DateTime)
+    checkout_at = db.Column(db.DateTime)
+    latitude = db.Column(db.String(50))
+    longitude = db.Column(db.String(50))
+
+    data_registro = db.Column(db.DateTime, default=datetime.utcnow)
+    data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    cliente = db.relationship('Cliente', backref=db.backref('visitas', lazy='dynamic'))
+    vendedor = db.relationship('Vendedor', backref=db.backref('visitas', lazy='dynamic'))
+    pedido = db.relationship('CompraCliente', backref=db.backref('visitas', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<VisitaCliente cliente={self.cliente_id} vendedor={self.vendedor_id} data={self.data_visita} status={self.status}>'
+
 # ============================================================================
 # MÓDULO DE ESTOQUE E MANUTENÇÃO
 # ============================================================================

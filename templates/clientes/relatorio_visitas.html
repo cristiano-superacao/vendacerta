@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de Visitas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-bar-chart-line text-primary me-2"></i>Relatórios de Visitas</h2>
+            <p class="text-muted mb-0">Produtividade e justificativas de visitas sem pedido.</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Data inicial</label>
+                    <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Data final</label>
+                    <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary-clean w-100" type="submit">Aplicar Filtro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0"><i class="bi bi-people me-2"></i>Relatório de Produtividade</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Vendedor</th>
+                            <th class="text-center">Clientes</th>
+                            <th class="text-center">Visitados</th>
+                            <th class="text-center text-success">Vendas</th>
+                            <th class="text-center text-warning">Sem venda</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in produtividade %}
+                        <tr>
+                            <td>{{ item.vendedor_nome }}</td>
+                            <td class="text-center">{{ item.clientes }}</td>
+                            <td class="text-center">{{ item.visitados }}</td>
+                            <td class="text-center"><span class="badge bg-success">{{ item.vendas }}</span></td>
+                            <td class="text-center"><span class="badge bg-warning text-dark">{{ item.sem_venda }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Sem dados para o período selecionado.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0"><i class="bi bi-chat-left-text me-2"></i>Relatório de Justificativas</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Vendedor</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in justificativas %}
+                        <tr>
+                            <td>{{ item.data.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ item.cliente_nome }}</td>
+                            <td>{{ item.vendedor_nome }}</td>
+                            <td>{{ item.motivo }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">Nenhuma justificativa registrada no período.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
