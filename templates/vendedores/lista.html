@@ -8,6 +8,11 @@
 <div class="container-fluid py-4">
     <!-- Header Clean -->
     {% call page_header_clean('OPERACIONAL', 'bi bi-people-fill', 'Gerenciamento de Vendedores') %}
+        {% if current_user.is_authenticated and (current_user.cargo == 'admin' or current_user.is_super_admin) %}
+        <a href="{{ url_for('admin_vendedores_dias_liberados') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-calendar-check"></i> Dias liberados
+        </a>
+        {% endif %}
         <a href="{{ url_for('lista_supervisores') }}" class="btn btn-secondary-clean">
             <i class="bi bi-person-badge"></i> Supervisores
         </a>

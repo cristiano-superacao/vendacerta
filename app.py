@@ -44,6 +44,7 @@ from models import (
     db,
     Usuario,
     Vendedor,
+    VendedorDiaLiberado,
     Meta,
     Equipe,
     Empresa,
@@ -78,6 +79,7 @@ from forms import (
     OrdemServicoAndamentoForm,
     OrdemServicoAvaliacaoForm,
     UsuarioForm,
+    AdminVendedoresDiasLiberadosForm,
 )
 from calculo_projecao import calcular_projecao_mes, formatar_moeda
 
@@ -104,6 +106,11 @@ from helpers import (
     get_cargos_permitidos_exportacao,
     validar_arquivo_excel,
     verificar_excel_disponivel,
+    get_dia_visita_hoje,
+    listar_dias_visita_validos,
+    normalizar_dia_visita,
+    dia_visita_label,
+    dia_visita_sort_key,
 )
 try:
     # Funções de backup (opcional em produção/Railway)
@@ -5414,11 +5421,36 @@ def lista_clientes():
     busca = request.args.get("busca", "")
 
     # Base query com lazy loading otimizado
+    dia_hoje = None
+    dias_permitidos = None
+    dias_permitidos_labels = None
+
+    def _get_dias_permitidos_vendedor(vendedor_id, empresa_id=None):
+        dia_atual = get_dia_visita_hoje()
+        dias = {dia_atual} if dia_atual else set()
+
+        extras_q = VendedorDiaLiberado.query.filter_by(vendedor_id=vendedor_id)
+        if empresa_id:
+            extras_q = extras_q.filter_by(empresa_id=empresa_id)
+        extras = [r.dia_visita for r in extras_q.all()]
+
+        for d in extras:
+            d_norm = normalizar_dia_visita(d)
+            if d_norm:
+                dias.add(d_norm)
+
+        return dia_atual, dias
+
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
         # Vendedor vê apenas seus clientes
+        dia_hoje, dias_permitidos = _get_dias_permitidos_vendedor(
+            current_user.vendedor_id, current_user.empresa_id
+        )
         query = Cliente.query.filter_by(
             vendedor_id=current_user.vendedor_id, ativo=True
         )
+        if dias_permitidos:
+            query = query.filter(Cliente.dia_visita.in_(list(dias_permitidos)))
     elif current_user.cargo == "supervisor":
         # Supervisor vê clientes de seus vendedores
         vendedores_ids = [v.id for v in current_user.vendedores]
@@ -5453,7 +5485,29 @@ def lista_clientes():
         query = query.filter(Cliente.bairro.ilike(f"%{bairro_filtro}%"))
 
     if dia_visita_filtro:
-        query = query.filter_by(dia_visita=dia_visita_filtro)
+        dia_filtro_norm = normalizar_dia_visita(dia_visita_filtro)
+        if current_user.cargo == "vendedor" and current_user.vendedor_id:
+            # Vendedor só pode filtrar pelos dias permitidos (hoje + extras)
+            if not dias_permitidos:
+                dias_permitidos = set()
+            if dia_filtro_norm not in dias_permitidos:
+                flash(
+                    "⚠️ Você não tem liberação para ver clientes desse dia.",
+                    "warning",
+                )
+                query = query.filter(db.text("1=0"))
+            else:
+                query = query.filter_by(dia_visita=dia_filtro_norm)
+        else:
+            query = query.filter_by(dia_visita=dia_filtro_norm)
+
+    if dias_permitidos:
+        dias_permitidos_labels = ", ".join(
+            [
+                dia_visita_label(d)
+                for d in sorted(list(dias_permitidos), key=dia_visita_sort_key)
+            ]
+        )
 
     # Ordenar por nome
     query = query.order_by(Cliente.nome)
@@ -5494,6 +5548,84 @@ def lista_clientes():
         bairro_filtro=bairro_filtro,
         dia_visita_filtro=dia_visita_filtro,
         busca=busca,
+        dia_visita_hoje=dia_hoje,
+        dias_visita_permitidos_labels=dias_permitidos_labels,
+    )
+
+
+@app.route("/admin/vendedores", methods=["GET", "POST"])
+@login_required
+def admin_vendedores_dias_liberados():
+    """Admin: liberar dias extras por vendedor (além do dia atual)."""
+
+    if current_user.cargo != "admin" and not current_user.is_super_admin:
+        flash("Acesso negado! Apenas Admin pode acessar.", "danger")
+        return redirect(url_for("dashboard"))
+
+    form = AdminVendedoresDiasLiberadosForm()
+    dias_validos = sorted(list(listar_dias_visita_validos()), key=dia_visita_sort_key)
+
+    vendedores_query = Vendedor.query.filter_by(ativo=True)
+    if not current_user.is_super_admin:
+        vendedores_query = vendedores_query.filter_by(empresa_id=current_user.empresa_id)
+
+    vendedores = vendedores_query.order_by(Vendedor.nome).all()
+
+    # Mapa vendedor_id -> set(dias_extras)
+    dias_extras = {}
+    if vendedores:
+        vendedor_ids = [v.id for v in vendedores]
+        rows = VendedorDiaLiberado.query.filter(VendedorDiaLiberado.vendedor_id.in_(vendedor_ids)).all()
+        for r in rows:
+            dias_extras.setdefault(r.vendedor_id, set()).add(normalizar_dia_visita(r.dia_visita))
+
+    if form.validate_on_submit():
+        try:
+            ids_raw = (request.form.get("vendedor_ids") or "").strip()
+            ids = [int(x) for x in ids_raw.split(",") if x.strip().isdigit()]
+
+            vendedores_permitidos = {v.id: v for v in vendedores}
+
+            for vendedor_id in ids:
+                vendedor_obj = vendedores_permitidos.get(vendedor_id)
+                if not vendedor_obj:
+                    continue
+
+                selecionados = request.form.getlist(f"dias_{vendedor_id}")
+                selecionados_norm = []
+                for d in selecionados:
+                    d_norm = normalizar_dia_visita(d)
+                    if d_norm in listar_dias_visita_validos():
+                        selecionados_norm.append(d_norm)
+
+                # Persistimos apenas dias EXTRAS. O dia do sistema é sempre liberado automaticamente.
+                VendedorDiaLiberado.query.filter_by(vendedor_id=vendedor_id).delete()
+
+                for d_norm in sorted(set(selecionados_norm), key=dia_visita_sort_key):
+                    db.session.add(
+                        VendedorDiaLiberado(
+                            vendedor_id=vendedor_id,
+                            dia_visita=d_norm,
+                            empresa_id=vendedor_obj.empresa_id,
+                            liberado_por_usuario_id=current_user.id,
+                        )
+                    )
+
+            db.session.commit()
+            flash("Dias extras atualizados com sucesso!", "success")
+            return redirect(url_for("admin_vendedores_dias_liberados"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erro ao atualizar dias extras: {str(e)}", "danger")
+
+    return render_template(
+        "vendedores/dias_liberados.html",
+        form=form,
+        vendedores=vendedores,
+        dias_validos=dias_validos,
+        dias_extras=dias_extras,
+        dia_visita_label=dia_visita_label,
     )
 
 @app.route("/clientes/novo", methods=["GET", "POST"])
@@ -6022,29 +6154,15 @@ def registrar_compra(id):
     """Registrar compra do cliente"""
     cliente = Cliente.query.get_or_404(id)
 
-    # Produtos de estoque disponíveis para venda (mesma empresa)
-    # Exibe apenas os 10 mais vendidos para simplificar a escolha do vendedor
-    from sqlalchemy import func, desc
-
-    vendas_subq = (
-        db.session.query(
-            EstoqueMovimento.produto_id,
-            func.sum(EstoqueMovimento.quantidade).label("total_vendido"),
-        )
-        .filter(
-            EstoqueMovimento.empresa_id == cliente.empresa_id,
-            EstoqueMovimento.tipo == "saida",
-            EstoqueMovimento.motivo == "venda",
-        )
-        .group_by(EstoqueMovimento.produto_id)
-        .subquery()
-    )
-
+    # Produtos válidos para venda (mesma empresa): estoque > 0 e preço > 0
     produtos = (
-        Produto.query.filter_by(empresa_id=cliente.empresa_id, ativo=True)
-        .outerjoin(vendas_subq, Produto.id == vendas_subq.c.produto_id)
-        .order_by(desc(vendas_subq.c.total_vendido), Produto.nome)
-        .limit(10)
+        Produto.query.filter(
+            Produto.empresa_id == cliente.empresa_id,
+            Produto.ativo.is_(True),
+            Produto.estoque_atual > 0,
+            Produto.preco_venda > 0,
+        )
+        .order_by(Produto.estoque_atual.desc(), Produto.nome)
         .all()
     )
 
@@ -6076,6 +6194,8 @@ def registrar_compra(id):
             itens_venda = []
             valor_total_itens = 0.0
 
+            erros_itens = []
+
             for key, value in request.form.items():
                 if not key.startswith("produto_"):
                     continue
@@ -6099,22 +6219,39 @@ def registrar_compra(id):
                         empresa_id=cliente.empresa_id,
                         ativo=True,
                     )
+                    .filter(Produto.preco_venda > 0)
                     .with_for_update()
                     .first()
                 )
 
                 if not produto:
+                    erros_itens.append(
+                        "Um dos produtos selecionados não está disponível para venda."
+                    )
                     continue
 
                 estoque_disponivel = float(produto.estoque_atual or 0)
                 if estoque_disponivel <= 0:
+                    erros_itens.append(
+                        f"Produto '{produto.nome}' sem estoque disponível."
+                    )
                     continue
 
-                quantidade_utilizada = min(qtd, estoque_disponivel)
-                if quantidade_utilizada <= 0:
+                if qtd > estoque_disponivel:
+                    erros_itens.append(
+                        f"Quantidade do produto '{produto.nome}' excede o estoque disponível."
+                    )
                     continue
+
+                quantidade_utilizada = qtd
 
                 preco_unitario = float(produto.preco_venda or 0)
+                if preco_unitario <= 0:
+                    erros_itens.append(
+                        f"Produto '{produto.nome}' está sem preço de venda."
+                    )
+                    continue
+
                 subtotal = quantidade_utilizada * preco_unitario
                 valor_total_itens += subtotal
 
@@ -6129,10 +6266,22 @@ def registrar_compra(id):
 
             # Se nenhum item foi selecionado, não é possível registrar a venda
             if not itens_venda:
+                if erros_itens:
+                    flash(erros_itens[0], "warning")
                 flash(
                     "Selecione pelo menos um produto para registrar a venda.",
                     "warning",
                 )
+                return render_template(
+                    "clientes/compra.html",
+                    form=form,
+                    cliente=cliente,
+                    produtos=produtos,
+                )
+
+            if erros_itens:
+                flash(erros_itens[0], "warning")
+                form.valor.data = round(valor_total_itens or 0, 2)
                 return render_template(
                     "clientes/compra.html",
                     form=form,
@@ -7948,7 +8097,27 @@ def verificar_acesso_cliente(cliente):
         return True
 
     if current_user.cargo == "vendedor" and current_user.vendedor_id:
-        return cliente.vendedor_id == current_user.vendedor_id
+        if cliente.vendedor_id != current_user.vendedor_id:
+            return False
+
+        # Regra de dia de visita: vendedor só acessa clientes do dia atual ou dias extras liberados
+        dia_hoje = get_dia_visita_hoje()
+        dias_permitidos = {dia_hoje} if dia_hoje else set()
+
+        extras = VendedorDiaLiberado.query.filter_by(
+            vendedor_id=current_user.vendedor_id,
+            empresa_id=current_user.empresa_id,
+        ).all()
+
+        for r in extras:
+            d_norm = normalizar_dia_visita(r.dia_visita)
+            if d_norm:
+                dias_permitidos.add(d_norm)
+
+        if not cliente.dia_visita:
+            return False
+
+        return normalizar_dia_visita(cliente.dia_visita) in dias_permitidos
 
     if current_user.cargo == "supervisor":
         vendedores_ids = [v.id for v in current_user.vendedores]

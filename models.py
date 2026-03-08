@@ -280,6 +280,53 @@ class Vendedor(db.Model):
         return f'<Vendedor {self.nome}>'
 
 
+class VendedorDiaLiberado(db.Model):
+    """Dias extras liberados para um vendedor ver/atender clientes."""
+
+    __tablename__ = 'vendedor_dias_liberados'
+
+    __table_args__ = (
+        db.UniqueConstraint('vendedor_id', 'dia_visita', name='uq_vendedor_dia_visita'),
+        db.Index('idx_vendedor_dias_liberados_empresa', 'empresa_id', 'vendedor_id'),
+        db.Index('idx_vendedor_dias_liberados_dia', 'dia_visita'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    vendedor_id = db.Column(
+        db.Integer,
+        db.ForeignKey('vendedores.id'),
+        nullable=False,
+        index=True,
+    )
+
+    # segunda, terca, quarta, quinta, sexta, sabado, domingo
+    dia_visita = db.Column(db.String(20), nullable=False, index=True)
+
+    # Empresa (facilita escopo/relatórios)
+    empresa_id = db.Column(
+        db.Integer,
+        db.ForeignKey('empresas.id'),
+        nullable=True,
+        index=True,
+    )
+
+    liberado_por_usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey('usuarios.id'),
+        nullable=True,
+        index=True,
+    )
+
+    data_liberacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    vendedor = db.relationship('Vendedor', backref=db.backref('dias_liberados', lazy='dynamic'))
+    liberado_por = db.relationship('Usuario', foreign_keys=[liberado_por_usuario_id])
+
+    def __repr__(self):
+        return f'<VendedorDiaLiberado vendedor_id={self.vendedor_id} dia={self.dia_visita}>'
+
+
 class Meta(db.Model):
     """Modelo de meta mensal - Suporta meta de Valor e Volume"""
     __tablename__ = 'metas'

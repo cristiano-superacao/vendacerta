@@ -368,7 +368,12 @@
                         <label class="form-label fw-bold">
                             <i class="bi bi-calendar-week text-primary me-2"></i>Dia da Visita
                         </label>
-                        {{ form.dia_visita(class="form-select") }}
+                        {{ form.dia_visita(class="form-select" + (" is-invalid" if form.dia_visita.errors else "")) }}
+                        {% if form.dia_visita.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.dia_visita.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-3">

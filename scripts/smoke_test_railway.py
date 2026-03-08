@@ -113,6 +113,7 @@ def main() -> int:
             "clientes",
             "vendedores",
             "metas",
+            "vendedor_dias_liberados",
         }
         missing = sorted(required - tables)
         if missing:

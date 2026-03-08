@@ -237,6 +237,60 @@ def atualizar_banco_railway():
                 adicionar_coluna_se_nao_existe(conn, 'clientes', 'vendedor_id', 'INTEGER')
                 adicionar_coluna_se_nao_existe(conn, 'clientes', 'empresa_id', 'INTEGER')
                 adicionar_coluna_se_nao_existe(conn, 'clientes', 'ativo', 'BOOLEAN', 'TRUE')
+
+            # Criar tabela de dias extras liberados por vendedor
+            print("\n" + "-"*80)
+            print("CRIANDO/ATUALIZANDO TABELA: vendedor_dias_liberados")
+            print("-"*80)
+
+            ddl_dias_liberados = """
+            CREATE TABLE vendedor_dias_liberados (
+                id SERIAL PRIMARY KEY,
+                vendedor_id INTEGER NOT NULL,
+                dia_visita VARCHAR(20) NOT NULL,
+                empresa_id INTEGER NULL,
+                liberado_por_usuario_id INTEGER NULL,
+                data_liberacao TIMESTAMP NOT NULL DEFAULT NOW(),
+                CONSTRAINT uq_vendedor_dia_visita UNIQUE (vendedor_id, dia_visita)
+            )
+            """
+
+            criar_tabela_se_nao_existe(conn, 'vendedor_dias_liberados', ddl_dias_liberados)
+            criar_indice_se_nao_existe(conn, 'idx_vendedor_dias_liberados_vendedor', 'vendedor_dias_liberados', 'vendedor_id')
+            criar_indice_se_nao_existe(conn, 'idx_vendedor_dias_liberados_empresa', 'vendedor_dias_liberados', 'empresa_id')
+            criar_indice_se_nao_existe(conn, 'idx_vendedor_dias_liberados_dia', 'vendedor_dias_liberados', 'dia_visita')
+
+            # FKs (tolerante: pode falhar se tabelas não existirem ainda)
+            if 'vendedores' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='vendedor_dias_liberados',
+                    nome_fk='fk_vendedor_dias_liberados_vendedor_id',
+                    coluna='vendedor_id',
+                    tabela_ref='vendedores',
+                    coluna_ref='id',
+                    on_delete='CASCADE',
+                )
+            if 'empresas' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='vendedor_dias_liberados',
+                    nome_fk='fk_vendedor_dias_liberados_empresa_id',
+                    coluna='empresa_id',
+                    tabela_ref='empresas',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
+            if 'usuarios' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='vendedor_dias_liberados',
+                    nome_fk='fk_vendedor_dias_liberados_liberado_por_usuario_id',
+                    coluna='liberado_por_usuario_id',
+                    tabela_ref='usuarios',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
             
             # Criar indices para performance (se nao existirem)
             print("\n" + "-"*80)
@@ -249,6 +303,8 @@ def atualizar_banco_railway():
                 ("idx_clientes_codigo", "clientes", "codigo_cliente"),
                 ("idx_clientes_vendedor", "clientes", "vendedor_id"),
                 ("idx_metas_vendedor", "metas", "vendedor_id"),
+                ("idx_vendedor_dias_liberados_vendedor", "vendedor_dias_liberados", "vendedor_id"),
+                ("idx_vendedor_dias_liberados_dia", "vendedor_dias_liberados", "dia_visita"),
             ]
             
             for nome_idx, tabela, coluna in indices:

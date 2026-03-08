@@ -444,7 +444,7 @@ class ClienteForm(FlaskForm):
         ('sexta', 'Sexta-feira'),
         ('sabado', 'Sábado'),
         ('domingo', 'Domingo')
-    ], validators=[Optional()])
+    ], validators=[DataRequired(message='Dia da visita é obrigatório')])
 
     observacoes = TextAreaField('Observações', validators=[Optional()])
 
@@ -570,6 +570,12 @@ class FiltroClienteForm(FlaskForm):
         ('sabado', 'Sábado'),
         ('domingo', 'Domingo')
     ], validators=[Optional()])
+
+
+class AdminVendedoresDiasLiberadosForm(FlaskForm):
+    """Form para proteção CSRF na tela de dias liberados por vendedor."""
+
+    submit = SubmitField('Salvar alterações')
 
 # ============================================================================
 # FORMULÁRIOS DE ESTOQUE E MANUTENÇÃO

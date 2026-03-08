@@ -3,6 +3,81 @@ import re
 from flask import flash
 
 
+_DIA_VISITA_ORDEM = {
+    "segunda": 0,
+    "terca": 1,
+    "quarta": 2,
+    "quinta": 3,
+    "sexta": 4,
+    "sabado": 5,
+    "domingo": 6,
+}
+
+
+_DIA_VISITA_LABEL = {
+    "segunda": "Segunda-feira",
+    "terca": "Terça-feira",
+    "quarta": "Quarta-feira",
+    "quinta": "Quinta-feira",
+    "sexta": "Sexta-feira",
+    "sabado": "Sábado",
+    "domingo": "Domingo",
+}
+
+
+def normalizar_dia_visita(dia):
+    """Normaliza valores de dia_visita para o padrão usado no sistema."""
+    if not dia:
+        return None
+
+    dia_norm = str(dia).strip().lower()
+
+    aliases = {
+        "segunda-feira": "segunda",
+        "segunda feira": "segunda",
+        "terca-feira": "terca",
+        "terça-feira": "terca",
+        "terca feira": "terca",
+        "terça feira": "terca",
+        "quarta-feira": "quarta",
+        "quarta feira": "quarta",
+        "quinta-feira": "quinta",
+        "quinta feira": "quinta",
+        "sexta-feira": "sexta",
+        "sexta feira": "sexta",
+        "sabado": "sabado",
+        "sábado": "sabado",
+        "domingo": "domingo",
+    }
+
+    dia_norm = aliases.get(dia_norm, dia_norm)
+    return dia_norm
+
+
+def listar_dias_visita_validos():
+    return set(_DIA_VISITA_ORDEM.keys())
+
+
+def dia_visita_label(dia):
+    dia_norm = normalizar_dia_visita(dia)
+    return _DIA_VISITA_LABEL.get(dia_norm, "-")
+
+
+def dia_visita_sort_key(dia):
+    dia_norm = normalizar_dia_visita(dia)
+    return _DIA_VISITA_ORDEM.get(dia_norm, 99)
+
+
+def get_dia_visita_hoje(ref_dt=None):
+    """Retorna o dia_visita (segunda..domingo) para a data informada (ou hoje)."""
+    from datetime import datetime
+
+    dt = ref_dt or datetime.now()
+    weekday = dt.weekday()  # 0=segunda .. 6=domingo
+    inv = {v: k for k, v in _DIA_VISITA_ORDEM.items()}
+    return inv.get(weekday)
+
+
 def limpar_cpf(cpf):
     """Remove caracteres não numéricos de CPF"""
     return re.sub(r"\D", "", cpf) if cpf else None
@@ -134,8 +209,24 @@ def filtrar_clientes_por_escopo(current_user, apenas_ativos=True):
         # Super admin vê todos
         return query.all()
     elif current_user.cargo == "vendedor" and current_user.vendedor_id:
-        # Vendedor vê apenas seus clientes
-        return query.filter_by(vendedor_id=current_user.vendedor_id).all()
+        # Vendedor vê apenas seus clientes do dia atual + dias extras liberados
+        dia_hoje = get_dia_visita_hoje()
+        dias_permitidos = {dia_hoje} if dia_hoje else set()
+
+        from models import VendedorDiaLiberado
+        extras = VendedorDiaLiberado.query.filter_by(
+            vendedor_id=current_user.vendedor_id,
+            empresa_id=current_user.empresa_id,
+        ).all()
+        for r in extras:
+            d_norm = normalizar_dia_visita(r.dia_visita)
+            if d_norm:
+                dias_permitidos.add(d_norm)
+
+        q = query.filter_by(vendedor_id=current_user.vendedor_id)
+        if dias_permitidos:
+            q = q.filter(Cliente.dia_visita.in_(list(dias_permitidos)))
+        return q.all()
     elif current_user.cargo == "supervisor":
         # Supervisor vê clientes dos seus vendedores
         vendedores_ids = [v.id for v in Vendedor.query.filter_by(

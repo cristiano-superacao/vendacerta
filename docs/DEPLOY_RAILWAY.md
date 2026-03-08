@@ -59,7 +59,7 @@ railway run python scripts/smoke_test_railway.py
 
 Ele valida:
 - HTTP: `/ping`, `/login` e `/api/ranking` (não pode retornar 5xx)
-- Postgres: tabelas essenciais e o admin `ADMIN_EMAIL` (default `admin@sistema.com`)
+- Postgres: tabelas essenciais (inclui `vendedor_dias_liberados`) e o admin `ADMIN_EMAIL` (default `admin@sistema.com`)
 
 ### Verificar schema de manutenção/técnicos
 Após o deploy, valide que a tabela `faixas_comissao_manutencao` e a coluna `tecnicos.faixa_manutencao_id` existem:

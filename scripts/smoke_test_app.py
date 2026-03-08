@@ -18,7 +18,6 @@ Uso (Railway/Postgres):
 """
 
 import os
-import sys
 
 
 def _fail(msg: str) -> int:
@@ -46,7 +45,7 @@ def main() -> int:
             db.create_all()
             insp = inspect(db.engine)
             tables = set(insp.get_table_names())
-            required = {"usuarios", "empresas", "vendedores", "metas"}
+            required = {"usuarios", "empresas", "vendedores", "metas", "vendedor_dias_liberados"}
             missing = sorted(required - tables)
             if missing:
                 return _fail(f"Tabelas faltando: {missing}")
@@ -95,6 +94,7 @@ def main() -> int:
             "/dashboard",
             "/clientes",
             "/vendedores",
+            "/admin/vendedores",
             "/metas",
             "/mensagens",
             "/estoque",
