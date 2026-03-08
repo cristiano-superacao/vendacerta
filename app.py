@@ -6780,21 +6780,89 @@ def lista_pedidos():
     if canal:
         query = query.filter(Pedido.canal.ilike(f"%{canal}%"))
 
+    # Filtro de produto precisa ser aplicado sem "cortar" o total do pedido.
+    # Estratégia: primeiro obter os numeros_pedido que possuem o produto, depois agrupar o pedido inteiro.
+    numeros_pedido_produto = None
     if produto:
-        query = query.filter(
-            db.or_(
-                Pedido.produto.ilike(f"%{produto}%"),
-                Pedido.codigo_produto.ilike(f"%{produto}%"),
+        numeros_pedido_produto = (
+            query.with_entities(Pedido.numero_pedido)
+            .filter(
+                db.or_(
+                    Pedido.produto.ilike(f"%{produto}%"),
+                    Pedido.codigo_produto.ilike(f"%{produto}%"),
+                )
             )
+            .distinct()
+            .subquery()
         )
 
     if numero_pedido:
         query = query.filter(Pedido.numero_pedido.ilike(f"%{numero_pedido}%"))
 
-    query = query.order_by(Pedido.data_pedido.desc(), Pedido.id.desc())
+    # Listagem por PEDIDO (1 linha por numero_pedido)
+    from sqlalchemy import case
+
+    has_pendente = db.func.bool_or(Pedido.status == "Pendente")
+    status_calc = case(
+        (has_pendente.is_(True), "Pendente"),
+        else_="Exportado",
+    )
+
+    grouped_q = _pedidos_base_query()
+    # Reaplicar filtros que não "cortam" totais
+    if di:
+        grouped_q = grouped_q.filter(Pedido.data_pedido >= datetime.combine(di, datetime.min.time()))
+    if df:
+        grouped_q = grouped_q.filter(Pedido.data_pedido <= datetime.combine(df, datetime.max.time()))
+    if vendedor_id:
+        grouped_q = grouped_q.filter(Pedido.codigo_vendedor == str(vendedor_id))
+    if cliente:
+        grouped_q = grouped_q.filter(
+            db.or_(
+                Pedido.codigo_cliente.ilike(f"%{cliente}%"),
+                Pedido.nome_cliente.ilike(f"%{cliente}%"),
+            )
+        )
+    if canal:
+        grouped_q = grouped_q.filter(Pedido.canal.ilike(f"%{canal}%"))
+    if numero_pedido:
+        grouped_q = grouped_q.filter(Pedido.numero_pedido.ilike(f"%{numero_pedido}%"))
+    if numeros_pedido_produto is not None:
+        grouped_q = grouped_q.filter(
+            Pedido.numero_pedido.in_(
+                db.session.query(numeros_pedido_produto.c.numero_pedido)
+            )
+        )
+
+    grouped_q = (
+        grouped_q.with_entities(
+            db.func.min(Pedido.id).label("id"),
+            Pedido.numero_pedido.label("numero_pedido"),
+            db.func.max(Pedido.data_pedido).label("data_pedido"),
+            db.func.max(Pedido.codigo_cliente).label("codigo_cliente"),
+            db.func.max(Pedido.nome_cliente).label("nome_cliente"),
+            db.func.max(Pedido.codigo_vendedor).label("codigo_vendedor"),
+            db.func.max(Pedido.nome_vendedor).label("nome_vendedor"),
+            db.func.max(Pedido.canal).label("canal"),
+            db.func.count(Pedido.id).label("itens"),
+            db.func.coalesce(db.func.sum(Pedido.valor_total), 0).label("valor_total"),
+            status_calc.label("status"),
+        )
+        .group_by(Pedido.numero_pedido)
+    )
+
+    if status and status != "Todos":
+        if status == "Pendente":
+            grouped_q = grouped_q.having(has_pendente.is_(True))
+        elif status == "Exportado":
+            grouped_q = grouped_q.having(has_pendente.is_(False))
+        else:
+            grouped_q = grouped_q.having(status_calc == status)
+
+    grouped_q = grouped_q.order_by(db.func.max(Pedido.data_pedido).desc(), db.func.min(Pedido.id).desc())
 
     page = request.args.get("page", 1, type=int)
-    pagination = query.paginate(page=page, per_page=20, error_out=False)
+    pagination = grouped_q.paginate(page=page, per_page=20, error_out=False)
     pedidos = pagination.items
 
     # Dados para selects
@@ -6877,16 +6945,30 @@ def exportar_pedidos_excel():
     if canal:
         query = query.filter(Pedido.canal.ilike(f"%{canal}%"))
 
+    numeros_pedido_produto = None
     if produto:
-        query = query.filter(
-            db.or_(
-                Pedido.produto.ilike(f"%{produto}%"),
-                Pedido.codigo_produto.ilike(f"%{produto}%"),
+        numeros_pedido_produto = (
+            _pedidos_base_query()
+            .with_entities(Pedido.numero_pedido)
+            .filter(
+                db.or_(
+                    Pedido.produto.ilike(f"%{produto}%"),
+                    Pedido.codigo_produto.ilike(f"%{produto}%"),
+                )
             )
+            .distinct()
+            .subquery()
         )
 
     if numero_pedido:
         query = query.filter(Pedido.numero_pedido.ilike(f"%{numero_pedido}%"))
+
+    if numeros_pedido_produto is not None:
+        query = query.filter(
+            Pedido.numero_pedido.in_(
+                db.session.query(numeros_pedido_produto.c.numero_pedido)
+            )
+        )
 
     rows = query.order_by(Pedido.data_pedido.asc(), Pedido.id.asc()).all()
     if not rows:

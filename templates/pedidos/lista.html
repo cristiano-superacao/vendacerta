@@ -134,9 +134,7 @@
               <th>Data</th>
               <th>Cliente</th>
               <th>Vendedor</th>
-              <th>Produto</th>
-              <th class="text-end">Qtd</th>
-              <th class="text-end">Preço</th>
+              <th class="text-end">Itens</th>
               <th class="text-end">Total</th>
               <th>Status</th>
               <th class="text-end">Ações</th>
@@ -158,12 +156,7 @@
                   <div class="fw-semibold">{{ p.nome_vendedor or '' }}</div>
                   <div class="text-muted small">{{ p.codigo_vendedor or '' }}</div>
                 </td>
-                <td>
-                  <div class="fw-semibold">{{ p.produto or '' }}</div>
-                  <div class="text-muted small">{{ p.codigo_produto or '' }}</div>
-                </td>
-                <td class="text-end">{{ p.quantidade or 0 }}</td>
-                <td class="text-end">R$ {{ '%.2f'|format(p.preco_unitario or 0) }}</td>
+                <td class="text-end">{{ p.itens or 0 }}</td>
                 <td class="text-end">R$ {{ '%.2f'|format(p.valor_total or 0) }}</td>
                 <td>
                   {% if p.status == 'Pendente' %}
@@ -181,7 +174,7 @@
             {% endfor %}
             {% if pedidos|length == 0 %}
               <tr>
-                <td colspan="10" class="text-center text-muted py-4">Nenhum pedido encontrado.</td>
+                <td colspan="8" class="text-center text-muted py-4">Nenhum pedido encontrado.</td>
               </tr>
             {% endif %}
           </tbody>
