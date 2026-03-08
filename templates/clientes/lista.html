@@ -11,18 +11,6 @@
             <p class="text-muted mb-0">Gerencie sua carteira de clientes</p>
         </div>
         <div class="btn-group">
-            {% if current_user.cargo == 'vendedor' and current_user.vendedor_id %}
-            <a href="{{ url_for('vendedor_clientes_dia') }}" class="btn btn-outline-primary">
-                <i class="bi bi-calendar-week me-2"></i>Clientes do Dia
-            </a>
-            {% endif %}
-
-            {% if current_user.cargo in ['admin', 'gerente', 'supervisor', 'supervisor_manutencao', 'gerente_manutencao'] %}
-            <a href="{{ url_for('relatorio_visitas_clientes') }}" class="btn btn-outline-info">
-                <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório de Visitas
-            </a>
-            {% endif %}
-
             {% if current_user.pode_exportar_dados %}
             <a href="{{ url_for('exportar_clientes') }}" class="btn btn-secondary-clean">
                 <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
@@ -300,12 +288,6 @@
                                        class="btn btn-outline-success" title="Registrar Compra" aria-label="Registrar compra para {{ cliente.nome }}">
                                         <i class="bi bi-cart-plus"></i>
                                     </a>
-                                    {% if current_user.cargo == 'vendedor' and current_user.vendedor_id %}
-                                    <a href="{{ url_for('registrar_visita_cliente', id=cliente.id) }}"
-                                       class="btn btn-outline-warning" title="Registrar Visita" aria-label="Registrar visita para {{ cliente.nome }}">
-                                        <i class="bi bi-geo-alt"></i>
-                                    </a>
-                                    {% endif %}
                                     {% if current_user.pode_editar_clientes %}
                                     <a href="{{ url_for('editar_cliente', id=cliente.id) }}"
                                        class="btn btn-outline-warning" title="Editar" aria-label="Editar {{ cliente.nome }}">

@@ -371,12 +371,6 @@
                     <span>Meu Desempenho</span>
                 </a>
             </li>
-            <li>
-                <a href="{{ url_for('vendedor_clientes_dia') }}" class="{% if request.endpoint in ['vendedor_clientes_dia', 'registrar_visita_cliente'] %}active{% endif %}">
-                    <i class="bi bi-calendar-week"></i>
-                    <span>Clientes do Dia</span>
-                </a>
-            </li>
             {% endif %}
 
             {% if current_user.cargo == 'supervisor' %}
@@ -404,20 +398,11 @@
 
             <li>
                 <a href="{{ url_for('lista_clientes') }}"
-                   class="{% if 'cliente' in request.endpoint and 'relatorio' not in request.endpoint and request.endpoint != 'vendedor_clientes_dia' %}active{% endif %}">
+                   class="{% if 'cliente' in request.endpoint and 'relatorio' not in request.endpoint %}active{% endif %}">
                     <i class="bi bi-person-lines-fill"></i>
                     <span>Clientes</span>
                 </a>
             </li>
-            {% if current_user.cargo in ['admin', 'gerente', 'supervisor', 'supervisor_manutencao', 'gerente_manutencao'] %}
-            <li>
-                <a href="{{ url_for('relatorio_visitas_clientes') }}"
-                   class="{% if request.endpoint == 'relatorio_visitas_clientes' %}active{% endif %}">
-                    <i class="bi bi-clipboard-data"></i>
-                    <span>Relatório de Visitas</span>
-                </a>
-            </li>
-            {% endif %}
             {% if current_user.cargo != 'vendedor' %}
             <li>
                 <a href="{{ url_for('lista_vendedores') }}"
