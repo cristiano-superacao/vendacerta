@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual do Usuário - Sistema VendaCerta</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --info-color: #0dcaf0;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --dark-text: #212529;
+            --sidebar-width: 280px;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            width: var(--sidebar-width);
+            background-color: #fff;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        @media (max-width: 767.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary-color);
+            background-color: rgba(13, 110, 253, 0.05);
+            border-right: 3px solid var(--primary-color);
+        }
+
+        .nav-link i {
+            font-size: 1.1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+
+        /* Cards & Sections */
+        .section-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .section-title {
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+        }
+
+        /* Steps */
+        .step-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary-color);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .step-number {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            display: block;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* Code/Terminal */
+        .code-block {
+            background-color: #2d3436;
+            color: #dfe6e9;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        /* UI Mockups */
+        .ui-mockup {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            color: #495057;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+        }
+
+        /* Navbar Mobile */
+        .navbar-mobile {
+            display: none;
+            background: #fff;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 101;
+        }
+
+        @media (max-width: 767.98px) {
+            .navbar-mobile {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Navbar -->
+    <div class="navbar-mobile">
+        <span class="fw-bold text-primary"><i class="bi bi-graph-up-arrow"></i> VendaCerta</span>
+        <button class="btn btn-link text-dark p-0" onclick="toggleSidebar()">
+            <i class="bi bi-list fs-1"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="position-sticky sidebar-sticky">
+            <div class="px-4 pb-4 pt-2">
+                <h4 class="text-primary fw-bold"><i class="bi bi-graph-up-arrow"></i> VendaCerta</h4>
+                <p class="text-muted small">Manual do Usuário v2.9</p>
+            </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#visao-geral">
+                        <i class="bi bi-house-door"></i> Visão Geral
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#dashboard">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#vendedores">
+                        <i class="bi bi-people"></i> Vendedores
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#metas">
+                        <i class="bi bi-bullseye"></i> Metas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#equipes">
+                        <i class="bi bi-diagram-3"></i> Equipes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#comissoes">
+                        <i class="bi bi-cash-coin"></i> Comissões
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#suporte">
+                        <i class="bi bi-headset"></i> Suporte
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Visão Geral -->
+        <section id="visao-geral" class="section-card">
+            <h2 class="section-title"><i class="bi bi-stars"></i> Visão Geral do Sistema</h2>
+            <p class="lead">Bem-vindo ao <strong>Sistema VendaCerta</strong>, sua plataforma completa para gestão de metas comerciais, comissões e equipes de vendas.</p>
+            
+            <div class="row mt-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 border-0 bg-light">
+                        <div class="card-body text-center">
+                            <i class="bi bi-graph-up text-primary fs-1 mb-3"></i>
+                            <h5>Alta Performance</h5>
+                            <p class="text-muted small">Acompanhe resultados em tempo real com dashboards interativos.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 border-0 bg-light">
+                        <div class="card-body text-center">
+                            <i class="bi bi-cash-stack text-success fs-1 mb-3"></i>
+                            <h5>Comissões Automáticas</h5>
+                            <p class="text-muted small">Cálculos precisos baseados em faixas de alcance configuráveis.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 border-0 bg-light">
+                        <div class="card-body text-center">
+                            <i class="bi bi-phone text-info fs-1 mb-3"></i>
+                            <h5>100% Responsivo</h5>
+                            <p class="text-muted small">Acesse de qualquer lugar: computador, tablet ou celular.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard -->
+        <section id="dashboard" class="section-card">
+            <h2 class="section-title"><i class="bi bi-speedometer2"></i> Módulo: Dashboard</h2>
+            <p>O painel principal oferece uma visão panorâmica do desempenho da sua empresa ou equipe.</p>
+
+            <div class="step-card">
+                <span class="step-number">Passo 1</span>
+                <h5>Acessando o Dashboard</h5>
+                <p>Após fazer login, você será direcionado automaticamente. Você verá cards com métricas principais:</p>
+                <div class="ui-mockup">
+┌─────────────────────────────────────────────────┐
+│ 👥 Total Vendedores     💰 Receita Total        │
+│ 📈 45                   💵 R$ 2.5M              │
+├─────────────────────────────────────────────────┤
+│ 🎯 Meta Total           💵 Comissões            │
+│ 🎯 R$ 3.0M              💸 R$ 50K               │
+└─────────────────────────────────────────────────┘
+                </div>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">Passo 2</span>
+                <h5>Utilizando Filtros</h5>
+                <p>No topo da página, utilize os seletores para filtrar os dados:</p>
+                <ul>
+                    <li><strong>Período:</strong> Selecione o Mês e Ano desejados.</li>
+                    <li><strong>Equipe:</strong> Filtre por uma equipe específica.</li>
+                    <li><strong>Supervisor:</strong> Veja apenas subordinados de um supervisor.</li>
+                </ul>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">Passo 3</span>
+                <h5>Exportando Relatórios</h5>
+                <p>Clique no botão <button class="btn btn-sm btn-danger"><i class="bi bi-file-pdf"></i> Exportar PDF</button> no canto superior direito para baixar um relatório completo com todos os gráficos e tabelas atuais.</p>
+            </div>
+        </section>
+
+        <!-- Vendedores -->
+        <section id="vendedores" class="section-card">
+            <h2 class="section-title"><i class="bi bi-people"></i> Módulo: Gestão de Vendedores</h2>
+            
+            <div class="step-card">
+                <span class="step-number">Como Cadastrar</span>
+                <h5>Novo Vendedor</h5>
+                <ol>
+                    <li>Acesse o menu <strong>Vendedores</strong> > <strong>Lista de Vendedores</strong>.</li>
+                    <li>Clique no botão <strong>+ Novo Vendedor</strong>.</li>
+                    <li>Preencha os dados obrigatórios:
+                        <ul>
+                            <li>Nome Completo</li>
+                            <li>Email (Login)</li>
+                            <li>CPF</li>
+                            <li>Equipe e Supervisor</li>
+                        </ul>
+                    </li>
+                    <li>Clique em <strong>Salvar</strong>.</li>
+                </ol>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">Importação em Massa</span>
+                <h5>Importar via Excel</h5>
+                <p>Para cadastrar muitos vendedores de uma vez:</p>
+                <ol>
+                    <li>Vá em <strong>Vendedores</strong> > <strong>Importar</strong>.</li>
+                    <li>Baixe o modelo da planilha clicando em "Baixar Template".</li>
+                    <li>Preencha a planilha mantendo o formato das colunas.</li>
+                    <li>Faça o upload do arquivo preenchido.</li>
+                    <li>O sistema validará os dados e confirmará a importação.</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Metas -->
+        <section id="metas" class="section-card">
+            <h2 class="section-title"><i class="bi bi-bullseye"></i> Módulo: Gestão de Metas</h2>
+            
+            <div class="step-card">
+                <span class="step-number">Definindo Objetivos</span>
+                <h5>Criar Nova Meta</h5>
+                <ol>
+                    <li>Acesse <strong>Metas</strong> > <strong>Nova Meta</strong>.</li>
+                    <li>Selecione o <strong>Vendedor</strong>.</li>
+                    <li>Defina o <strong>Mês</strong> e <strong>Ano</strong> de referência.</li>
+                    <li>Insira o <strong>Valor da Meta (R$)</strong>.</li>
+                    <li>O sistema mostrará uma projeção de comissão baseada no alcance de 100%.</li>
+                    <li>Clique em <strong>Criar Meta</strong>.</li>
+                </ol>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">Acompanhamento</span>
+                <h5>Atualizar Receita Alcançada</h5>
+                <p>Durante o mês, mantenha os valores atualizados:</p>
+                <ol>
+                    <li>Na lista de metas, encontre o vendedor.</li>
+                    <li>Clique no ícone de lápis (✏️) para editar.</li>
+                    <li>Atualize o campo <strong>Receita Alcançada</strong>.</li>
+                    <li>O sistema recalculará automaticamente:
+                        <ul>
+                            <li>% de Alcance</li>
+                            <li>Faixa de Comissão atingida</li>
+                            <li>Valor da Comissão a pagar</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Equipes -->
+        <section id="equipes" class="section-card">
+            <h2 class="section-title"><i class="bi bi-diagram-3"></i> Módulo: Equipes</h2>
+            
+            <div class="step-card">
+                <span class="step-number">Organização</span>
+                <h5>Criar Equipe</h5>
+                <ol>
+                    <li>Acesse <strong>Equipes</strong> > <strong>Nova Equipe</strong>.</li>
+                    <li>Defina um <strong>Nome</strong> para a equipe (ex: Vendas Externas).</li>
+                    <li>Selecione um <strong>Supervisor</strong> responsável.</li>
+                    <li>Adicione uma descrição opcional.</li>
+                    <li>Salve a equipe.</li>
+                </ol>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> <strong>Dica:</strong> Ao cadastrar um vendedor, você pode vinculá-lo diretamente a uma equipe existente.
+            </div>
+        </section>
+
+        <!-- Comissões -->
+        <section id="comissoes" class="section-card">
+            <h2 class="section-title"><i class="bi bi-cash-coin"></i> Configuração de Comissões</h2>
+            <p>O sistema utiliza um modelo de faixas progressivas para bonificar performance.</p>
+
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Alcance da Meta</th>
+                            <th>Comissão</th>
+                            <th>Status Visual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>0% - 50%</td>
+                            <td>1.0%</td>
+                            <td><span class="badge bg-danger">Crítico</span></td>
+                        </tr>
+                        <tr>
+                            <td>51% - 75%</td>
+                            <td>1.5%</td>
+                            <td><span class="badge bg-warning text-dark">Atenção</span></td>
+                        </tr>
+                        <tr>
+                            <td>76% - 99%</td>
+                            <td>2.0%</td>
+                            <td><span class="badge bg-primary">Bom</span></td>
+                        </tr>
+                        <tr>
+                            <td>100% ou mais</td>
+                            <td>2.5%</td>
+                            <td><span class="badge bg-success">Excelente</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="step-card">
+                <span class="step-number">Personalização</span>
+                <h5>Criar Nova Faixa</h5>
+                <ol>
+                    <li>Vá em <strong>Configurações</strong> > <strong>Comissões</strong>.</li>
+                    <li>Clique em <strong>Nova Faixa</strong>.</li>
+                    <li>Defina o intervalo (Mínimo % e Máximo %).</li>
+                    <li>Defina a taxa de comissão (ex: 3.0 para 3%).</li>
+                    <li>Escolha uma cor para representação visual.</li>
+                    <li>Salve. O sistema usará essa nova regra para os próximos cálculos.</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Suporte -->
+        <section id="suporte" class="section-card">
+            <h2 class="section-title"><i class="bi bi-headset"></i> Suporte e Ajuda</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="bi bi-whatsapp text-success"></i> Suporte via WhatsApp</h5>
+                    <p>Atendimento de Seg a Sex, das 08h às 18h.</p>
+                    <a href="https://wa.me/5571993372960" class="btn btn-outline-success" target="_blank">
+                        (71) 99337-2960
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <h5><i class="bi bi-envelope text-primary"></i> Email</h5>
+                    <p>Para dúvidas técnicas e reportar erros.</p>
+                    <a href="mailto:cristiano.s.santos@ba.estudante.senai.br" class="btn btn-outline-primary">
+                        Enviar Email
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center text-muted mt-5 mb-3 small">
+            &copy; 2025 Sistema VendaCerta. Todos os direitos reservados.<br>
+            Versão 2.9.1
+        </footer>
+
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+
+        // Auto-activate nav links on scroll
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= (sectionTop - 150)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

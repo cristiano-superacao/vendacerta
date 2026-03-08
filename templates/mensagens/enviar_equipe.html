@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Enviar Mensagem para Equipe{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('caixa_entrada') }}">Mensagens</a></li>
+                    <li class="breadcrumb-item active">Enviar para Equipe</li>
+                </ol>
+            </nav>
+
+            <!-- Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>
+                        Enviar Mensagem para Equipe
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Atenção:</strong> Esta mensagem será enviada para todos os membros da equipe selecionada que possuem login ativo no sistema.
+                    </div>
+
+                    <form method="POST" class="needs-validation" novalidate>
+                        <!-- Equipe -->
+                        <div class="mb-3">
+                            <label for="equipe_id" class="form-label">
+                                <i class="bi bi-diagram-3-fill me-1"></i>
+                                Equipe *
+                            </label>
+                            <select class="form-select" id="equipe_id" name="equipe_id" required>
+                                <option value="">Selecione uma equipe...</option>
+                                {% for equipe in equipes %}
+                                <option value="{{ equipe.id }}">
+                                    {{ equipe.nome }}
+                                    {% if equipe.vendedores %}
+                                    ({{ equipe.vendedores|selectattr('ativo')|list|length }} vendedores ativos)
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Selecione uma equipe.
+                            </div>
+                        </div>
+
+                        <!-- Prioridade -->
+                        <div class="mb-3">
+                            <label for="prioridade" class="form-label">
+                                <i class="bi bi-flag me-1"></i>
+                                Prioridade
+                            </label>
+                            <select class="form-select" id="prioridade" name="prioridade">
+                                <option value="baixa">Baixa</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="alta">Alta</option>
+                                <option value="urgente">Urgente</option>
+                            </select>
+                        </div>
+
+                        <!-- Assunto -->
+                        <div class="mb-3">
+                            <label for="assunto" class="form-label">
+                                <i class="bi bi-chat-square-text me-1"></i>
+                                Assunto *
+                            </label>
+                            <input type="text" class="form-control" id="assunto" name="assunto"
+                                   required maxlength="200" placeholder="Digite o assunto da mensagem">
+                            <div class="form-text">
+                                O nome da equipe será adicionado automaticamente ao assunto.
+                            </div>
+                            <div class="invalid-feedback">
+                                O assunto é obrigatório.
+                            </div>
+                        </div>
+
+                        <!-- Mensagem -->
+                        <div class="mb-3">
+                            <label for="mensagem" class="form-label">
+                                <i class="bi bi-text-paragraph me-1"></i>
+                                Mensagem *
+                            </label>
+                            <textarea class="form-control" id="mensagem" name="mensagem"
+                                      rows="6" required placeholder="Digite sua mensagem para toda a equipe..."></textarea>
+                            <div class="invalid-feedback">
+                                A mensagem é obrigatória.
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('caixa_entrada') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-send-fill me-1"></i>
+                                Enviar para Equipe
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Definir Senha - {{ supervisor.nome }} - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title mb-2">
+                <i class="bi bi-key-fill"></i> Definir Senha do Supervisor
+            </h1>
+            <p class="text-muted mb-0">Altere a senha de acesso do supervisor <strong>{{ supervisor.nome }}</strong></p>
+        </div>
+        <a href="{{ url_for('lista_supervisores') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <!-- Card de Informações do Supervisor -->
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-badge"></i> Informações do Supervisor
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Nome:</label>
+                            <p class="fw-semibold mb-0">{{ supervisor.nome }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Email:</label>
+                            <p class="fw-semibold mb-0">{{ supervisor.email }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Cargo:</label>
+                            <p class="mb-0">
+                                <span class="badge bg-info">{{ supervisor.cargo|title }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Status:</label>
+                            <p class="mb-0">
+                                {% if supervisor.ativo %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativo</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de Definir Senha -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-shield-lock"></i> Nova Senha
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label for="nova_senha" class="form-label fw-semibold">
+                                <i class="bi bi-key"></i> Nova Senha
+                            </label>
+                            <input type="password"
+                                   class="form-control form-control-lg"
+                                   id="nova_senha"
+                                   name="nova_senha"
+                                   placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                                   required
+                                   minlength="6"
+                                   autocomplete="new-password">
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> A senha deve ter no mínimo 6 caracteres
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="confirmar_senha" class="form-label fw-semibold">
+                                <i class="bi bi-key-fill"></i> Confirmar Senha
+                            </label>
+                            <input type="password"
+                                   class="form-control form-control-lg"
+                                   id="confirmar_senha"
+                                   name="confirmar_senha"
+                                   placeholder="Digite a senha novamente"
+                                   required
+                                   minlength="6"
+                                   autocomplete="new-password">
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Atenção:</strong> O supervisor deve ser informado da nova senha e orientado a alterá-la no primeiro acesso.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning btn-lg">
+                                <i class="bi bi-shield-check"></i> Definir Nova Senha
+                            </button>
+                            <a href="{{ url_for('lista_supervisores') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Card de Senha Padrão -->
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-clockwise"></i> Resetar para Senha Padrão
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        Se preferir, você pode resetar a senha para a senha padrão do sistema: <code class="bg-light px-2 py-1">senha123</code>
+                    </p>
+                    <form method="POST" action="{{ url_for('resetar_senha_supervisor', id=supervisor.id) }}"
+                          onsubmit="return confirm('Tem certeza que deseja resetar a senha para senha123?')">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="bi bi-arrow-counterclockwise"></i> Resetar para senha123
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control-lg {
+        border-radius: 8px;
+        padding: 12px 16px;
+    }
+
+    .card {
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    code {
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+</style>
+
+<script>
+    // Validar se as senhas conferem
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const novaSenha = document.getElementById('nova_senha').value;
+        const confirmarSenha = document.getElementById('confirmar_senha').value;
+
+        if (novaSenha !== confirmarSenha) {
+            e.preventDefault();
+            alert('As senhas não conferem! Por favor, verifique.');
+            document.getElementById('confirmar_senha').focus();
+            return false;
+        }
+
+        if (novaSenha.length < 6) {
+            e.preventDefault();
+            alert('A senha deve ter no mínimo 6 caracteres!');
+            document.getElementById('nova_senha').focus();
+            return false;
+        }
+    });
+
+    // Mostrar/ocultar senha
+    const toggleButtons = document.querySelectorAll('.toggle-password');
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            const icon = this.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        });
+    });
+</script>
+{% endblock %}

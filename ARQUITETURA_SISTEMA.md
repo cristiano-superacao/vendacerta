@@ -1,0 +1,455 @@
+# 🏗️ ARQUITETURA DO SISTEMA VENDACERTA
+
+## 📊 Visão Geral da Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     VENDACERTA - SISTEMA COMPLETO                   │
+│                    Sistema de Gestão de Vendas e Metas              │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          CAMADA DE APRESENTAÇÃO                     │
+│                         (64 Templates HTML)                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │   DASHBOARD  │  │   CLIENTES   │  │  VENDEDORES  │             │
+│  │              │  │              │  │              │             │
+│  │  • Admin     │  │  • Lista     │  │  • Lista     │             │
+│  │  • Supervisor│  │  • Form      │  │  • Form      │             │
+│  │  • Vendedor  │  │  • Compras   │  │  • Logins    │             │
+│  │  • Charts    │  │  • Relatório │  │  • Permissões│             │
+│  └──────────────┘  └──────────────┘  └──────────────┘             │
+│                                                                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │    METAS     │  │   ESTOQUE    │  │  ORDEM SERV  │             │
+│  │              │  │              │  │              │             │
+│  │  • Lista     │  │  • Dashboard │  │  • Lista     │             │
+│  │  • Form      │  │  • Produtos  │  │  • Nova      │             │
+│  │  • Configurar│  │  • Moviment. │  │  • Atualizar │             │
+│  │  • PDF       │  │  • Permissões│  │  • Avaliar   │             │
+│  └──────────────┘  └──────────────┘  └──────────────┘             │
+│                                                                      │
+│                    ✅ Bootstrap 5.3.3 Responsivo                    │
+└─────────────────────────────────────────────────────────────────────┘
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       CAMADA DE APLICAÇÃO                           │
+│                     (Flask App - 119 Rotas)                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │               ROTEAMENTO E CONTROLE (app.py)              │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │                                                            │     │
+│  │  🔐 Autenticação (7 rotas)                                │     │
+│  │     /login, /registro, /logout, /recuperar-senha          │     │
+│  │                                                            │     │
+│  │  👨‍💼 Super Admin (17 rotas)                                │     │
+│  │     /super-admin/empresas, /usuarios, /backups            │     │
+│  │                                                            │     │
+│  │  👥 Supervisores (6 rotas)                                │     │
+│  │     /supervisores, /novo, /editar, /importar              │     │
+│  │                                                            │     │
+│  │  👤 Vendedores (13 rotas)                                 │     │
+│  │     /vendedores, /novo, /logins, /permissoes              │     │
+│  │                                                            │     │
+│  │  👔 Funcionários (5 rotas)                                │     │
+│  │     /funcionarios, /criar, /editar                        │     │
+│  │                                                            │     │
+│  │  📞 Clientes (10 rotas)                                   │     │
+│  │     /clientes, /novo, /compra, /relatorio, /importar      │     │
+│  │                                                            │     │
+│  │  💬 Mensagens (7 rotas)                                   │     │
+│  │     /mensagens, /nova, /enviadas, /enviar-equipe          │     │
+│  │                                                            │     │
+│  │  🎯 Metas (6 rotas)                                       │     │
+│  │     /metas, /nova, /configurar, /exportar-pdf             │     │
+│  │                                                            │     │
+│  │  👥 Equipes (5 rotas)                                     │     │
+│  │     /equipes, /nova, /detalhes                            │     │
+│  │                                                            │     │
+│  │  💰 Comissões (3+ rotas)                                  │     │
+│  │     /configuracoes/comissoes, /criar, /vincular-tecnicos  │     │
+│  │                                                            │     │
+│  │  📦 Estoque (11 rotas)                                    │     │
+│  │     /estoque, /produtos, /movimentacoes, /importar        │     │
+│  │                                                            │     │
+│  │  🔧 Ordens Serviço (9 rotas)                             │     │
+│  │     /os, /nova, /atualizar, /aprovar, /avaliar            │     │
+│  │                                                            │     │
+│  │  📊 Relatórios (2 rotas)                                  │     │
+│  │     /relatorios/metas-avancado, /api/metas/dados          │     │
+│  │                                                            │     │
+│  │  🔌 API & Utilities (8 rotas)                            │     │
+│  │     /api/ranking, /health, /ping                          │     │
+│  │                                                            │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │            MIDDLEWARES E DECORADORES                       │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │  • @login_required        - Autenticação obrigatória      │     │
+│  │  • @super_admin_required  - Super Admin apenas            │     │
+│  │  • @admin_required        - Admin/Super Admin             │     │
+│  │  • @permission_required   - Permissões específicas        │     │
+│  │  • ProxyFix               - Headers HTTPS                 │     │
+│  │  • Security Headers       - CSP, XSS, Frame Options       │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      CAMADA DE VALIDAÇÃO                            │
+│                    (WTForms - 25+ Forms)                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │  LoginForm   │  │ VendedorForm │  │ ClienteForm  │             │
+│  │  RegistroForm│  │ MetaForm     │  │ ProdutoForm  │             │
+│  │  EmpresaForm │  │ EquipeForm   │  │ OSForm       │             │
+│  └──────────────┘  └──────────────┘  └──────────────┘             │
+│                                                                      │
+│  ✅ CSRF Protection   ✅ Field Validation   ✅ Type Checking        │
+└─────────────────────────────────────────────────────────────────────┘
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       CAMADA DE NEGÓCIO                             │
+│                      (Helpers & Services)                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │                    HELPERS (helpers.py)                    │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │  • limpar_cpf, limpar_cnpj, limpar_telefone               │     │
+│  │  • formatar_cpf, formatar_cnpj, formatar_telefone         │     │
+│  │  • flash_sucesso, flash_erro, flash_aviso                 │     │
+│  │  • filtrar_vendedores_por_escopo                          │     │
+│  │  • filtrar_clientes_por_escopo                            │     │
+│  │  • paginar_query, validar_email                           │     │
+│  │  • gerar_codigo_cliente, calcular_porcentagem             │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │              CÁLCULOS (calculo_*.py)                       │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │  • calculo_projecao.py    - Projeções de vendas           │     │
+│  │  • calculo_comissao.py    - Comissões por faixa           │     │
+│  │  • calculo_balanceamento.py - Balanceamento metas         │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │               BACKUPS (backup_helper.py)                   │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │  • criar_backup_db        - Backup automático              │     │
+│  │  • listar_backups         - Listar backups                 │     │
+│  │  • restaurar_backup       - Restaurar banco                │     │
+│  │  • deletar_backup         - Limpar antigos                 │     │
+│  │  • Agendamento: APScheduler (diário)                       │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │              PDF GENERATOR (pdf_generator.py)              │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │  • gerar_pdf_metas        - PDF relatório metas            │     │
+│  │  • gerar_pdf_dashboard    - PDF dashboard                  │     │
+│  │  • gerar_pdf_os           - PDF ordem serviço              │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      CAMADA DE DADOS (ORM)                          │
+│                   (SQLAlchemy - 16 Models)                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │                    MODELS (models.py)                      │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │                                                            │     │
+│  │  🏢 Empresa                  - Multi-tenant                │     │
+│  │     • id, nome, cnpj, plano, ativo                         │     │
+│  │     • max_usuarios, max_vendedores                         │     │
+│  │                                                            │     │
+│  │  👤 Usuario                  - Autenticação                │     │
+│  │     • id, nome, email, senha_hash                          │     │
+│  │     • cargo, departamento, empresa_id                      │     │
+│  │     • is_super_admin, ativo                                │     │
+│  │                                                            │     │
+│  │  👥 Vendedor                 - Vendedores                  │     │
+│  │     • id, nome, email, telefone                            │     │
+│  │     • supervisor_id, empresa_id                            │     │
+│  │     • meta_mensal, vendas_mes, ativo                       │     │
+│  │                                                            │     │
+│  │  🎯 Meta                     - Metas vendas                │     │
+│  │     • id, vendedor_id, valor_meta                          │     │
+│  │     • mes, ano, atingido                                   │     │
+│  │                                                            │     │
+│  │  👥 Equipe                   - Equipes vendas              │     │
+│  │     • id, nome, supervisor_id                              │     │
+│  │     • vendedores (relacionamento)                          │     │
+│  │                                                            │     │
+│  │  💰 FaixaComissao           - Comissões                   │     │
+│  │     • id, nome, descricao                                  │     │
+│  │     • faixas (JSON), empresa_id                            │     │
+│  │                                                            │     │
+│  │  💰 FaixaComissaoVendedor   - Comissões vendedor          │     │
+│  │     • vendedor_id, faixa_comissao_id                       │     │
+│  │                                                            │     │
+│  │  💰 FaixaComissaoSupervisor - Comissões supervisor        │     │
+│  │     • usuario_id, faixa_comissao_id                        │     │
+│  │                                                            │     │
+│  │  💰 FaixaComissaoManutencao - Comissões técnicos          │     │
+│  │     • id, ordem, alcance_min/max, taxa_comissao, cor       │     │
+│  │     • empresa_id, relacionamento com Técnico               │     │
+│  │                                                            │     │
+│  │  💬 Mensagem                 - Sistema mensagens           │     │
+│  │     • id, remetente_id, destinatario_id                    │     │
+│  │     • assunto, corpo, lida, arquivada                      │     │
+│  │                                                            │     │
+│  │  📞 Cliente                  - Gestão clientes             │     │
+│  │     • id, nome, email, telefone                            │     │
+│  │     • cpf_cnpj, endereco, vendedor_id                      │     │
+│  │     • codigo, empresa_id, ativo                            │     │
+│  │                                                            │     │
+│  │  💳 CompraCliente           - Vendas/Compras              │     │
+│  │     • id, cliente_id, valor, descricao                     │     │
+│  │     • data_compra, vendedor_id                             │     │
+│  │                                                            │     │
+│  │  📦 Produto                  - Catálogo produtos           │     │
+│  │     • id, nome, descricao, codigo                          │     │
+│  │     • preco, estoque_atual, empresa_id                     │     │
+│  │                                                            │     │
+│  │  📊 EstoqueMovimento        - Movimentações               │     │
+│  │     • id, produto_id, tipo, quantidade                     │     │
+│  │     • usuario_id, data, observacao                         │     │
+│  │                                                            │     │
+│  │  🔧 Tecnico                  - Técnicos                    │     │
+│  │     • id, nome, email, telefone                            │     │
+│  │     • especialidade, ativo                                 │     │
+│  │                                                            │     │
+│  │  🛠️ OrdemServico            - Ordens serviço              │     │
+│  │     • id, cliente_id, tecnico_id                           │     │
+│  │     • status, tipo, descricao, valor                       │     │
+│  │     • avaliacao, data_abertura                             │     │
+│  │                                                            │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  ✅ Relacionamentos FK   ✅ Indexes   ✅ Constraints                │
+└─────────────────────────────────────────────────────────────────────┘
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    CAMADA DE PERSISTÊNCIA                           │
+│                    (Banco de Dados)                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │              SQLITE (Desenvolvimento)                      │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │  📁 vendacerta.db                                          │     │
+│  │  • 16 tabelas                                              │     │
+│  │  • Relacionamentos FK                                      │     │
+│  │  • Indexes para performance                                │     │
+│  │  • Backup automático diário                                │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────┐     │
+│  │             POSTGRESQL (Produção)                          │     │
+│  ├───────────────────────────────────────────────────────────┤     │
+│  │  🐘 PostgreSQL 15+                                         │     │
+│  │  • Scripts de migração prontos                             │     │
+│  │  • test_postgresql.py - Testar conexão                     │     │
+│  │  • setup_postgresql.py - Configurar banco                  │     │
+│  │  • migrate_to_postgresql.py - Migrar dados                 │     │
+│  │  • quick_start.py - Menu interativo                        │     │
+│  └───────────────────────────────────────────────────────────┘     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                    SERVIÇOS EXTERNOS E INTEGRAÇÃO                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  📧 Email (Em desenvolvimento)                                       │
+│  📱 SMS (Planejado)                                                  │
+│  💳 Gateway Pagamento (Planejado)                                   │
+│  📊 BI/Analytics (Chart.js integrado)                               │
+│  ☁️  Cloud Storage (Planejado)                                      │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔐 FLUXO DE AUTENTICAÇÃO
+
+```
+┌──────────────┐
+│   USUÁRIO    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────────┐
+│  /login (GET)    │  → Renderiza login.html
+│  LoginForm       │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  /login (POST)   │  → Valida credenciais
+│  check_password  │
+└──────┬───────────┘
+       │
+       ├─[✅ Válido]────────────────┐
+       │                            ▼
+       │                    ┌───────────────┐
+       │                    │  login_user() │
+       │                    │  session ativa│
+       │                    └───────┬───────┘
+       │                            │
+       │                            ▼
+       │                    ┌───────────────┐
+       │                    │  Redirect     │
+       │                    │  /dashboard   │
+       │                    └───────────────┘
+       │
+       └─[❌ Inválido]─────────────┐
+                                    ▼
+                            ┌───────────────┐
+                            │ Flash Error   │
+                            │ Volta /login  │
+                            └───────────────┘
+```
+
+---
+
+## 📊 FLUXO DE DADOS - EXEMPLO: CADASTRO CLIENTE
+
+```
+┌──────────────────┐
+│  FRONTEND        │
+│  /clientes/novo  │  → Template: clientes/form.html
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  FORM VALIDATION │
+│  ClienteForm     │  → WTForms valida campos
+│  CSRF Token      │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  APP ROUTE       │
+│  @app.route      │  → /clientes/novo POST
+│  @login_required │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  BUSINESS LOGIC  │
+│  helpers.py      │  → limpar_cpf, validar_email
+│  gerar_codigo    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  ORM/MODEL       │
+│  Cliente()       │  → Cria objeto Cliente
+│  db.session.add  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  DATABASE        │
+│  INSERT INTO     │  → Salva no banco
+│  clientes        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  REDIRECT        │
+│  flash_sucesso   │  → Mensagem de sucesso
+│  /clientes       │  → Lista de clientes
+└──────────────────┘
+```
+
+---
+
+## 🎯 HIERARQUIA DE PERMISSÕES
+
+```
+                    ┌─────────────────┐
+                    │  SUPER ADMIN    │
+                    │  is_super_admin │
+                    │  Todas empresas │
+                    └────────┬────────┘
+                             │
+                ┌────────────┴────────────┐
+                │                         │
+        ┌───────▼────────┐        ┌──────▼──────┐
+        │  ADMIN         │        │  GERENTE    │
+        │  cargo='admin' │        │  gerente_id │
+        │  Sua empresa   │        │  Hierarquia │
+        └───────┬────────┘        └──────┬──────┘
+                │                         │
+        ┌───────┴────────┐        ┌──────┴──────┐
+        │                │        │             │
+┌───────▼────────┐  ┌───▼────────▼──┐  ┌───────▼────────┐
+│  SUPERVISOR    │  │  FUNCIONÁRIO  │  │  VENDEDOR      │
+│  cargo='sup'   │  │  departamento │  │  cargo='vend'  │
+│  Sua equipe    │  │  RH/Fin/Ti    │  │  Seus clientes │
+└────────────────┘  └───────────────┘  └────────────────┘
+```
+
+---
+
+## 📱 RESPONSIVIDADE BOOTSTRAP 5.3.3
+
+```
+┌────────────────────────────────────────────────────┐
+│         BREAKPOINTS RESPONSIVOS                    │
+├────────────────────────────────────────────────────┤
+│                                                     │
+│  📱 Mobile (< 576px)                               │
+│     • Navbar colapsado                             │
+│     • Cards empilhados (col-12)                    │
+│     • Tabelas scroll horizontal                    │
+│     • Botões full-width                            │
+│                                                     │
+│  📱 Tablet (576px - 768px)                         │
+│     • Navbar responsivo                            │
+│     • Cards 2 colunas (col-md-6)                   │
+│     • Sidebar colapsável                           │
+│                                                     │
+│  💻 Desktop (768px - 992px)                        │
+│     • Navbar expandido                             │
+│     • Cards 3 colunas (col-lg-4)                   │
+│     • Sidebar fixa                                 │
+│                                                     │
+│  🖥️ Large Desktop (> 992px)                       │
+│     • Layout completo                              │
+│     • Cards 4 colunas (col-xl-3)                   │
+│     • Todas funcionalidades visíveis               │
+│                                                     │
+└────────────────────────────────────────────────────┘
+```
+
+---
+
+## ✅ CONCLUSÃO
+
+**Sistema VendaCerta - Arquitetura Completa e Integrada:**
+
+- ✅ **6 Camadas** bem definidas (Apresentação → Aplicação → Validação → Negócio → Dados → Persistência)
+- ✅ **119 Rotas** mapeadas e funcionais
+- ✅ **64 Templates** responsivos Bootstrap 5.3.3
+- ✅ **16 Models** SQLAlchemy integrados
+- ✅ **25+ Forms** WTForms validados
+- ✅ **Segurança** multi-camada (auth, CSRF, permissions)
+- ✅ **Multi-tenant** por empresa
+- ✅ **Hierarquia** 5 níveis de acesso
+- ✅ **Responsivo** mobile-first design
+
+**Pronto para produção!** 🚀

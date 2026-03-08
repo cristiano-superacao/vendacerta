@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Erro Interno do Servidor{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4 p-md-5">
+          <div class="d-flex align-items-center mb-3">
+            <div class="me-3">
+              <span class="badge bg-danger rounded-pill p-3">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+              </span>
+            </div>
+            <div>
+              <h1 class="h4 mb-0">Ops! Ocorreu um erro interno.</h1>
+              <small class="text-muted">Nosso time já está verificando.</small>
+            </div>
+          </div>
+
+          <p class="text-secondary mb-4">
+            O servidor encontrou um erro inesperado ao processar sua solicitação.
+            Tente novamente em alguns instantes. Se o problema persistir, entre em contato com o suporte.
+          </p>
+
+          {% if db_status %}
+          <div class="alert {% if db_status == 'conectado' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-start" role="alert">
+            <i class="bi {% if db_status == 'conectado' %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %} me-2 mt-1"></i>
+            <div class="w-100">
+              <strong>Status da Conexão com Banco de Dados:</strong> 
+              <span class="badge {% if db_status == 'conectado' %}bg-success{% else %}bg-danger{% endif %} ms-2">
+                {{ db_status }}
+              </span>
+              {% if db_error %}
+              <div class="mt-2 small">
+                <strong>Erro:</strong> <code class="text-danger">{{ db_error }}</code>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="alert alert-info d-flex align-items-start" role="alert">
+            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+            <div>
+              Enquanto isso, você pode:
+              <ul class="mb-0 mt-2">
+                <li>Voltar para a <a href="{{ url_for('login') }}" class="alert-link">página de login</a></li>
+                {% if current_user.is_authenticated %}
+                <li>Ir para o <a href="{{ url_for('dashboard') }}" class="alert-link">dashboard</a></li>
+                {% endif %}
+                <li>Verificar o status do sistema em <a href="/ping" class="alert-link">/ping</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" href="{{ url_for('login') }}">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Ir para Login
+            </a>
+            <a class="btn btn-outline-secondary" href="/">
+              <i class="bi bi-arrow-counterclockwise me-1"></i> Tentar novamente
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

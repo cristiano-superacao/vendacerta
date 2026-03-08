@@ -1,0 +1,179 @@
+{# Macros de UI para reduzir duplicações sem alterar o HTML/CSS final. #}
+
+{% macro auth_head_base(title, include_theme_css=false) %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+{% if include_theme_css %}
+<!-- Project theme CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+{% endif %}
+{% endmacro %}
+
+
+{% macro bootstrap_bundle_js() %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endmacro %}
+
+{% macro page_header_clean(category, icon_class, title, mb='mb-4') %}
+<div class="page-header-clean {{ mb }}">
+    <div class="header-content">
+        <p class="header-subtitle">{{ category }}</p>
+        <h1 class="header-title">
+            <i class="{{ icon_class }}"></i> {{ title }}
+        </h1>
+    </div>
+    <div class="header-actions">
+        {% if caller is defined %}
+            {{ caller() }}
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+
+{% macro page_header_prescrimed(category, title, subtitle, mb='mb-4') %}
+<div class="page-header-clean {{ mb }}">
+    <p class="page-category">{{ category }}</p>
+    <h1 class="page-title-clean">{{ title }}</h1>
+    <p class="page-subtitle-clean">{{ subtitle }}</p>
+
+    {% if caller is defined %}
+    <div class="d-flex gap-2 mt-3 flex-wrap">
+        {{ caller() }}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{% macro page_header_prescrimed_custom(category, mb='mb-4') %}
+<div class="page-header-clean {{ mb }}">
+    <p class="page-category">{{ category }}</p>
+    {% if caller is defined %}
+        {{ caller() }}
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{% macro stats_card_clean(color, icon_class, label, value, subtitle, subtitle_class='') %}
+<div class="stats-card-clean stats-card-{{ color }} h-100">
+    <div class="stats-icon-clean stats-icon-{{ color }}">
+        <i class="{{ icon_class }}"></i>
+    </div>
+    <p class="stats-label-clean">{{ label }}</p>
+    <h3 class="stats-value-clean">{{ value }}</h3>
+    <p class="stats-subtitle-clean{% if subtitle_class %} {{ subtitle_class }}{% endif %}">{{ subtitle }}</p>
+</div>
+{% endmacro %}
+
+
+{% macro stats_card_modern(border_left_color, badge_class, badge_text, icon_wrapper_class, icon_class, value, label_text='') %}
+<div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid {{ border_left_color }} !important;">
+    <div class="card-body position-relative">
+        <span class="badge {{ badge_class }} position-absolute top-0 end-0 m-3">{{ badge_text }}</span>
+        <div class="d-flex align-items-center mb-3">
+            <div class="icon-modern {{ icon_wrapper_class }}">
+                <i class="{{ icon_class }}"></i>
+            </div>
+        </div>
+        <h3 class="stats-value-modern mb-1">{{ value }}</h3>
+        <p class="stats-label-modern mb-0">
+            {% if caller is defined %}
+                {{ caller() }}
+            {% else %}
+                {{ label_text }}
+            {% endif %}
+        </p>
+    </div>
+</div>
+{% endmacro %}
+
+
+{% macro page_header_modern_standard(category, icon_class, title, subtitle=None, mb='mb-4', actions_wrap=False, actions_class='d-flex flex-wrap gap-2') %}
+<div class="modern-header {{ mb }}">
+    <p class="text-muted text-uppercase small mb-1 fw-semibold" style="letter-spacing: 1px;">{{ category }}</p>
+    <h1 class="page-title-modern mb-2">
+        <i class="{{ icon_class }}"></i> {{ title }}
+    </h1>
+    {% if subtitle is not none %}
+    <p class="text-muted mb-3">{{ subtitle }}</p>
+    {% endif %}
+
+    {% if caller is defined %}
+        {% if actions_wrap %}
+        <div class="{{ actions_class }}">
+            {{ caller() }}
+        </div>
+        {% else %}
+            {{ caller() }}
+        {% endif %}
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{% macro flash_messages(show_icons=true, icon_fill=false, map_error_to_danger=true, icon_strategy='standard') %}
+{#
+  Renderiza mensagens flash (Flask) de forma padronizada.
+  Opções:
+    - show_icons: inclui/omite o <i class="bi ..."></i>
+    - icon_fill: adiciona sufixo -fill ao ícone
+    - map_error_to_danger: trata categoria 'error' como 'danger'
+    - icon_strategy:
+        - 'standard': success/danger(error)/warning/else
+        - 'simple': success/else
+        - 'danger-info': success/danger/else
+#}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            {% set resolved_category = ('danger' if (map_error_to_danger and category == 'error') else category) %}
+
+            {% if icon_strategy == 'simple' %}
+                {% set icon_name = ('check-circle' if resolved_category == 'success' else 'exclamation-triangle') %}
+            {% elif icon_strategy == 'danger-info' %}
+                {% set icon_name = ('check-circle' if resolved_category == 'success' else ('exclamation-triangle' if resolved_category == 'danger' else 'info-circle')) %}
+            {% else %}
+                {% set icon_name = (
+                    'check-circle'
+                    if resolved_category == 'success'
+                    else (
+                        'exclamation-circle'
+                        if resolved_category == 'danger'
+                        else (
+                            'exclamation-triangle'
+                            if resolved_category == 'warning'
+                            else 'info-circle'
+                        )
+                    )
+                ) %}
+            {% endif %}
+
+            <div class="alert alert-{{ resolved_category }} alert-dismissible fade show" role="alert">
+                {% if show_icons %}
+                    <i class="bi bi-{{ icon_name }}{% if icon_fill %}-fill{% endif %}"></i>
+                {% endif %}
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+{% endmacro %}

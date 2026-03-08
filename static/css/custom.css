@@ -1,0 +1,1676 @@
+/*
+ * Sistema SuaMeta - Design System Moderno
+ * Versão: 3.0.0
+ * Data: 14/12/2025
+ * Inspirado em: Prescrimed Layout
+ *
+ * Paleta de Cores Principal:
+ * - Verde Principal: #22c55e
+ * - Verde Escuro: #16a34a
+ * - Teal: #14b8a6
+ * - Vermelho: #ef4444
+ * - Roxo: #a855f7
+ * - Fundo: #f9fafb
+ */
+
+/* ===== VARIÁVEIS GLOBAIS ===== */
+:root {
+    --primary-green: #22c55e;
+    --primary-dark: #16a34a;
+    --teal: #14b8a6;
+    --red: #ef4444;
+    --purple: #a855f7;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --sidebar-bg: #1a4d2e;
+    --sidebar-dark: #0d3a1f;
+
+    /* Variáveis responsivas (Vendacerta) */
+    --vc-dashboard-header-padding: 1.75rem;
+    --vc-dashboard-title-font-size: 1.875rem;
+    --vc-stats-card-body-padding: 1.5rem;
+    --vc-stats-value-font-size: 1.75rem;
+    --vc-projection-item-padding: 1.25rem;
+    --vc-projection-value-font-size: 1.5rem;
+    --vc-table-modern-font-size: 0.9375rem;
+    --vc-table-modern-cell-padding-y: 1rem;
+    --vc-table-modern-cell-padding-x: 0.75rem;
+    --vc-equipe-nome-font-size: 1rem;
+    --vc-stat-row-font-size: inherit;
+
+    /* UI moderna (macros) */
+    --vc-page-title-modern-font-size: 2rem;
+    --vc-stats-value-modern-font-size: 2rem;
+    --vc-modern-header-padding: 2rem;
+    --vc-icon-modern-size: 48px;
+    --vc-icon-modern-font-size: 1.5rem;
+    --vc-stats-card-modern-margin-bottom: 0;
+
+    /* Gradientes (deduplicação) */
+    --vc-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ===== RESET E GLOBAIS ===== */
+:where(body) {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-900);
+}
+
+/* ===== CARDS ESTATÍSTICAS - PADRÃO PRESCRIMED ===== */
+
+.stats-card-clean {
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card-clean:hover {
+    border-color: var(--gray-300);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+/* Variantes de cor */
+.stats-card-green {
+    border-left: 4px solid var(--primary-green);
+}
+
+.stats-card-teal {
+    border-left: 4px solid var(--teal);
+}
+
+.stats-card-red {
+    border-left: 4px solid var(--red);
+}
+
+.stats-card-purple {
+    border-left: 4px solid var(--purple);
+}
+
+/* Ícone do card */
+.stats-icon-clean {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.stats-icon-clean i {
+    font-size: 1.75rem;
+}
+
+/* Verde */
+.stats-icon-green {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--primary-green);
+}
+
+/* Teal */
+.stats-icon-teal {
+    background: rgba(20, 184, 166, 0.1);
+    color: var(--teal);
+}
+
+/* Vermelho */
+.stats-icon-red {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--red);
+}
+
+/* Roxo */
+.stats-icon-purple {
+    background: rgba(168, 85, 247, 0.1);
+    color: var(--purple);
+}
+
+/* Label do card */
+.stats-label-clean {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    margin-bottom: 0.5rem;
+}
+
+/* Valor do card */
+.stats-value-clean {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 0.25rem;
+    line-height: 1;
+}
+
+/* Subtítulo do card */
+.stats-subtitle-clean {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+.stats-subtitle-clean.positive {
+    color: var(--primary-green);
+}
+
+.stats-subtitle-clean.negative {
+    color: var(--red);
+}
+
+/* ===== CABEÇALHOS DE PÁGINA - PADRÃO PRESCRIMED ===== */
+
+.page-header-clean {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid var(--gray-200);
+    margin-bottom: 1.5rem;
+}
+
+.page-category {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gray-500);
+    margin-bottom: 0.5rem;
+}
+
+.page-title-clean {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 0.5rem 0;
+}
+
+.page-subtitle-clean {
+    font-size: 0.9375rem;
+    color: var(--gray-500);
+    margin: 0;
+}
+
+/* ===== BOTÕES - PADRÃO PRESCRIMED ===== */
+
+.btn-primary-clean {
+    background: var(--primary-green);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary-clean:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    color: white;
+}
+
+.btn-secondary-clean {
+    background: white;
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary-clean:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+/* ===== BARRA DE PESQUISA E FILTROS ===== */
+
+.search-filter-bar {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--gray-200);
+    margin-bottom: 1.5rem;
+}
+
+.search-input-clean {
+    border: 1px solid var(--gray-300);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+}
+
+.search-input-clean:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    outline: none;
+}
+
+/* ===== ESTADO VAZIO - PADRÃO PRESCRIMED ===== */
+
+.empty-state-clean {
+    background: white;
+    border: 2px dashed var(--gray-300);
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.empty-state-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--gray-100);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.empty-state-icon i {
+    font-size: 2.5rem;
+    color: var(--gray-400);
+}
+
+.empty-state-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-subtitle {
+    font-size: 0.9375rem;
+    color: var(--gray-500);
+    margin-bottom: 1.5rem;
+}
+
+/* ===== CARDS LEGADOS (COMPATIBILIDADE) ===== */
+
+/* ===== UI MODERNA (MACROS) ===== */
+
+.modern-header {
+    background: white;
+    padding: var(--vc-modern-header-padding);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.page-title-modern {
+    font-size: var(--vc-page-title-modern-font-size);
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.stats-card-modern {
+    border-radius: 12px;
+    margin-bottom: var(--vc-stats-card-modern-margin-bottom);
+    transition: all 0.3s ease;
+}
+
+.stats-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.icon-modern {
+    width: var(--vc-icon-modern-size);
+    height: var(--vc-icon-modern-size);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--vc-icon-modern-font-size);
+}
+
+.stats-value-modern {
+    font-size: var(--vc-stats-value-modern-font-size);
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+}
+
+.stats-label-modern {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* ===== SUPER ADMIN (AJUSTES RESPONSIVOS) ===== */
+
+@media (max-width: 768px) {
+    .super-admin-page .d-flex.gap-1 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+
+    .super-admin-page .d-flex.gap-1 .btn {
+        width: 100%;
+    }
+}
+
+/* ===== CARDS DE INFORMAÇÃO ===== */
+
+.info-card {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* ===== SECTION TITLES ===== */
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid #007bff;
+    margin-bottom: 1.5rem;
+}
+
+/* ===== BOTÕES CUSTOMIZADOS ===== */
+
+.shortcut-btn {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    border: none;
+    color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.shortcut-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
+    color: white;
+}
+
+.shortcut-btn i {
+    font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.contact-btn {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+}
+
+.contact-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+    color: white;
+}
+
+/* ===== BADGES CUSTOMIZADOS ===== */
+
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    padding: 0.35em 0.65em;
+}
+
+/* ===== TABELAS ===== */
+
+.table > tbody > tr {
+    transition: background-color 0.2s ease;
+}
+
+.table > tbody > tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+.table-light th {
+    background-color: #f8f9fa;
+    padding: 1rem 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+}
+
+/* ===== FORMS ===== */
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.form-switch .form-check-input {
+    width: 3em;
+    height: 1.5em;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+/* ===== TABELA - ESTILOS GLOBAIS ===== */
+
+.category-card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: var(--vc-gradient-primary);
+    color: white;
+}
+
+.category-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
+}
+
+.category-card:hover .category-icon {
+    transform: rotate(360deg);
+}
+
+.category-icon {
+    transition: transform 0.6s ease;
+}
+
+/* ===== ACCORDION CUSTOMIZADO ===== */
+
+/* (removido) Bloco antigo de accordion (estava duplicado e era sobrescrito mais abaixo
+ * na seção "CENTRAL DE AJUDA". Mantemos apenas a versão mais recente para evitar
+ * duplicidades e conflitos de estilo.
+ */
+
+/* ===== FAQ ITEMS ===== */
+
+.faq-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.faq-item:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    transform: translateX(5px);
+}
+
+/* ===== ANIMAÇÕES ===== */
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in-up {
+    animation: slideInUp 0.5s ease-out;
+}
+
+/* ===== GRADIENTES ===== */
+
+.gradient-primary {
+    background: var(--vc-gradient-primary);
+}
+
+.gradient-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+}
+
+.gradient-danger {
+    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+}
+
+.gradient-info {
+    background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+}
+
+/* Gradientes de background (utilizados em vários templates) */
+.bg-gradient-primary {
+    background: var(--vc-gradient-primary);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+/* Gradientes (configurações/comissões) */
+.bg-gradient-vendedor {
+    background: var(--vc-gradient-primary);
+}
+
+.bg-gradient-supervisor {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.bg-gradient-manutencao {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+/* ===== SOMBRAS ===== */
+
+.shadow-sm-modern {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.shadow-md-modern {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
+.shadow-lg-modern {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* ===== UTILITÁRIOS ===== */
+
+.border-radius-12 {
+    border-radius: 12px !important;
+}
+
+.border-radius-16 {
+    border-radius: 16px !important;
+}
+
+.text-gradient {
+    background: var(--vc-gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ===== IMPORTAÇÃO (DRAG & DROP) ===== */
+
+.drop-zone {
+    border: 3px dashed #dee2e6;
+    border-radius: 1rem;
+    padding: 2rem 1rem;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    position: relative;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: translateY(-2px);
+}
+
+.drop-zone.drag-over {
+    border-style: solid;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+}
+
+.drop-zone-content,
+.drop-zone-file-info {
+    transition: opacity 0.3s ease;
+}
+
+.step-icon {
+    position: relative;
+    width: 80px;
+    height: 80px;
+}
+
+.step-icon .icon-wrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--vc-gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+}
+
+.step-icon .icon-wrapper:hover {
+    transform: scale(1.1) rotateY(180deg);
+}
+
+.step-icon .step-number {
+    position: absolute;
+    top: -5px;
+    right: 0px;
+    background: #fff;
+    color: #667eea;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border: 2px solid #667eea;
+}
+
+/* ===== RESPONSIVIDADE ===== */
+
+@media (max-width: 768px) {
+    :where(html) {
+        --vc-page-title-modern-font-size: clamp(1.25rem, 3vw, 1.5rem);
+        --vc-stats-value-modern-font-size: clamp(1.25rem, 3vw, 1.5rem);
+        --vc-modern-header-padding: clamp(1rem, 3vw, 1.5rem);
+        --vc-icon-modern-size: 40px;
+        --vc-icon-modern-font-size: 1.25rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+    }
+}
+
+/* ===== MODO ESCURO (FUTURO) ===== */
+
+@media (prefers-color-scheme: dark) {
+    /*
+     * Estilos para modo escuro serão adicionados aqui
+     * quando implementarmos o tema dark mode
+     */
+}
+
+/* ===== CENTRAL DE AJUDA (ACCORDION & CARDS) ===== */
+
+/* Cards de Categoria (Topo) */
+.card-ajuda {
+    border: 2px solid transparent;
+    border-radius: 20px;
+    padding: 1.5rem;
+    height: 100%;
+    transition: all 0.3s ease;
+    background: white;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.card-ajuda:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+}
+
+/* Cores dos Cards */
+.card-green { border-color: #10b981; }
+.card-teal { border-color: #14b8a6; }
+.card-orange { border-color: #f97316; }
+.card-purple { border-color: #8b5cf6; }
+.card-blue { border-color: #3b82f6; }
+.card-red { border-color: #ef4444; }
+
+/* Icon Boxes */
+.icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+.bg-green-light { background-color: #d1fae5; color: #059669; }
+.bg-teal-light { background-color: #ccfbf1; color: #0f766e; }
+.bg-orange-light { background-color: #ffedd5; color: #c2410c; }
+.bg-purple-light { background-color: #f3e8ff; color: #7e22ce; }
+.bg-blue-light { background-color: #dbeafe; color: #1d4ed8; }
+.bg-red-light { background-color: #fee2e2; color: #b91c1c; }
+
+/* Labels e Textos */
+.card-label {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.text-green { color: #10b981; }
+.text-teal { color: #14b8a6; }
+.text-orange { color: #f97316; }
+.text-purple { color: #8b5cf6; }
+.text-blue { color: #3b82f6; }
+.text-red { color: #ef4444; }
+
+.card-title-large {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.card-desc {
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Filter Bar */
+.filter-bar {
+    background: white;
+    border-radius: 16px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border: 1px solid #f3f4f6;
+}
+
+/* Accordion Moderno (Clean UI) */
+.accordion-item {
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 16px !important;
+    margin-bottom: 1rem;
+    box-shadow: none;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+.accordion-item:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.accordion-button:not(.collapsed) {
+    background: #f9fafb;
+    color: #4f46e5; /* Indigo-600 */
+    box-shadow: none;
+    border-bottom: 1px solid #e5e7eb;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+.accordion-button {
+    background: white;
+    color: #1f2937;
+    font-weight: 700;
+    padding: 1.5rem;
+    border-radius: 16px !important;
+    font-size: 1.1rem;
+}
+/* SVGs para setas do accordion */
+.accordion-button::after {
+    background-image: url('data:image/svg+xml,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%236b7280"%3e%3cpath fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/%3e%3c/svg%3e');
+    transition: transform 0.2s ease-in-out;
+}
+.accordion-button:not(.collapsed)::after {
+    background-image: url('data:image/svg+xml,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%234f46e5"%3e%3cpath fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/%3e%3c/svg%3e');
+    filter: none;
+    transform: rotate(-180deg);
+}
+
+.accordion-body {
+    padding: 2rem;
+    background: white;
+}
+.accordion-body ul { margin: 0; }
+.accordion-body li {
+    padding: 0.5rem 0;
+    transition: all 0.2s;
+}
+.accordion-body li:hover { padding-left: 0.5rem; }
+
+/* Sidebar Cards (Clean Style) */
+.sidebar-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    /* padding: 1.5rem; Removed to avoid double padding with card-body */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    transition: all 0.3s ease;
+}
+.sidebar-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+    border-color: #d1d5db;
+}
+
+/* ===== DASHBOARD CARDS - DESIGN MODERNO ===== */
+
+/* Dashboard Header */
+.dashboard-header {
+    background: white;
+    padding: var(--vc-dashboard-header-padding);
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+}
+
+.dashboard-title {
+    font-size: var(--vc-dashboard-title-font-size);
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+/* Stats Cards */
+.stats-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    transition: all 0.2s ease;
+}
+
+.stats-card:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.stats-card-body {
+    padding: var(--vc-stats-card-body-padding);
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stats-icon i {
+    font-size: 1.5rem;
+}
+
+.stats-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.stats-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0 0 0.25rem 0;
+    font-weight: 500;
+}
+
+.stats-value {
+    font-size: var(--vc-stats-value-font-size);
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.2;
+}
+
+.stats-badge {
+    margin-top: 0.5rem;
+}
+
+/* Progress Card */
+.progress-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+}
+
+.progress-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.progress-subtitle {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.progress-percentage {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.progress-modern {
+    height: 12px;
+    background: #f3f4f6;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.progress-bar-modern {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.3s ease;
+}
+
+.progress-info-footer {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Section Title */
+.section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+/* Projection Cards */
+.projection-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+}
+
+.projection-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: var(--vc-projection-item-padding);
+    height: 100%;
+    transition: all 0.2s ease;
+}
+
+.projection-item:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.projection-highlight {
+    border-width: 2px;
+}
+
+.projection-success {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.projection-warning {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.projection-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.projection-icon i {
+    font-size: inherit;
+}
+
+.projection-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin: 0 0 0.5rem 0;
+}
+
+.projection-value {
+    font-size: var(--vc-projection-value-font-size);
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+    line-height: 1.2;
+}
+
+.projection-detail {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Ranking Card & Table */
+.ranking-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+}
+
+.table-modern {
+    font-size: var(--vc-table-modern-font-size);
+    margin-bottom: 0;
+}
+
+.table-modern thead {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.table-modern thead th {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    padding: var(--vc-table-modern-cell-padding-y) var(--vc-table-modern-cell-padding-x);
+    border: none;
+}
+
+.table-modern tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.15s ease;
+}
+
+.table-modern tbody tr:hover {
+    background: #f9fafb;
+}
+
+.table-modern tbody td {
+    padding: var(--vc-table-modern-cell-padding-y) var(--vc-table-modern-cell-padding-x);
+    border: none;
+    vertical-align: middle;
+}
+
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.rank-1 {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.rank-2 {
+    background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(156, 163, 175, 0.3);
+}
+
+.rank-3 {
+    background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3);
+}
+
+.rank-other {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.vendedor-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.vendedor-info-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.vendedor-nome {
+    font-weight: 600;
+    color: #111827;
+}
+
+.vendedor-nome-compact {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.vendedor-supervisor {
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+.vendedor-supervisor-compact {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Tabela compacta (Dashboard) */
+.table-compact {
+    font-size: 0.875rem;
+}
+
+.table-compact thead th {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.table-compact tbody td {
+    padding: 0.75rem 0.5rem;
+}
+
+/* Badges de Ranking (variante compacta) */
+.rank-badge-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.8125rem;
+}
+
+/* Avatares e lista compacta de supervisores */
+.supervisor-avatar,
+.supervisor-avatar-small {
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.supervisor-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.875rem;
+}
+
+.supervisor-avatar-small {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    font-size: 0.8125rem;
+}
+
+.supervisor-info-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.supervisor-nome-compact {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.875rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.supervisor-equipe-compact {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Cards de Equipe (Dashboard) */
+.equipe-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.equipe-card:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.equipe-nome {
+    font-size: var(--vc-equipe-nome-font-size);
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.equipe-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    padding: 0.375rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: white;
+}
+
+.equipe-stats {
+    border-top: 1px solid #f3f4f6;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 0.75rem 0;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    font-size: var(--vc-stat-row-font-size);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.stat-value {
+    font-size: 0.875rem;
+    color: #111827;
+}
+
+.projecao-info {
+    padding-top: 0.75rem;
+}
+
+/* Filtro de Ranking / Alternar Visualização */
+.ranking-filter-btn,
+.view-toggle-btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    transition: all 0.2s ease;
+    border: 2px solid #2563eb;
+}
+
+.ranking-filter-btn:not(.active),
+.view-toggle-btn:not(.active) {
+    background: white;
+    color: #2563eb;
+    border-color: #e5e7eb;
+}
+
+.ranking-filter-btn:not(.active):hover,
+.view-toggle-btn:not(.active):hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+.ranking-filter-btn.active,
+.view-toggle-btn.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+/* Avatares e linhas compactas de equipes */
+.equipe-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.equipe-info-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.equipe-nome-compact {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #111827;
+    line-height: 1.2;
+}
+
+.equipe-vendedores-compact {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Cards de Equipes Detalhadas */
+.equipe-detail-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.equipe-detail-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.equipe-header {
+    background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.5rem;
+}
+
+.equipe-avatar-large {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.equipe-titulo {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.equipe-percentual {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.table-equipe-vendedores {
+    font-size: 0.875rem;
+}
+
+.table-equipe-vendedores thead {
+    background: #f9fafb;
+}
+
+.table-equipe-vendedores thead th {
+    font-weight: 600;
+    color: #6b7280;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.8125rem;
+}
+
+.table-equipe-vendedores tbody td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.table-equipe-vendedores tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-equipe-vendedores tbody tr:hover {
+    background: #f9fafb;
+}
+
+.vendedor-avatar-tiny {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.vendedor-nome-small {
+    font-weight: 500;
+    color: #111827;
+    font-size: 0.875rem;
+}
+
+.valor-destaque {
+    font-weight: 600;
+    color: #111827;
+}
+
+.progress {
+    height: 32px;
+    background: #f3f4f6;
+    border-radius: 8px;
+}
+
+.progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.badge-status {
+    padding: 0.5rem 0.75rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+}
+
+.empty-state {
+    padding: 3rem 1rem;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: #d1d5db;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.empty-message {
+    color: #6b7280;
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* ===== MEDIA QUERIES - RESPONSIVIDADE ===== */
+
+@media (max-width: 992px) {
+    html {
+        --vc-table-modern-font-size: 0.875rem;
+        --vc-table-modern-cell-padding-y: 0.75rem;
+        --vc-table-modern-cell-padding-x: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    body {
+        --vc-dashboard-header-padding: 1.25rem;
+        --vc-dashboard-title-font-size: 1.5rem;
+        --vc-stats-card-body-padding: 1.25rem;
+        --vc-stats-value-font-size: 1.5rem;
+        --vc-projection-item-padding: 1rem;
+        --vc-projection-value-font-size: 1.25rem;
+        --vc-equipe-nome-font-size: 0.9375rem;
+        --vc-stat-row-font-size: 0.8125rem;
+        --vc-stats-card-modern-margin-bottom: 1rem;
+    }
+
+    .stats-card-clean {
+        padding: 1rem;
+    }
+
+    .equipe-card .card-body {
+        padding: 1rem;
+    }
+
+}
+
+/* ===== CORES AUXILIARES ===== */
+
+.text-pink {
+    color: #ec4899 !important;
+}
+
+.bg-pink {
+    background-color: #ec4899 !important;
+}
+
+/* ===== UTILIDADES ===== */
+
+.minw-180px {
+    min-width: 180px;
+}
+
+.progress-small {
+    height: 8px;
+}
+
+/* ===== ANIMAÇÕES DE PROGRESSO ===== */
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* ===== UTILITÁRIOS VENDACERTA (RESPONSIVO) ===== */
+
+/* Altura maior para barras de progresso em cards de desempenho */
+.vc-progress-lg {
+    height: 30px;
+}
+
+/* Bordas coloridas para cards de resumo */
+.vc-card-border-indigo {
+    border-left: 4px solid #6366f1 !important;
+}
+
+.vc-card-border-emerald {
+    border-left: 4px solid #10b981 !important;
+}
+
+.vc-card-border-pink {
+    border-left: 4px solid #ec4899 !important;
+}
+
+/* Texto auxiliar em rosa */
+.vc-text-pink {
+    color: #ec4899 !important;
+}
+
+/* Badges circulares para ranking */
+.vc-badge-circle {
+    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vc-badge-circle-sm {
+    font-size: 1rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Badge pequena para contador de mensagens no header mobile */
+.vc-badge-messages {
+    font-size: 0.65rem;
+}
+
+/* Largura máxima para grupos de busca compactos em tabelas */
+.vc-input-group-narrow {
+    max-width: 260px;
+}
+
+/* Coluna de quantidade estreita em tabelas de produtos */
+.vc-col-qtd {
+    width: 110px;
+}
+

@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% from "_macros/ui.html" import page_header_clean, stats_card_modern %}
+
+{% block title %}Metas - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Clean -->
+    {% call page_header_clean('OPERACIONAL', 'bi bi-bullseye', 'Gerenciamento de Metas') %}
+        <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-people"></i> Vendedores
+        </a>
+        <a href="{{ url_for('lista_supervisores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-person-badge"></i> Supervisores
+        </a>
+        <a href="{{ url_for('lista_equipes') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-diagram-3-fill"></i> Equipes
+        </a>
+        <a href="{{ url_for('exportar_pdf_metas', mes=mes, ano=ano) }}" class="btn btn-secondary-clean">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+        <a href="{{ url_for('importar_metas') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-upload"></i> Importar
+        </a>
+        <a href="{{ url_for('nova_meta') }}" class="btn btn-primary-clean">
+            <i class="bi bi-plus-circle"></i> Nova Meta
+        </a>
+    {% endcall %}
+
+    <!-- Filtros Modernizados -->
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px;">
+        <div class="card-body p-4">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-funnel-fill"></i> Filtros e Ordenação
+            </h5>
+            <form method="GET" class="row g-3">
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label text-muted small text-uppercase fw-semibold">
+                        <i class="bi bi-calendar-month"></i> Mês
+                    </label>
+                    <select name="mes" class="form-select" onchange="this.form.submit()">
+                        <option value="1" {% if mes == 1 %}selected{% endif %}>Janeiro</option>
+                        <option value="2" {% if mes == 2 %}selected{% endif %}>Fevereiro</option>
+                        <option value="3" {% if mes == 3 %}selected{% endif %}>Março</option>
+                        <option value="4" {% if mes == 4 %}selected{% endif %}>Abril</option>
+                        <option value="5" {% if mes == 5 %}selected{% endif %}>Maio</option>
+                        <option value="6" {% if mes == 6 %}selected{% endif %}>Junho</option>
+                        <option value="7" {% if mes == 7 %}selected{% endif %}>Julho</option>
+                        <option value="8" {% if mes == 8 %}selected{% endif %}>Agosto</option>
+                        <option value="9" {% if mes == 9 %}selected{% endif %}>Setembro</option>
+                        <option value="10" {% if mes == 10 %}selected{% endif %}>Outubro</option>
+                        <option value="11" {% if mes == 11 %}selected{% endif %}>Novembro</option>
+                        <option value="12" {% if mes == 12 %}selected{% endif %}>Dezembro</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label text-muted small text-uppercase fw-semibold">
+                        <i class="bi bi-calendar"></i> Ano
+                    </label>
+                    <select name="ano" class="form-select" onchange="this.form.submit()">
+                        {% for a in range(2023, 2028) %}
+                        <option value="{{ a }}" {% if ano == a %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-4 col-md-4">
+                    <label class="form-label text-muted small text-uppercase fw-semibold">
+                        <i class="bi bi-sort-down-alt"></i> Ordenar Ranking
+                    </label>
+                    <select name="ordenar" class="form-select" onchange="this.form.submit()">
+                        <option value="vendas" {% if ordenar == 'vendas' %}selected{% endif %}>
+                            <i class="bi bi-graph-up"></i> Por Vendas (Maior → Menor)
+                        </option>
+                        <option value="manutencao" {% if ordenar == 'manutencao' %}selected{% endif %}>
+                            <i class="bi bi-bullseye"></i> Por Manutenção/Alcance (Maior → Menor)
+                        </option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-12 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Aplicar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if metas %}
+    <!-- Cards de Estatísticas Modernizados -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            {% call stats_card_modern('#6366f1', 'bg-primary bg-opacity-10 text-primary', 'VENDEDORES', 'bg-primary bg-opacity-10 text-primary', 'bi bi-people-fill', metas|length) %}
+                {% if ordenar == 'vendas' %}
+                <i class="bi bi-sort-numeric-down"></i> POR VENDAS
+                {% else %}
+                <i class="bi bi-percent"></i> POR ALCANCE
+                {% endif %}
+            {% endcall %}
+        </div>
+        <div class="col-xl-3 col-md-6">
+            {% call stats_card_modern('#06b6d4', 'bg-info bg-opacity-10 text-info', 'META', 'bg-info bg-opacity-10 text-info', 'bi bi-bullseye', 'R$ ' ~ "{:,.0f}".format(total_meta)) %}
+                <i class="bi bi-calendar-month"></i> {{ mes }}/{{ ano }}
+            {% endcall %}
+        </div>
+        <div class="col-xl-3 col-md-6">
+            {% call stats_card_modern('#10b981', 'bg-success bg-opacity-10 text-success', 'RECEITA', 'bg-success bg-opacity-10 text-success', 'bi bi-cash-stack', 'R$ ' ~ "{:,.0f}".format(total_receita)) %}
+                <i class="bi bi-graph-up-arrow"></i>
+                {{ "{:.1f}%".format((total_receita/total_meta*100) if total_meta > 0 else 0) }} DA META
+            {% endcall %}
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stats-card-modern h-100 border-0 shadow-sm" style="border-left: 4px solid #ec4899 !important;">
+                <div class="card-body position-relative">
+                    <span class="badge bg-pink bg-opacity-10 text-pink position-absolute top-0 end-0 m-3" style="--bs-bg-opacity: .1; color: #ec4899 !important; background-color: #ec4899 !important;">COMISSÃO</span>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-modern text-white" style="background-color: rgba(236, 72, 153, 0.1);">
+                            <i class="bi bi-wallet2" style="color: #ec4899;"></i>
+                        </div>
+                    </div>
+                    <h3 class="stats-value-modern mb-1">R$ {{ "{:,.0f}".format(total_comissao) }}</h3>
+                    <p class="stats-label-modern mb-0">
+                        <i class="bi bi-percent"></i>
+                        {{ "{:.2f}%".format((total_comissao/total_receita*100) if total_receita > 0 else 0) }} DA RECEITA
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Tabela de Metas Aprimorada -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold">
+            <i class="bi bi-table text-primary"></i>
+            Ranking de Metas
+            {% if ordenar == 'vendas' %}
+            <span class="badge bg-primary">Por Vendas</span>
+            {% else %}
+            <span class="badge bg-success">Por Manutenção/Alcance</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-light table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Vendedor</th>
+                        <th class="text-end d-none d-md-table-cell">Meta</th>
+                        <th class="text-end d-none d-md-table-cell">Receita</th>
+                        <th class="text-center">Alcance</th>
+                        <th class="text-end">Comissão</th>
+                        <th class="text-center d-none d-lg-table-cell">Status</th>
+                        <th class="text-center pe-4">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+            {% for meta in metas %}
+            <tr class="{% if loop.index <= 3 %}table-success bg-opacity-10{% endif %}">
+                <td class="ps-4">
+                    <div class="d-flex align-items-center gap-2">
+                        {% if loop.index == 1 %}
+                        <span class="badge bg-warning text-dark me-2"><i class="bi bi-trophy-fill"></i></span>
+                        {% elif loop.index == 2 %}
+                        <span class="badge bg-secondary me-2"><i class="bi bi-trophy-fill"></i></span>
+                        {% elif loop.index == 3 %}
+                        <span class="badge bg-info me-2"><i class="bi bi-trophy-fill"></i></span>
+                        {% endif %}
+                        <div>
+                            <div class="fw-semibold">{{ meta.vendedor.nome }}</div>
+                            <small class="text-muted d-none d-sm-block">
+                                <i class="bi bi-briefcase"></i>
+                                {{ meta.vendedor.supervisor.nome if meta.vendedor.supervisor else 'Sem supervisor' }}
+                            </small>
+                        </div>
+                    </div>
+                </td>
+                <td class="text-end d-none d-md-table-cell">
+                    {% if meta.tipo_meta == 'volume' %}
+                        <strong>{{ meta.volume_meta or 0 }} vendas</strong>
+                    {% else %}
+                        <strong>R$ {{ "{:,.2f}".format(meta.valor_meta or 0) }}</strong>
+                    {% endif %}
+                </td>
+                <td class="text-end d-none d-md-table-cell">
+                    {% if meta.tipo_meta == 'volume' %}
+                        <span>{{ meta.volume_alcancado or 0 }} vendas</span>
+                    {% else %}
+                        <span>R$ {{ "{:,.2f}".format(meta.receita_alcancada or 0) }}</span>
+                    {% endif %}
+                </td>
+                <td class="minw-180px">
+                    {% set alcance = meta.percentual_alcance or 0 %}
+                    <div class="mb-1 small">
+                        <strong>{{ "{:.1f}".format(alcance) }}%</strong>
+                        {% if alcance < 50 %}
+                            <i class="bi bi-circle-fill text-danger ms-1" title="Crítico"></i>
+                        {% elif alcance < 75 %}
+                            <i class="bi bi-circle-fill text-warning ms-1" title="Atenção"></i>
+                        {% elif alcance < 100 %}
+                            <i class="bi bi-circle-fill text-info ms-1" title="Bom"></i>
+                        {% elif alcance < 125 %}
+                            <i class="bi bi-circle-fill text-success ms-1" title="Ótimo"></i>
+                        {% else %}
+                            <i class="bi bi-star-fill text-success ms-1" title="Excelente"></i>
+                        {% endif %}
+                    </div>
+                    <div class="progress progress-small">
+                        <div class="progress-bar
+                            {% if alcance >= 125 %}bg-success
+                            {% elif alcance >= 100 %}bg-info
+                            {% elif alcance >= 75 %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                            role="progressbar"
+                            data-percent="{{ '{:.1f}'.format(alcance) }}">
+                        </div>
+                    </div>
+                </td>
+                <td class="text-end">
+                    <strong class="text-success">R$ {{ "{:,.2f}".format(meta.comissao_total or 0) }}</strong>
+                    {% if meta.tipo_meta != 'volume' and (meta.receita_alcancada or 0) > 0 %}
+                    <br><small class="text-muted d-none d-sm-block">{{ "{:.1f}".format(((meta.comissao_total or 0) / (meta.receita_alcancada or 1) * 100) if (meta.receita_alcancada or 0) > 0 else 0) }}%</small>
+                    {% endif %}
+                </td>
+                <td class="text-center d-none d-lg-table-cell">
+                    <span class="badge
+                        {% if meta.status_comissao == 'Pago' %}bg-secondary
+                        {% elif meta.status_comissao == 'Aprovado' %}bg-success
+                        {% else %}bg-primary{% endif %}">
+                        {% if meta.status_comissao == 'Pago' %}<i class="bi bi-check-circle"></i>
+                        {% elif meta.status_comissao == 'Aprovado' %}<i class="bi bi-check"></i>
+                        {% else %}<i class="bi bi-clock"></i>{% endif %}
+                        {{ meta.status_comissao }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('editar_meta', id=meta.id) }}"
+                           class="btn btn-sm btn-outline-primary"
+                           title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('deletar_meta', id=meta.id) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Tem certeza que deseja deletar esta meta?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Deletar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% if pagination and pagination.pages > 1 %}
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0 text-muted small">
+                    Mostrando {{ pagination.per_page * (pagination.page - 1) + 1 }}
+                    até {{ [pagination.per_page * pagination.page, pagination.total] | min }}
+                    de {{ pagination.total }} metas
+                </p>
+            </div>
+            <div class="col-md-6">
+                <nav>
+                    <ul class="pagination pagination-sm justify-content-end mb-0">
+                        {# Primeira página #}
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=1, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=pagination.prev_num, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                        </li>
+                        {% endif %}
+
+                        {# Páginas numeradas #}
+                        {% for page_num in range(1, pagination.pages + 1) %}
+                            {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_metas', page=page_num, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {# Última página #}
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=pagination.next_num, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_metas', page=pagination.pages, mes=mes, ano=ano, ordenar=ordenar) }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<!-- Estado Vazio Modernizado -->
+<div class="text-center py-5">
+    <div class="icon-modern bg-secondary bg-opacity-10 text-secondary mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2.5rem;">
+        <i class="bi bi-clipboard-x"></i>
+    </div>
+    <h3 class="mt-3 fw-bold">Nenhuma meta para este período</h3>
+    <p class="text-muted mb-4">Selecione outro período ou cadastre uma nova meta</p>
+    <a href="{{ url_for('nova_meta') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Cadastrar Primeira Meta
+    </a>
+</div>
+{% endif %}
+
+<!-- Legenda de Faixas de Comissão (dinâmica) -->
+<div class="card mt-4 border-0 shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title mb-3"><i class="bi bi-info-circle"></i> Faixas de Comissão</h5>
+        <div class="row g-2">
+            {% if faixas_vendedor %}
+                {% for faixa in faixas_vendedor %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1 progress-sm" style="height: 20px;">
+                            <div class="progress-bar bg-{{ faixa.cor }} w-100 d-flex align-items-center justify-content-center">
+                                {% if faixa.alcance_max is none or faixa.alcance_max >= 1000 %}
+                                    <i class="bi bi-star-fill text-white me-1" style="font-size: 0.7rem;"></i> Acima de {{ '{:.0f}'.format(faixa.alcance_min) }}%
+                                {% else %}
+                                    <i class="bi bi-circle-fill text-white me-1" style="font-size: 0.7rem;"></i> {{ '{:.0f}'.format(faixa.alcance_min) }}-{{ '{:.0f}'.format(faixa.alcance_max) }}%
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="text-muted small fw-bold">{{ '{:.1f}'.format(faixa.taxa_comissao * 100) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-muted small">Nenhuma faixa configurada. Configure em Configurações → Faixas de Comissão.</div>
+            {% endif %}
+        </div>
+    </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Anima barras de progresso
+document.addEventListener('DOMContentLoaded', function() {
+    const bars = document.querySelectorAll('.progress-bar');
+    bars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => {
+            bar.style.width = width;
+            bar.style.transition = 'width 0.6s ease';
+        }, 100);
+    });
+});
+</script>
+{% endblock %}

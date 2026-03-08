@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Produtos - Venda Certa{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="page-header-clean d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title-clean mb-1">Produtos do Estoque</h1>
+            <p class="page-subtitle-clean mb-0">Gerencie os produtos cadastrados no estoque</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if current_user.pode_gerenciar_produtos or current_user.cargo == 'admin' %}
+            <button type="button" class="btn btn-secondary-clean" data-bs-toggle="modal" data-bs-target="#modalImportacao">
+                <i class="bi bi-file-earmark-excel me-2"></i>Importar Excel
+            </button>
+            <a href="{{ url_for('novo_produto') }}" class="btn btn-primary-clean">
+                <i class="bi bi-plus-circle me-2"></i>Novo Produto
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-4 rounded-3">
+        <div class="card-body p-4">
+            <form method="GET" action="{{ url_for('lista_produtos') }}" class="row g-3">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label small text-muted text-uppercase fw-semibold">Buscar</label>
+                    <input type="text" name="busca" class="form-control form-control-lg border-0 bg-light rounded-3"
+                           placeholder="Código, Nome, Código de Barras, Referência..."
+                           aria-label="Buscar produtos por código, nome ou código de barras"
+                           value="{{ filtros.busca }}">
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label small text-muted text-uppercase fw-semibold">Categoria</label>
+                    <select name="categoria" class="form-select form-select-lg border-0 bg-light rounded-3"
+                            aria-label="Filtrar produtos por categoria">
+                        <option value="">Todas</option>
+                        <option value="Peça" {% if filtros.categoria == 'Peça' %}selected{% endif %}>Peça</option>
+                        <option value="Consumível" {% if filtros.categoria == 'Consumível' %}selected{% endif %}>Consumível</option>
+                        <option value="Ferramenta" {% if filtros.categoria == 'Ferramenta' %}selected{% endif %}>Ferramenta</option>
+                        <option value="Equipamento" {% if filtros.categoria == 'Equipamento' %}selected{% endif %}>Equipamento</option>
+                        <option value="Outro" {% if filtros.categoria == 'Outro' %}selected{% endif %}>Outro</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label small text-muted text-uppercase fw-semibold">Status Estoque</label>
+                    <select name="status" class="form-select form-select-lg border-0 bg-light rounded-3"
+                            aria-label="Filtrar produtos por status de estoque">
+                        <option value="">Todos</option>
+                        <option value="zerado" {% if filtros.status == 'zerado' %}selected{% endif %}>Zerado</option>
+                        <option value="baixo" {% if filtros.status == 'baixo' %}selected{% endif %}>Baixo</option>
+                        <option value="normal" {% if filtros.status == 'normal' %}selected{% endif %}>Normal</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-12 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary-clean flex-grow-1">
+                        Filtrar
+                    </button>
+                    <a href="{{ url_for('lista_produtos') }}" class="btn btn-secondary-clean">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Lista de Produtos -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light border-0 py-3">
+            <h5 class="mb-0 fw-semibold text-dark">
+                <i class="bi bi-list-ul me-2"></i>{{ pagination.total if pagination else produtos|length }} Produto(s) Encontrado(s)
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if produtos %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted ps-4 py-3">Código</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3" style="min-width: 200px;">Nome</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Referência</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Código de Barra</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">NCM</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Fornecedor</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center py-3">Estoque Atual</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center py-3">Estoque Mín</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted py-3">Localização</th>
+                            {% if current_user.pode_ver_custos or current_user.cargo == 'admin' %}
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-end py-3">Custo</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-end py-3">Preço Venda</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-end py-3">Preço Serviço</th>
+                            {% endif %}
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center py-3">Status</th>
+                            <th class="border-0 text-uppercase small fw-semibold text-muted text-center pe-4 py-3">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produto in produtos %}
+                        <tr class="border-bottom">
+                            <td class="ps-4 py-3"><strong class="text-primary">{{ produto.codigo }}</strong></td>
+                            <td class="py-3">
+                                <div class="text-truncate" style="max-width: 250px;" title="{{ produto.nome }}">
+                                    {{ produto.nome }}
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted">{{ produto.referencia or '-' }}</small>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted font-monospace">{{ produto.codigo_barra or '-' }}</small>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted font-monospace">{{ produto.ncm or '-' }}</small>
+                            </td>
+                            <td class="py-3">
+                                <small class="text-muted">{{ produto.fornecedor or '-' }}</small>
+                            </td>
+                            <td class="text-center py-3">
+                                {% if produto.estoque_atual <= 0 %}
+                                <span class="badge rounded-pill bg-danger px-3 py-2">
+                                    {{ produto.estoque_atual|int }} {{ produto.unidade }}
+                                </span>
+                                {% elif produto.estoque_atual <= produto.estoque_minimo %}
+                                <span class="badge rounded-pill bg-warning text-dark px-3 py-2">
+                                    {{ produto.estoque_atual|int }} {{ produto.unidade }}
+                                </span>
+                                {% else %}
+                                <span class="badge rounded-pill bg-success px-3 py-2">
+                                    {{ produto.estoque_atual|int }} {{ produto.unidade }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center py-3">
+                                <small class="text-muted fw-medium">{{ produto.estoque_minimo|int }}</small>
+                            </td>
+                            <td class="py-3">
+                                <div class="text-truncate" style="max-width: 150px;" title="{{ produto.localizacao or '-' }}">
+                                    <small class="text-muted">{{ produto.localizacao or '-' }}</small>
+                                </div>
+                            </td>
+                            {% if current_user.pode_ver_custos or current_user.cargo == 'admin' %}
+                            <td class="text-end py-3">
+                                <small class="text-muted">R$ {{ '{:,.2f}'.format(produto.custo_medio) }}</small>
+                            </td>
+                            <td class="text-end py-3">
+                                <strong class="text-success">R$ {{ '{:,.2f}'.format(produto.preco_venda) }}</strong>
+                            </td>
+                            <td class="text-end py-3">
+                                <strong class="text-primary">R$ {{ '{:,.2f}'.format(produto.preco_servico if produto.preco_servico else 0) }}</strong>
+                            </td>
+                            {% endif %}
+                            <td class="text-center py-3">
+                                {% if produto.ativo %}
+                                <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2">
+                                    <i class="bi bi-check-circle me-1"></i>Ativo
+                                </span>
+                                {% else %}
+                                <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary px-3 py-2">
+                                    <i class="bi bi-x-circle me-1"></i>Inativo
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center py-3">
+                                {% if current_user.pode_gerenciar_produtos or current_user.cargo == 'admin' %}
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('visualizar_produto', id=produto.id) }}"
+                                       class="btn btn-outline-primary rounded-start"
+                                       title="Visualizar"
+                                       data-bs-toggle="tooltip">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('editar_produto', id=produto.id) }}"
+                                       class="btn btn-outline-warning rounded-end"
+                                       title="Editar"
+                                       data-bs-toggle="tooltip">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                                {% else %}
+                                <a href="{{ url_for('visualizar_produto', id=produto.id) }}"
+                                   class="btn btn-outline-primary btn-sm rounded-3"
+                                   title="Visualizar"
+                                   data-bs-toggle="tooltip">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                </div>
+                <h5 class="text-muted mb-2">Nenhum produto encontrado</h5>
+                <p class="text-muted small mb-4">
+                    {% if filtros.busca or filtros.categoria or filtros.status %}
+                    Tente alterar os filtros de busca
+                    {% else %}
+                    Cadastre o primeiro produto clicando no botão acima
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        {% if pagination and pagination.pages > 1 %}
+        <div class="card-footer bg-white border-0 py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-muted">
+                    Página {{ pagination.page }} de {{ pagination.pages }}
+                </small>
+                <nav aria-label="Navegação de página de produtos">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('lista_produtos', page=1, busca=filtros.busca, categoria=filtros.categoria, status=filtros.status) }}" aria-label="Primeira página">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('lista_produtos', page=pagination.prev_num if pagination.has_prev else 1, busca=filtros.busca, categoria=filtros.categoria, status=filtros.status) }}" aria-label="Página anterior">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% for p in range(1, pagination.pages + 1) %}
+                        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('lista_produtos', page=p, busca=filtros.busca, categoria=filtros.categoria, status=filtros.status) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('lista_produtos', page=pagination.next_num if pagination.has_next else pagination.pages, busca=filtros.busca, categoria=filtros.categoria, status=filtros.status) }}" aria-label="Próxima página">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('lista_produtos', page=pagination.pages, busca=filtros.busca, categoria=filtros.categoria, status=filtros.status) }}" aria-label="Última página">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Importação -->
+<div class="modal fade" id="modalImportacao" tabindex="-1" aria-labelledby="modalImportacaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-semibold" id="modalImportacaoLabel">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Importar Produtos do Excel
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Instruções -->
+                <div class="alert alert-info border-0 mb-4">
+                    <h6 class="alert-heading d-flex align-items-center mb-3">
+                        <i class="bi bi-info-circle-fill me-2"></i>Como importar
+                    </h6>
+                    <ol class="mb-0 ps-3 small">
+                        <li class="mb-2">Baixe o modelo de planilha clicando no botão abaixo</li>
+                        <li class="mb-2">Preencha os dados dos produtos nas colunas correspondentes</li>
+                        <li class="mb-2">Produtos já cadastrados (código duplicado) serão ignorados e informados</li>
+                        <li class="mb-2">Produtos novos receberão um ID único automaticamente</li>
+                        <li>A coluna O.S deve ser preenchida manualmente quando necessário</li>
+                    </ol>
+                </div>
+
+                <!-- Download Template -->
+                <div class="mb-4">
+                    <a href="{{ url_for('download_template_produtos') }}" class="btn btn-secondary-clean w-100">
+                        <i class="bi bi-download me-2"></i>Baixar Modelo de Planilha (.xlsx)
+                    </a>
+                </div>
+
+                <!-- Upload Form -->
+                <form method="POST" action="{{ url_for('importar_produtos') }}" enctype="multipart/form-data" id="formImportacao">
+                    <div class="mb-4">
+                        <label for="arquivo" class="form-label fw-semibold">Selecione o arquivo Excel</label>
+                        <input type="file"
+                               class="form-control form-control-lg"
+                               id="arquivo"
+                               name="arquivo"
+                               accept=".xlsx,.xls"
+                               required>
+                        <div class="form-text">Formatos aceitos: .xlsx, .xls</div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary-clean">
+                            <i class="bi bi-cloud-upload me-2"></i>Importar Produtos
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Resultado da Importação -->
+                <div id="resultadoImportacao" class="mt-4" style="display: none;">
+                    <div class="card border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="mb-3 fw-semibold">Resultado da Importação</h6>
+                            <div id="conteudoResultado"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary-clean" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('formImportacao')?.addEventListener('submit', function(e) {
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importando...';
+});
+</script>
+
+<style>
+/* Botões de Ação com Visibilidade Aprimorada */
+.btn-group-sm .btn,
+.btn-sm {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn i,
+.btn-sm i {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn:hover,
+.btn-sm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Botão Visualizar - Azul com ícone destacado */
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+    border-width: 1.5px;
+}
+
+.btn-outline-primary i {
+    color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #ffffff;
+}
+
+.btn-outline-primary:hover i {
+    color: #ffffff;
+}
+
+/* Botão Editar - Amarelo com ícone destacado */
+.btn-outline-warning {
+    color: #dc8a00;
+    border-color: #ffc107;
+    border-width: 1.5px;
+}
+
+.btn-outline-warning i {
+    color: #dc8a00;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.btn-outline-warning:hover i {
+    color: #000;
+}
+
+/* Hover suave na linha da tabela */
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+</style>
+
+{% endblock %}

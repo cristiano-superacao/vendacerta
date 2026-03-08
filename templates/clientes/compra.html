@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Compra - {{ cliente.nome }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('lista_clientes') }}">Clientes</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('ver_cliente', id=cliente.id) }}">{{ cliente.nome }}</a></li>
+            <li class="breadcrumb-item active">Registrar Compra</li>
+        </ol>
+    </nav>
+
+    <!-- Cabeçalho -->
+    <div class="mb-4">
+        <h2 class="mb-1">
+            <i class="bi bi-cart-plus text-success me-2"></i>Registrar Compra
+        </h2>
+        <p class="text-muted mb-0">Cliente: <strong>{{ cliente.nome }}</strong></p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <!-- Formulário de Compra + Produtos do Estoque -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>Dados da Compra</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.valor.label }} <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                {{ form.valor(class="form-control" + (" is-invalid" if form.valor.errors else ""), placeholder="0,00", id="valor_compra", readonly=True) }}
+                                {% if form.valor.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.valor.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">O total dos produtos selecionados preenche automaticamente este valor.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.forma_pagamento.label }} <span class="text-danger">*</span></label>
+                            {{ form.forma_pagamento(class="form-select" + (" is-invalid" if form.forma_pagamento.errors else "")) }}
+                            {% if form.forma_pagamento.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.forma_pagamento.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.observacoes.label }}</label>
+                            {{ form.observacoes(class="form-control", rows=3, placeholder="Ex: Primeira compra do mês, pedido especial, etc.") }}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h6 class="text-primary mb-3"><i class="bi bi-box-seam me-2"></i>Selecionar produtos do estoque</h6>
+
+                        {% if produtos %}
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">Produtos em estoque: {{ produtos|length }}</small>
+                            <div class="input-group input-group-sm vc-input-group-narrow">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" id="filtro-produtos" placeholder="Buscar por nome ou código...">
+                            </div>
+                        </div>
+
+                        <small id="info-listagem-produtos" class="text-muted d-block mb-2"></small>
+
+                        <div class="table-responsive mb-2">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th class="text-center d-none d-md-table-cell">Estoque</th>
+                                        <th class="text-end">Preço</th>
+                                        <th class="text-end vc-col-qtd">Qtd.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for produto in produtos %}
+                                    <tr data-produto-linha="1"
+                                        data-nome="{{ produto.nome|lower }}"
+                                        data-codigo="{{ (produto.codigo or '')|lower }}"
+                                        data-nome-exibicao="{{ produto.nome }}"
+                                        data-codigo-exibicao="{{ produto.codigo or '' }}">
+                                        <td>
+                                            <div class="fw-semibold">{{ produto.nome }}</div>
+                                            <small class="text-muted">Cód: {{ produto.codigo }}</small>
+                                        </td>
+                                        <td class="text-center d-none d-md-table-cell">
+                                            <span class="badge bg-light text-dark border">{{ produto.estoque_atual|int }}</span>
+                                        </td>
+                                        <td class="text-end">
+                                            R$ {{ "%.2f"|format(produto.preco_venda or 0) }}
+                                        </td>
+                                        <td class="text-end">
+                                            <input type="number"
+                                                   min="0"
+                                                   max="{{ produto.estoque_atual|int }}"
+                                                   step="1"
+                                                   inputmode="numeric"
+                                                   class="form-control form-control-sm text-end produto-quantidade"
+                                                   data-preco="{{ produto.preco_venda or 0 }}"
+                                                   name="produto_{{ produto.id }}"
+                                                   placeholder="0"
+                                                   aria-label="Quantidade do produto {{ produto.nome }}">
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <small class="text-muted d-block mb-2">A quantidade máxima de cada item é limitada ao estoque disponível.</small>
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">Total dos produtos selecionados</small>
+                            <strong class="fs-5 text-success">R$ <span id="total-produtos">0.00</span></strong>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Nenhum produto de estoque cadastrado para esta empresa.
+                        </div>
+                        {% endif %}
+
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <strong>Compras neste mês:</strong> {{ cliente.get_total_compras_mes() }}
+                            <br>
+                            {% if cliente.pode_comprar_no_mes() %}
+                                <span class="text-success">✓ Cliente pode fazer mais compras este mês</span>
+                            {% else %}
+                                <span class="text-danger">⚠️ Cliente atingiu limite de compras do mês</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-2"></i>Registrar Compra
+                            </button>
+                            <a href="{{ url_for('ver_cliente', id=cliente.id) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informações do Cliente -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Resumo do Cliente</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Status</small>
+                        {% if cliente.get_status_cor() == 'verde' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Positivado</span>
+                        {% elif cliente.get_status_cor() == 'amarelo' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill"><i class="bi bi-exclamation-circle-fill me-1"></i> Atenção (30-38 dias)</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill"><i class="bi bi-x-circle-fill me-1"></i> Sem Compras (&gt;38 dias)</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Formas de Pagamento Aceitas</small>
+                        {% set formas = cliente.get_formas_pagamento_list() %}
+                        {% if formas %}
+                            {% for forma in formas %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill me-1">
+                                    {% if forma == 'cartao' %}<i class="bi bi-credit-card-fill me-1"></i> Cartão
+                                    {% elif forma == 'pix' %}<i class="bi bi-phone-fill me-1"></i> PIX
+                                    {% elif forma == 'dinheiro' %}<i class="bi bi-cash-stack me-1"></i> Dinheiro
+                                    {% elif forma == 'boleto' %}<i class="bi bi-file-text-fill me-1"></i> Boleto
+                                    {% endif %}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Última Compra</small>
+                        {% set ultima_compra = cliente.get_ultima_compra() %}
+                        {% if ultima_compra %}
+                            <strong>{{ ultima_compra.data_compra.strftime('%d/%m/%Y') }}</strong>
+                            <small class="text-muted d-block">
+                                Valor: R$ {{ "%.2f"|format(ultima_compra.valor) }}
+                            </small>
+                        {% else %}
+                            <span class="text-danger">Nunca comprou</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Total de Compras</small>
+                        <strong>{{ cliente.compras.count() }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3 bg-light">
+                <div class="card-body">
+                    <h6 class="text-primary mb-3"><i class="bi bi-lightbulb-fill me-2"></i>Dicas</h6>
+                    <ul class="small mb-0">
+                        <li class="mb-2">O cliente pode fazer até {{ cliente.pode_comprar_no_mes() and '4 ou 5' or '0' }} compras por mês</li>
+                        <li class="mb-2">Registre a compra logo após a venda para manter o status atualizado</li>
+                        <li>Use as observações para anotar detalhes importantes da venda</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Modal de resumo da venda -->
+    <div class="modal fade" id="resumoVendaModal" tabindex="-1" aria-labelledby="resumoVendaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resumoVendaModalLabel"><i class="bi bi-receipt me-2"></i>Resumo da venda</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">Confira os itens e os dados principais antes de confirmar o registro da venda.</p>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-2 mb-md-0">
+                            <small class="text-muted d-block">Cliente</small>
+                            <strong>{{ cliente.nome }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">Forma de pagamento</small>
+                            <strong id="resumo-forma-pagamento">-</strong>
+                        </div>
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produto</th>
+                                    <th class="text-end">Qtd.</th>
+                                    <th class="text-end">Preço</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resumo-itens-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <div class="text-end">
+                            <small class="text-muted d-block">Total da venda</small>
+                            <strong class="fs-5 text-success">R$ <span id="resumo-total-valor">0.00</span></strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar e editar</button>
+                    <button type="button" class="btn btn-success" id="btn-confirmar-resumo">
+                        <i class="bi bi-check-circle me-2"></i>Confirmar e registrar venda
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const qtyInputs = document.querySelectorAll('.produto-quantidade');
+    const totalSpan = document.getElementById('total-produtos');
+    const valorInput = document.getElementById('valor_compra');
+    const filtroInput = document.getElementById('filtro-produtos');
+    const infoListagem = document.getElementById('info-listagem-produtos');
+    const linhasProdutos = document.querySelectorAll('tr[data-produto-linha="1"]');
+    const formCompra = document.querySelector('form');
+    const resumoModalEl = document.getElementById('resumoVendaModal');
+    const resumoBody = document.getElementById('resumo-itens-body');
+    const resumoTotalSpan = document.getElementById('resumo-total-valor');
+    const btnConfirmarResumo = document.getElementById('btn-confirmar-resumo');
+    const resumoFormaSpan = document.getElementById('resumo-forma-pagamento');
+    let envioConfirmado = false;
+    let resumoModal = null;
+
+    if (resumoModalEl && window.bootstrap && bootstrap.Modal) {
+        resumoModal = new bootstrap.Modal(resumoModalEl);
+    }
+
+    function recalcTotal() {
+        let total = 0;
+        qtyInputs.forEach(function (input) {
+            const qtdRaw = (input.value || '').replace(',', '.');
+            const qtd = parseFloat(qtdRaw) || 0;
+            const preco = parseFloat(input.dataset.preco || '0') || 0;
+            total += qtd * preco;
+        });
+
+        if (totalSpan) {
+            totalSpan.textContent = total.toFixed(2);
+        }
+        if (valorInput) {
+            valorInput.value = total.toFixed(2);
+        }
+    }
+
+    function aplicarFiltro() {
+        if (!linhasProdutos.length) return;
+        const termoBruto = (filtroInput ? filtroInput.value : '');
+        const termo = termoBruto.toLowerCase().trim();
+        let mostrados = 0;
+
+        linhasProdutos.forEach(function (linha) {
+            const nome = (linha.dataset.nome || '').toLowerCase();
+            const codigo = (linha.dataset.codigo || '').toLowerCase();
+            let visivel = false;
+
+            if (termo) {
+                visivel = nome.includes(termo) || codigo.includes(termo);
+            } else {
+                visivel = mostrados < 10; // mostra apenas os 10 primeiros sem filtro
+            }
+
+            if (visivel) {
+                linha.classList.remove('d-none');
+                mostrados++;
+            } else {
+                linha.classList.add('d-none');
+            }
+        });
+
+        if (infoListagem) {
+            if (termo) {
+                infoListagem.textContent = `Mostrando ${mostrados} produto(s) encontrados para "${termoBruto}".`;
+            } else {
+                const total = linhasProdutos.length;
+                const limite = Math.min(10, total);
+                infoListagem.textContent = `Mostrando ${limite} de ${total} produto(s). Use a busca para localizar outros itens.`;
+            }
+        }
+    }
+
+    qtyInputs.forEach(function (input) {
+        input.addEventListener('input', recalcTotal);
+    });
+
+    if (filtroInput) {
+        filtroInput.addEventListener('input', aplicarFiltro);
+    }
+
+    aplicarFiltro(); // aplica a regra inicial de mostrar só 10
+
+    if (formCompra && resumoModal) {
+        formCompra.addEventListener('submit', function (e) {
+            if (envioConfirmado) {
+                return; // deixa seguir o fluxo normal
+            }
+
+            e.preventDefault();
+
+            const itensSelecionados = [];
+            let total = 0;
+
+            qtyInputs.forEach(function (input) {
+                const qtdRaw = (input.value || '').replace(',', '.');
+                const qtd = parseFloat(qtdRaw) || 0;
+                if (qtd <= 0) return;
+
+                const preco = parseFloat(input.dataset.preco || '0') || 0;
+                const linha = input.closest('tr');
+                const nome = linha ? (linha.dataset.nomeExibicao || '') : '';
+                const codigo = linha ? (linha.dataset.codigoExibicao || '') : '';
+                const subtotal = qtd * preco;
+                total += subtotal;
+
+                itensSelecionados.push({
+                    nome: nome,
+                    codigo: codigo,
+                    quantidade: qtd,
+                    preco: preco,
+                    subtotal: subtotal
+                });
+            });
+
+            if (!itensSelecionados.length) {
+                // Nenhum item selecionado: envia normalmente (pode ser valor manual)
+                envioConfirmado = true;
+                formCompra.submit();
+                return;
+            }
+
+            if (valorInput) {
+                valorInput.value = total.toFixed(2);
+            }
+
+            if (resumoBody) {
+                resumoBody.innerHTML = itensSelecionados.map(function (item) {
+                    return '<tr>' +
+                        '<td>' +
+                            '<div class="fw-semibold">' + item.nome + '</div>' +
+                            '<small class="text-muted">Cód: ' + (item.codigo || '-') + '</small>' +
+                        '</td>' +
+                        '<td class="text-end">' + item.quantidade + '</td>' +
+                        '<td class="text-end">R$ ' + item.preco.toFixed(2) + '</td>' +
+                        '<td class="text-end">R$ ' + item.subtotal.toFixed(2) + '</td>' +
+                    '</tr>';
+                }).join('');
+            }
+
+            if (resumoTotalSpan) {
+                resumoTotalSpan.textContent = total.toFixed(2);
+            }
+
+            if (resumoFormaSpan && formCompra) {
+                const selectForma = formCompra.querySelector('[name="forma_pagamento"]');
+                let texto = '-';
+                if (selectForma && selectForma.options && selectForma.selectedIndex >= 0) {
+                    texto = (selectForma.options[selectForma.selectedIndex].textContent || '').trim() || '-';
+                }
+                resumoFormaSpan.textContent = texto;
+            }
+
+            resumoModal.show();
+        });
+    }
+
+    if (btnConfirmarResumo && formCompra && resumoModal) {
+        btnConfirmarResumo.addEventListener('click', function () {
+            envioConfirmado = true;
+            resumoModal.hide();
+            formCompra.submit();
+        });
+    }
+});
+</script>
+{% endblock %}

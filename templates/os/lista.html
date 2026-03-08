@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% from "_macros/ui.html" import page_header_prescrimed, stats_card_clean %}
+
+{% block title %}Ordens de Serviço{% endblock %}
+
+{% block content %}
+<!-- Header Padrão Prescrimed -->
+{% call page_header_prescrimed('MANUTENÇÃO', 'Ordens de Serviço', 'Gerenciar todas as ordens de serviço de manutenção') %}
+    {% if current_user.cargo in ['admin', 'administrativo'] %}
+    <a href="{{ url_for('nova_ordem_servico') }}" class="btn-primary-clean">
+        <i class="bi bi-plus-lg"></i>
+        <span>Nova OS</span>
+    </a>
+    {% endif %}
+{% endcall %}
+
+<!-- Cards de Estatísticas -->
+<div class="row g-3 mb-4">
+    <!-- Card Aguardando Aprovação -->
+    <div class="col-12 col-sm-6 col-lg-3">
+        {{ stats_card_clean('red', 'bi bi-hourglass-split', 'Aguardando Aprovação', stats.aguardando_aprovacao, 'Pendentes de análise') }}
+    </div>
+
+    <!-- Card Em Andamento -->
+    <div class="col-12 col-sm-6 col-lg-3">
+        {{ stats_card_clean('teal', 'bi bi-tools', 'Em Andamento', stats.em_andamento, 'Sendo executadas') }}
+    </div>
+
+    <!-- Card Concluídas -->
+    <div class="col-12 col-sm-6 col-lg-3">
+        {{ stats_card_clean('green', 'bi bi-check-circle-fill', 'Concluídas', stats.concluida, 'Finalizadas com sucesso') }}
+    </div>
+
+    <!-- Card Total -->
+    <div class="col-12 col-sm-6 col-lg-3">
+        {{ stats_card_clean('purple', 'bi bi-clipboard-data', 'Total', stats.total, 'Todas as ordens') }}
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <form method="GET" action="{{ url_for('lista_ordens_servico') }}" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-secondary small">Status</label>
+                <select name="status" class="form-select bg-light border-0">
+                    <option value="">Todos</option>
+                    <option value="aguardando_aprovacao" {% if filtros.status == 'aguardando_aprovacao' %}selected{% endif %}>Aguardando Aprovação</option>
+                    <option value="aprovada" {% if filtros.status == 'aprovada' %}selected{% endif %}>Aprovada</option>
+                    <option value="em_andamento" {% if filtros.status == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
+                    <option value="aguardando_peca" {% if filtros.status == 'aguardando_peca' %}selected{% endif %}>Aguardando Peça</option>
+                    <option value="concluida" {% if filtros.status == 'concluida' %}selected{% endif %}>Concluída</option>
+                    <option value="cancelada" {% if filtros.status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold text-secondary small">Prioridade</label>
+                <select name="prioridade" class="form-select bg-light border-0">
+                    <option value="">Todas</option>
+                    <option value="baixa" {% if filtros.prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
+                    <option value="normal" {% if filtros.prioridade == 'normal' %}selected{% endif %}>Normal</option>
+                    <option value="alta" {% if filtros.prioridade == 'alta' %}selected{% endif %}>Alta</option>
+                    <option value="urgente" {% if filtros.prioridade == 'urgente' %}selected{% endif %}>Urgente</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-secondary small">Técnico</label>
+                <select name="tecnico_id" class="form-select bg-light border-0">
+                    <option value="">Todos</option>
+                    {% for tecnico in tecnicos %}
+                    <option value="{{ tecnico.id }}" {% if filtros.tecnico_id == tecnico.id|string %}selected{% endif %}>{{ tecnico.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-secondary small">Buscar</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+                    <input type="text" name="busca" class="form-control bg-light border-0" placeholder="Nº OS, título..." value="{{ filtros.busca }}">
+                </div>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="bi bi-filter"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de OS - Desktop -->
+<div class="card border-0 shadow-sm d-none d-lg-block">
+    <div class="card-body p-0">
+        {% if ordens %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-gradient-primary">
+                    <tr>
+                        <th class="border-0 py-3 ps-4 text-white fw-semibold">Nº OS</th>
+                        <th class="border-0 py-3 text-white fw-semibold">Cliente</th>
+                        <th class="border-0 py-3 text-white fw-semibold">Título</th>
+                        <th class="border-0 py-3 text-white fw-semibold">Técnico</th>
+                        <th class="border-0 py-3 text-white fw-semibold">Prioridade</th>
+                        <th class="border-0 py-3 text-white fw-semibold">Status</th>
+                        <th class="border-0 py-3 text-white fw-semibold">Data</th>
+                        <th class="border-0 py-3 text-end pe-4 text-white fw-semibold">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for os in ordens %}
+                    <tr class="border-bottom" style="transition: all 0.2s ease;">
+                        <td class="ps-4 py-3">
+                            <span class="badge bg-dark text-white fw-bold">#{{ os.numero_os }}</span>
+                        </td>
+                        <td class="py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle-sm bg-gradient-primary me-2">
+                                    {{ (os.cliente.nome[:1] if os.cliente else '?')|upper }}
+                                </div>
+                                <span class="fw-medium">{{ os.cliente.nome if os.cliente else '-' }}</span>
+                            </div>
+                        </td>
+                        <td class="py-3">
+                            <div class="text-truncate" style="max-width: 250px;" title="{{ os.titulo }}">
+                                {{ os.titulo }}
+                            </div>
+                        </td>
+                        <td class="py-3">
+                            {% if os.tecnico %}
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle-sm me-2" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                        {{ os.tecnico.nome[:1]|upper }}
+                                    </div>
+                                    <span class="fw-medium">{{ os.tecnico.nome }}</span>
+                                </div>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                    <i class="bi bi-person-x me-1"></i>Não atribuído
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            {% if os.prioridade == 'urgente' %}
+                                <span class="badge bg-danger text-white fw-semibold px-3 py-2">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>URGENTE
+                                </span>
+                            {% elif os.prioridade == 'alta' %}
+                                <span class="badge bg-warning text-dark fw-semibold px-3 py-2">
+                                    <i class="bi bi-arrow-up-circle-fill me-1"></i>Alta
+                                </span>
+                            {% elif os.prioridade == 'normal' %}
+                                <span class="badge bg-info text-white fw-semibold px-3 py-2">
+                                    <i class="bi bi-dash-circle-fill me-1"></i>Normal
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary text-white fw-semibold px-3 py-2">
+                                    <i class="bi bi-arrow-down-circle-fill me-1"></i>Baixa
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            {% if os.status == 'aguardando_aprovacao' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning fw-semibold px-3 py-2">
+                                    <i class="bi bi-hourglass-split me-1"></i>Aguardando
+                                </span>
+                            {% elif os.status == 'aprovada' %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary fw-semibold px-3 py-2">
+                                    <i class="bi bi-check-circle me-1"></i>Aprovada
+                                </span>
+                            {% elif os.status == 'em_andamento' %}
+                                <span class="badge bg-info-subtle text-info border border-info fw-semibold px-3 py-2">
+                                    <i class="bi bi-tools me-1"></i>Em Andamento
+                                </span>
+                            {% elif os.status == 'aguardando_peca' %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary fw-semibold px-3 py-2">
+                                    <i class="bi bi-box-seam me-1"></i>Aguard. Peça
+                                </span>
+                            {% elif os.status == 'concluida' %}
+                                <span class="badge bg-success-subtle text-success border border-success fw-semibold px-3 py-2">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Concluída
+                                </span>
+                            {% elif os.status == 'cancelada' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger fw-semibold px-3 py-2">
+                                    <i class="bi bi-x-circle-fill me-1"></i>Cancelada
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="text-muted">
+                                <i class="bi bi-calendar3 me-1"></i>{{ os.data_abertura.strftime('%d/%m/%Y') }}
+                            </div>
+                        </td>
+                        <td class="text-end pe-4 py-3">
+                            <div class="btn-group shadow-sm" role="group">
+                                <a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Visualizar">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if current_user.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
+                                <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}"
+                                   class="btn btn-sm btn-outline-success" title="Aprovar">
+                                    <i class="bi bi-check-lg"></i>
+                                </a>
+                                {% endif %}
+                                {% if os.pode_editar(current_user) %}
+                                <a href="{{ url_for('atualizar_ordem_servico', id=os.id) }}"
+                                   class="btn btn-sm btn-outline-warning" title="Atualizar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+            </div>
+            <h5 class="text-muted fw-normal mb-3">Nenhuma ordem de serviço encontrada</h5>
+            {% if current_user.cargo in ['admin', 'administrativo'] %}
+            <a href="{{ url_for('nova_ordem_servico') }}" class="btn-primary-clean">
+                <i class="bi bi-plus-lg"></i>
+                <span>Criar Primeira OS</span>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Lista de OS - Mobile (Cards) -->
+<div class="d-block d-lg-none">
+    {% if ordens %}
+    <div class="row g-3">
+        {% for os in ordens %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-3">
+                    <!-- Header do Card -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <span class="badge bg-dark text-white fw-bold mb-2">#{{ os.numero_os }}</span>
+                            <h6 class="mb-1 fw-bold">{{ os.titulo }}</h6>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar3 me-1"></i>{{ os.data_abertura.strftime('%d/%m/%Y') }}
+                            </small>
+                        </div>
+                        <div>
+                            {% if os.prioridade == 'urgente' %}
+                                <span class="badge bg-danger text-white">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                </span>
+                            {% elif os.prioridade == 'alta' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-arrow-up-circle-fill"></i>
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Cliente -->
+                    <div class="mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle-sm bg-gradient-primary me-2">
+                                {{ (os.cliente.nome[:1] if os.cliente else '?')|upper }}
+                            </div>
+                            <div>
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">Cliente</small>
+                                <span class="fw-medium">{{ os.cliente.nome if os.cliente else '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Técnico -->
+                    <div class="mb-3">
+                        {% if os.tecnico %}
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle-sm me-2" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                {{ os.tecnico.nome[:1]|upper }}
+                            </div>
+                            <div>
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">Técnico</small>
+                                <span class="fw-medium">{{ os.tecnico.nome }}</span>
+                            </div>
+                        </div>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                            <i class="bi bi-person-x me-1"></i>Não atribuído
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Status e Prioridade -->
+                    <div class="d-flex gap-2 mb-3 flex-wrap">
+                        {% if os.status == 'aguardando_aprovacao' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1">
+                                <i class="bi bi-hourglass-split me-1"></i>Aguardando
+                            </span>
+                        {% elif os.status == 'aprovada' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                                <i class="bi bi-check-circle me-1"></i>Aprovada
+                            </span>
+                        {% elif os.status == 'em_andamento' %}
+                            <span class="badge bg-info-subtle text-info border border-info px-2 py-1">
+                                <i class="bi bi-tools me-1"></i>Em Andamento
+                            </span>
+                        {% elif os.status == 'aguardando_peca' %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary px-2 py-1">
+                                <i class="bi bi-box-seam me-1"></i>Aguard. Peça
+                            </span>
+                        {% elif os.status == 'concluida' %}
+                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Concluída
+                            </span>
+                        {% elif os.status == 'cancelada' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                <i class="bi bi-x-circle-fill me-1"></i>Cancelada
+                            </span>
+                        {% endif %}
+
+                        {% if os.prioridade == 'urgente' %}
+                            <span class="badge bg-danger text-white px-2 py-1">URGENTE</span>
+                        {% elif os.prioridade == 'alta' %}
+                            <span class="badge bg-warning text-dark px-2 py-1">Alta</span>
+                        {% elif os.prioridade == 'normal' %}
+                            <span class="badge bg-info text-white px-2 py-1">Normal</span>
+                        {% else %}
+                            <span class="badge bg-secondary text-white px-2 py-1">Baixa</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Ações -->
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('visualizar_ordem_servico', id=os.id) }}"
+                           class="btn btn-sm btn-outline-primary flex-fill">
+                            <i class="bi bi-eye me-1"></i>Ver
+                        </a>
+                        {% if current_user.cargo in ['admin', 'gerente_manutencao', 'supervisor_manutencao'] and os.pode_aprovar(current_user) %}
+                        <a href="{{ url_for('aprovar_ordem_servico', id=os.id) }}"
+                           class="btn btn-sm btn-outline-success flex-fill">
+                            <i class="bi bi-check-lg me-1"></i>Aprovar
+                        </a>
+                        {% endif %}
+                        {% if os.pode_editar(current_user) %}
+                        <a href="{{ url_for('atualizar_ordem_servico', id=os.id) }}"
+                           class="btn btn-sm btn-outline-warning flex-fill">
+                            <i class="bi bi-pencil me-1"></i>Editar
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+            </div>
+            <h5 class="text-muted fw-normal mb-3">Nenhuma ordem de serviço encontrada</h5>
+            {% if current_user.cargo in ['admin', 'administrativo'] %}
+            <a href="{{ url_for('nova_ordem_servico') }}" class="btn-primary-clean">
+                <i class="bi bi-plus-lg"></i>
+                <span>Criar Primeira OS</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Hover effect para linhas da tabela */
+.table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05) !important;
+    transform: scale(1.005);
+}
+
+/* Animação dos badges */
+.badge {
+    transition: all 0.2s ease;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+/* Avatar circles */
+.avatar-circle-sm {
+    flex-shrink: 0;
+    color: white;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+/* Responsividade dos cards mobile */
+@media (max-width: 991.98px) {
+    .card {
+        transition: all 0.2s ease;
+    }
+    
+    .card:active {
+        transform: scale(0.98);
+    }
+}
+</style>
+{% endblock %}
+
+{% if pagination and pagination.pages > 1 %}
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0 text-muted small">
+                    Mostrando {{ pagination.per_page * (pagination.page - 1) + 1 }}
+                    até {{ [pagination.per_page * pagination.page, pagination.total] | min }}
+                    de {{ pagination.total }} ordens de serviço
+                </p>
+            </div>
+            <div class="col-md-6">
+                <nav>
+                    <ul class="pagination pagination-sm justify-content-end mb-0">
+                        {# Primeira página #}
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=1, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=pagination.prev_num, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                        </li>
+                        {% endif %}
+
+                        {# Páginas numeradas #}
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == pagination.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('lista_ordens_servico', page=page_num, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {# Última página #}
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=pagination.next_num, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('lista_ordens_servico', page=pagination.pages, status=filtros.status, prioridade=filtros.prioridade, tecnico_id=filtros.tecnico_id, busca=filtros.busca) }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+    </div>
+{% endif %}

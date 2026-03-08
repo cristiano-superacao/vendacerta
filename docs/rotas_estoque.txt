@@ -1,0 +1,402 @@
+# ROTAS DE ESTOQUE - Para adicionar ao app.py
+
+"""
+=================================================================
+ROTAS DE ESTOQUE E PRODUTOS
+=================================================================
+"""
+
+@app.route('/estoque')
+@login_required
+def lista_estoque():
+    """Dashboard de estoque com resumo e estatísticas"""
+    # Verificar permissão
+    if not current_user.pode_acessar_estoque and current_user.cargo != 'admin':
+        flash('❌ Você não tem permissão para acessar o estoque.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Estatísticas gerais
+    total_produtos = Produto.query.filter_by(
+        empresa_id=current_user.empresa_id,
+        ativo=True
+    ).count()
+    
+    produtos_zerados = Produto.query.filter_by(
+        empresa_id=current_user.empresa_id,
+        ativo=True
+    ).filter(Produto.estoque_atual <= 0).count()
+    
+    produtos_baixos = Produto.query.filter_by(
+        empresa_id=current_user.empresa_id,
+        ativo=True
+    ).filter(
+        Produto.estoque_atual > 0,
+        Produto.estoque_atual <= Produto.estoque_minimo
+    ).count()
+    
+    # Valor total do estoque (se tiver permissão)
+    valor_total = 0
+    if current_user.pode_ver_custos or current_user.cargo == 'admin':
+        produtos = Produto.query.filter_by(
+            empresa_id=current_user.empresa_id,
+            ativo=True
+        ).all()
+        valor_total = sum(p.estoque_atual * p.custo_medio for p in produtos)
+    
+    # Últimas movimentações
+    ultimas_movimentacoes = EstoqueMovimento.query.filter_by(
+        empresa_id=current_user.empresa_id
+    ).order_by(EstoqueMovimento.data_movimento.desc()).limit(10).all()
+    
+    # Produtos com estoque baixo
+    produtos_alerta = Produto.query.filter_by(
+        empresa_id=current_user.empresa_id,
+        ativo=True
+    ).filter(
+        Produto.estoque_atual > 0,
+        Produto.estoque_atual <= Produto.estoque_minimo
+    ).order_by(Produto.estoque_atual).limit(10).all()
+    
+    return render_template('estoque/dashboard.html',
+                         total_produtos=total_produtos,
+                         produtos_zerados=produtos_zerados,
+                         produtos_baixos=produtos_baixos,
+                         valor_total=valor_total,
+                         ultimas_movimentacoes=ultimas_movimentacoes,
+                         produtos_alerta=produtos_alerta)
+
+
+@app.route('/estoque/produtos')
+@login_required
+def lista_produtos():
+    """Lista todos os produtos do estoque"""
+    if not current_user.pode_acessar_estoque and current_user.cargo != 'admin':
+        flash('❌ Você não tem permissão para acessar o estoque.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Filtros
+    busca = request.args.get('busca', '')
+    categoria = request.args.get('categoria', '')
+    status_estoque = request.args.get('status', '')
+    
+    # Query base
+    query = Produto.query.filter_by(empresa_id=current_user.empresa_id)
+    
+    # Aplicar filtros
+    if busca:
+        query = query.filter(
+            db.or_(
+                Produto.codigo.ilike(f'%{busca}%'),
+                Produto.nome.ilike(f'%{busca}%'),
+                Produto.codigo_barra.ilike(f'%{busca}%'),
+                Produto.referencia.ilike(f'%{busca}%')
+            )
+        )
+    
+    if categoria:
+        query = query.filter_by(categoria=categoria)
+    
+    if status_estoque == 'zerado':
+        query = query.filter(Produto.estoque_atual <= 0)
+    elif status_estoque == 'baixo':
+        query = query.filter(
+            Produto.estoque_atual > 0,
+            Produto.estoque_atual <= Produto.estoque_minimo
+        )
+    elif status_estoque == 'normal':
+        query = query.filter(Produto.estoque_atual > Produto.estoque_minimo)
+    
+    produtos = query.order_by(Produto.nome).all()
+    
+    return render_template('estoque/produtos.html',
+                         produtos=produtos,
+                         filtros={
+                             'busca': busca,
+                             'categoria': categoria,
+                             'status': status_estoque
+                         })
+
+
+@app.route('/estoque/produto/novo', methods=['GET', 'POST'])
+@login_required
+def novo_produto():
+    """Cadastrar novo produto"""
+    if not current_user.pode_gerenciar_produtos and current_user.cargo != 'admin':
+        flash('❌ Você não tem permissão para cadastrar produtos.', 'danger')
+        return redirect(url_for('lista_produtos'))
+    
+    form = ProdutoForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Verificar se código já existe
+            existe = Produto.query.filter_by(
+                codigo=form.codigo.data,
+                empresa_id=current_user.empresa_id
+            ).first()
+            
+            if existe:
+                flash('❌ Já existe um produto com este código!', 'danger')
+                return render_template('estoque/produto_form.html', form=form, titulo='Novo Produto')
+            
+            produto = Produto(
+                codigo=form.codigo.data,
+                codigo_barra=form.codigo_barra.data,
+                referencia=form.referencia.data,
+                ncm=form.ncm.data,
+                nome=form.nome.data,
+                descricao=form.descricao.data,
+                categoria=form.categoria.data,
+                fornecedor=form.fornecedor.data,
+                unidade=form.unidade.data,
+                estoque_minimo=form.estoque_minimo.data or 0,
+                estoque_atual=0,  # Inicia zerado
+                custo_medio=form.custo_medio.data or 0,
+                preco_venda=form.preco_venda.data or 0,
+                localizacao=form.localizacao.data,
+                ativo=form.ativo.data,
+                empresa_id=current_user.empresa_id
+            )
+            
+            db.session.add(produto)
+            db.session.commit()
+            
+            flash(f'✅ Produto "{produto.nome}" cadastrado com sucesso!', 'success')
+            return redirect(url_for('visualizar_produto', id=produto.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Erro ao cadastrar produto: {str(e)}', 'danger')
+    
+    return render_template('estoque/produto_form.html', form=form, titulo='Novo Produto')
+
+
+@app.route('/estoque/produto/<int:id>')
+@login_required
+def visualizar_produto(id):
+    """Visualizar detalhes do produto"""
+    if not current_user.pode_acessar_estoque and current_user.cargo != 'admin':
+        flash('❌ Você não tem permissão para acessar o estoque.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    produto = Produto.query.get_or_404(id)
+    
+    # Verificar empresa
+    if produto.empresa_id != current_user.empresa_id:
+        flash('❌ Produto não encontrado.', 'danger')
+        return redirect(url_for('lista_produtos'))
+    
+    # Últimas movimentações deste produto
+    movimentacoes = EstoqueMovimento.query.filter_by(
+        produto_id=produto.id
+    ).order_by(EstoqueMovimento.data_movimento.desc()).limit(20).all()
+    
+    # Estatísticas
+    total_entradas = db.session.query(db.func.sum(EstoqueMovimento.quantidade)).filter_by(
+        produto_id=produto.id,
+        tipo='entrada'
+    ).scalar() or 0
+    
+    total_saidas = db.session.query(db.func.sum(EstoqueMovimento.quantidade)).filter_by(
+        produto_id=produto.id,
+        tipo='saida'
+    ).scalar() or 0
+    
+    return render_template('estoque/produto_visualizar.html',
+                         produto=produto,
+                         movimentacoes=movimentacoes,
+                         total_entradas=total_entradas,
+                         total_saidas=total_saidas)
+
+
+@app.route('/estoque/produto/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_produto(id):
+    """Editar produto existente"""
+    if not current_user.pode_gerenciar_produtos and current_user.cargo != 'admin':
+        flash('❌ Você não tem permissão para editar produtos.', 'danger')
+        return redirect(url_for('visualizar_produto', id=id))
+    
+    produto = Produto.query.get_or_404(id)
+    
+    if produto.empresa_id != current_user.empresa_id:
+        flash('❌ Produto não encontrado.', 'danger')
+        return redirect(url_for('lista_produtos'))
+    
+    form = ProdutoForm(obj=produto)
+    
+    if form.validate_on_submit():
+        try:
+            # Verificar se código mudou e já existe
+            if form.codigo.data != produto.codigo:
+                existe = Produto.query.filter_by(
+                    codigo=form.codigo.data,
+                    empresa_id=current_user.empresa_id
+                ).first()
+                
+                if existe:
+                    flash('❌ Já existe um produto com este código!', 'danger')
+                    return render_template('estoque/produto_form.html', form=form, titulo='Editar Produto', produto=produto)
+            
+            produto.codigo = form.codigo.data
+            produto.codigo_barra = form.codigo_barra.data
+            produto.referencia = form.referencia.data
+            produto.ncm = form.ncm.data
+            produto.nome = form.nome.data
+            produto.descricao = form.descricao.data
+            produto.categoria = form.categoria.data
+            produto.fornecedor = form.fornecedor.data
+            produto.unidade = form.unidade.data
+            produto.estoque_minimo = form.estoque_minimo.data or 0
+            produto.custo_medio = form.custo_medio.data or 0
+            produto.preco_venda = form.preco_venda.data or 0
+            produto.localizacao = form.localizacao.data
+            produto.ativo = form.ativo.data
+            
+            db.session.commit()
+            
+            flash(f'✅ Produto "{produto.nome}" atualizado com sucesso!', 'success')
+            return redirect(url_for('visualizar_produto', id=produto.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Erro ao atualizar produto: {str(e)}', 'danger')
+    
+    return render_template('estoque/produto_form.html', form=form, titulo='Editar Produto', produto=produto)
+
+
+@app.route('/estoque/movimentacao/nova', methods=['GET', 'POST'])
+@login_required
+def nova_movimentacao():
+    """Registrar nova movimentação de estoque"""
+    if not current_user.pode_movimentar_estoque and current_user.cargo != 'admin':
+        flash('❌ Você não tem permissão para movimentar estoque.', 'danger')
+        return redirect(url_for('lista_estoque'))
+    
+    form = EstoqueMovimentoForm()
+    
+    # Preencher choices
+    produtos = Produto.query.filter_by(
+        empresa_id=current_user.empresa_id,
+        ativo=True
+    ).order_by(Produto.nome).all()
+    form.produto_id.choices = [(0, 'Selecione o produto')] + [
+        (p.id, f'{p.codigo} - {p.nome}') for p in produtos
+    ]
+    
+    clientes = Cliente.query.filter_by(
+        empresa_id=current_user.empresa_id
+    ).order_by(Cliente.nome).all()
+    form.cliente_id.choices = [(0, 'Nenhum')] + [
+        (c.id, c.nome) for c in clientes
+    ]
+    
+    ordens = OrdemServico.query.filter_by(
+        empresa_id=current_user.empresa_id
+    ).filter(OrdemServico.status.in_(['aprovada', 'em_andamento', 'aguardando_peca'])).all()
+    form.ordem_servico_id.choices = [(0, 'Nenhuma')] + [
+        (os.id, f'{os.numero_os} - {os.titulo}') for os in ordens
+    ]
+    
+    if form.validate_on_submit():
+        try:
+            produto = Produto.query.get(form.produto_id.data)
+            if not produto:
+                flash('❌ Produto não encontrado!', 'danger')
+                return render_template('estoque/movimentacao_form.html', form=form)
+            
+            # Validar quantidade para saída
+            if form.tipo.data == 'saida':
+                if form.quantidade.data > produto.estoque_atual:
+                    flash(f'❌ Quantidade insuficiente! Estoque atual: {produto.estoque_atual}', 'danger')
+                    return render_template('estoque/movimentacao_form.html', form=form)
+            
+            # Criar movimentação
+            movimento = EstoqueMovimento(
+                produto_id=form.produto_id.data,
+                tipo=form.tipo.data,
+                motivo=form.motivo.data,
+                quantidade=form.quantidade.data,
+                valor_unitario=form.valor_unitario.data or 0,
+                valor_total=(form.quantidade.data * (form.valor_unitario.data or 0)),
+                documento=form.documento.data,
+                ordem_servico_id=form.ordem_servico_id.data if form.ordem_servico_id.data else None,
+                fornecedor=form.fornecedor.data,
+                cliente_id=form.cliente_id.data if form.cliente_id.data else None,
+                observacoes=form.observacoes.data,
+                usuario_id=current_user.id,
+                empresa_id=current_user.empresa_id,
+                data_movimento=datetime.now()
+            )
+            
+            # Atualizar estoque do produto
+            if form.tipo.data == 'entrada':
+                produto.estoque_atual += form.quantidade.data
+                # Atualizar custo médio se informado
+                if form.valor_unitario.data and form.valor_unitario.data > 0:
+                    total_anterior = produto.custo_medio * (produto.estoque_atual - form.quantidade.data)
+                    total_novo = form.valor_unitario.data * form.quantidade.data
+                    produto.custo_medio = (total_anterior + total_novo) / produto.estoque_atual
+            else:  # saida
+                produto.estoque_atual -= form.quantidade.data
+            
+            db.session.add(movimento)
+            db.session.commit()
+            
+            flash(f'✅ Movimentação registrada com sucesso! Estoque atual: {produto.estoque_atual}', 'success')
+            return redirect(url_for('visualizar_produto', id=produto.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Erro ao registrar movimentação: {str(e)}', 'danger')
+    
+    return render_template('estoque/movimentacao_form.html', form=form)
+
+
+@app.route('/estoque/movimentacoes')
+@login_required
+def lista_movimentacoes():
+    """Lista todas as movimentações de estoque"""
+    if not current_user.pode_acessar_estoque and current_user.cargo != 'admin':
+        flash('❌ Você não tem permissão para acessar o estoque.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Filtros
+    tipo = request.args.get('tipo', '')
+    motivo = request.args.get('motivo', '')
+    produto_id = request.args.get('produto_id', '')
+    data_inicio = request.args.get('data_inicio', '')
+    data_fim = request.args.get('data_fim', '')
+    
+    # Query base
+    query = EstoqueMovimento.query.filter_by(empresa_id=current_user.empresa_id)
+    
+    # Aplicar filtros
+    if tipo:
+        query = query.filter_by(tipo=tipo)
+    if motivo:
+        query = query.filter_by(motivo=motivo)
+    if produto_id:
+        query = query.filter_by(produto_id=produto_id)
+    if data_inicio:
+        query = query.filter(EstoqueMovimento.data_movimento >= data_inicio)
+    if data_fim:
+        query = query.filter(EstoqueMovimento.data_movimento <= data_fim)
+    
+    movimentacoes = query.order_by(EstoqueMovimento.data_movimento.desc()).all()
+    
+    # Produtos para filtro
+    produtos = Produto.query.filter_by(
+        empresa_id=current_user.empresa_id
+    ).order_by(Produto.nome).all()
+    
+    return render_template('estoque/movimentacoes.html',
+                         movimentacoes=movimentacoes,
+                         produtos=produtos,
+                         filtros={
+                             'tipo': tipo,
+                             'motivo': motivo,
+                             'produto_id': produto_id,
+                             'data_inicio': data_inicio,
+                             'data_fim': data_fim
+                         })

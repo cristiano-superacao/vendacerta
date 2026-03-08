@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Mensagem{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('caixa_entrada') }}">Mensagens</a></li>
+                    <li class="breadcrumb-item active">Nova Mensagem</li>
+                </ol>
+            </nav>
+
+            <!-- Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-envelope-plus me-2"></i>
+                        Nova Mensagem
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        <!-- Destinatário -->
+                        <div class="mb-3">
+                            <label for="destinatario_id" class="form-label">
+                                <i class="bi bi-person me-1"></i>
+                                Destinatário *
+                            </label>
+                            <select class="form-select" id="destinatario_id" name="destinatario_id" required>
+                                <option value="">Selecione um destinatário...</option>
+                                {% for usuario in usuarios %}
+                                <option value="{{ usuario.id }}">
+                                    {{ usuario.nome }} - {{ usuario.cargo|title }}
+                                    {% if usuario.email %} ({{ usuario.email }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Selecione um destinatário.
+                            </div>
+                        </div>
+
+                        <!-- Prioridade -->
+                        <div class="mb-3">
+                            <label for="prioridade" class="form-label">
+                                <i class="bi bi-flag me-1"></i>
+                                Prioridade
+                            </label>
+                            <select class="form-select" id="prioridade" name="prioridade">
+                                <option value="baixa">Baixa</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="alta">Alta</option>
+                                <option value="urgente">Urgente</option>
+                            </select>
+                        </div>
+
+                        <!-- Assunto -->
+                        <div class="mb-3">
+                            <label for="assunto" class="form-label">
+                                <i class="bi bi-chat-square-text me-1"></i>
+                                Assunto *
+                            </label>
+                            <input type="text" class="form-control" id="assunto" name="assunto"
+                                   required maxlength="200" placeholder="Digite o assunto da mensagem">
+                            <div class="invalid-feedback">
+                                O assunto é obrigatório.
+                            </div>
+                        </div>
+
+                        <!-- Mensagem -->
+                        <div class="mb-3">
+                            <label for="mensagem" class="form-label">
+                                <i class="bi bi-text-paragraph me-1"></i>
+                                Mensagem *
+                            </label>
+                            <textarea class="form-control" id="mensagem" name="mensagem"
+                                      rows="6" required placeholder="Digite sua mensagem..."></textarea>
+                            <div class="invalid-feedback">
+                                A mensagem é obrigatória.
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('caixa_entrada') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i>
+                                Enviar Mensagem
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

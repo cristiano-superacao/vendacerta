@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    {% from "_macros/ui.html" import auth_head_base, bootstrap_bundle_js %}
+    {{ auth_head_base('Redefinir Senha - Sistema de Metas', include_theme_css=true) }}
+
+    <style>
+        .password-requirements {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .password-requirements h6 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #065f46;
+            margin-bottom: 0.5rem;
+        }
+
+        .password-requirements ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            font-size: 0.8125rem;
+            color: #047857;
+        }
+
+        .password-requirements li {
+            margin-bottom: 0.25rem;
+        }
+
+        .password-strength {
+            margin-top: 0.5rem;
+            font-size: 0.8125rem;
+        }
+
+        .strength-weak {
+            color: #dc2626;
+        }
+
+        .strength-medium {
+            color: #f59e0b;
+        }
+
+        .strength-strong {
+            color: #10b981;
+        }
+    </style>
+</head>
+<body class="vc-auth-page">
+    {% from "_macros/ui.html" import flash_messages %}
+    <div class="reset-card">
+        <div class="reset-header">
+            <i class="bi bi-shield-lock-fill"></i>
+            <h1>Redefinir Senha</h1>
+            <p>Crie uma nova senha segura</p>
+        </div>
+
+        <div class="reset-body">
+            <div class="password-requirements">
+                <h6><i class="bi bi-check-circle-fill"></i> Requisitos da Senha</h6>
+                <ul>
+                    <li>Mínimo de 6 caracteres</li>
+                    <li>Recomendamos usar letras, números e símbolos</li>
+                    <li>Não use senhas óbvias ou fáceis de adivinhar</li>
+                </ul>
+            </div>
+
+            <!-- Mensagens Flash -->
+            {{ flash_messages(show_icons=true, icon_fill=false, map_error_to_danger=true, icon_strategy='standard') }}
+
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    <label for="nova_senha" class="form-label">
+                        <i class="bi bi-lock"></i> Nova Senha
+                    </label>
+                    {{ form.nova_senha(class="form-control" + (" is-invalid" if form.nova_senha.errors else ""),
+                       placeholder="Digite sua nova senha",
+                       id="nova_senha",
+                       autofocus=true) }}
+                    {% if form.nova_senha.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.nova_senha.errors[0] }}
+                        </div>
+                    {% endif %}
+                    <div id="password-strength" class="password-strength"></div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="confirmar_senha" class="form-label">
+                        <i class="bi bi-lock-fill"></i> Confirmar Nova Senha
+                    </label>
+                    {{ form.confirmar_senha(class="form-control" + (" is-invalid" if form.confirmar_senha.errors else ""),
+                       placeholder="Digite a senha novamente") }}
+                    {% if form.confirmar_senha.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.confirmar_senha.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-reset">
+                    <i class="bi bi-check-circle-fill"></i> Redefinir Senha
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    {{ bootstrap_bundle_js() }}
+
+    <script>
+        // Indicador de força da senha
+        const senhaInput = document.getElementById('nova_senha');
+        const strengthDiv = document.getElementById('password-strength');
+
+        if (senhaInput) {
+            senhaInput.addEventListener('input', function() {
+                const senha = this.value;
+                let strength = 0;
+
+                if (senha.length >= 6) strength++;
+                if (senha.length >= 10) strength++;
+                if (/[a-z]/.test(senha) && /[A-Z]/.test(senha)) strength++;
+                if (/[0-9]/.test(senha)) strength++;
+                if (/[^a-zA-Z0-9]/.test(senha)) strength++;
+
+                if (senha.length === 0) {
+                    strengthDiv.textContent = '';
+                } else if (strength <= 2) {
+                    strengthDiv.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> Senha fraca';
+                    strengthDiv.className = 'password-strength strength-weak';
+                } else if (strength <= 3) {
+                    strengthDiv.innerHTML = '<i class="bi bi-dash-circle-fill"></i> Senha média';
+                    strengthDiv.className = 'password-strength strength-medium';
+                } else {
+                    strengthDiv.innerHTML = '<i class="bi bi-check-circle-fill"></i> Senha forte';
+                    strengthDiv.className = 'password-strength strength-strong';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}{{ mensagem.assunto }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('caixa_entrada') }}">Mensagens</a></li>
+                    <li class="breadcrumb-item active">Ver Mensagem</li>
+                </ol>
+            </nav>
+
+            <!-- Card da Mensagem -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1">
+                                {% if mensagem.prioridade == 'urgente' %}
+                                <span class="badge bg-danger me-2">URGENTE</span>
+                                {% elif mensagem.prioridade == 'alta' %}
+                                <span class="badge bg-warning me-2">ALTA</span>
+                                {% endif %}
+                                {{ mensagem.assunto }}
+                            </h5>
+                            <div class="text-muted small">
+                                <i class="bi bi-person me-1"></i>
+                                <strong>De:</strong> {{ mensagem.remetente.nome }} ({{ mensagem.remetente.email }})
+                                <br>
+                                <i class="bi bi-calendar me-1"></i>
+                                {{ mensagem.data_envio.strftime('%d/%m/%Y às %H:%M') }}
+                            </div>
+                        </div>
+
+                        <!-- Ações -->
+                        <div class="btn-group">
+                            <form method="POST" action="{{ url_for('arquivar_mensagem', id=mensagem.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Arquivar">
+                                    <i class="bi bi-archive"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('deletar_mensagem', id=mensagem.id) }}"
+                                  class="d-inline" onsubmit="return confirm('Tem certeza que deseja deletar esta mensagem?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Deletar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <!-- Conteúdo da Mensagem -->
+                    <div class="mensagem-conteudo" style="white-space: pre-wrap; line-height: 1.6;">
+                        {{ mensagem.mensagem }}
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white">
+                    <a href="{{ url_for('caixa_entrada') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Voltar
+                    </a>
+                    <a href="{{ url_for('nova_mensagem') }}?destinatario={{ mensagem.remetente_id }}&assunto=Re: {{ mensagem.assunto }}"
+                       class="btn btn-primary">
+                        <i class="bi bi-reply me-1"></i>
+                        Responder
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

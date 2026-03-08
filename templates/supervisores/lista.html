@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% from "_macros/ui.html" import page_header_clean, stats_card_clean %}
+
+{% block title %}Supervisores - Sistema de Metas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Clean -->
+    {% call page_header_clean('OPERACIONAL', 'bi bi-person-badge', 'Gerenciamento de Supervisores') %}
+        <a href="{{ url_for('lista_vendedores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-people"></i> Vendedores
+        </a>
+        <a href="{{ url_for('lista_equipes') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-diagram-3-fill"></i> Equipes
+        </a>
+        <a href="{{ url_for('lista_metas') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-bullseye"></i> Metas
+        </a>
+        <a href="{{ url_for('importar_supervisores') }}" class="btn btn-secondary-clean">
+            <i class="bi bi-upload"></i> Importar
+        </a>
+        <a href="{{ url_for('novo_supervisor') }}" class="btn btn-primary-clean">
+            <i class="bi bi-plus-circle"></i> Novo Supervisor
+        </a>
+    {% endcall %}
+
+    <!-- Cards de Estatísticas -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4 col-md-6">
+            {{ stats_card_clean('green', 'bi bi-person-badge', 'Total de Supervisores', stats.total, 'Cadastrados no sistema') }}
+        </div>
+        <div class="col-lg-4 col-md-6">
+            {{ stats_card_clean('teal', 'bi bi-people-fill', 'Vendedores Supervisionados', stats.total_vendedores, 'Total sob gestão') }}
+        </div>
+        <div class="col-lg-4 col-md-6">
+            {{ stats_card_clean('green', 'bi bi-graph-up-arrow', 'Média de Vendedores', "%.1f"|format(stats.media_vendedores), 'Por supervisor') }}
+        </div>
+    </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Supervisores -->
+    <div class="row">
+        <div class="col-12">
+            {% if supervisores %}
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted ps-4">Nome</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Email</th>
+                                    {% if current_user.is_super_admin %}
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Empresa</th>
+                                    {% endif %}
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted">Vendedores</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted text-center">Status</th>
+                                    <th class="border-0 text-uppercase small fw-semibold text-muted text-center pe-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in supervisores %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <strong>{{ item.supervisor.nome }}</strong>
+                                        <br><small class="text-muted">Criado em {{ item.supervisor.data_criacao.strftime('%d/%m/%Y') }}</small>
+                                    </td>
+                                    <td>{{ item.supervisor.email }}</td>
+                                    {% if current_user.is_super_admin %}
+                                    <td>
+                                        {% if item.supervisor.empresa %}
+                                            <span class="badge bg-info">{{ item.supervisor.empresa.nome }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Sem empresa</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ item.total_vendedores }} vendedor{{ 'es' if item.total_vendedores != 1 else '' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.supervisor.bloqueado %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-lock-fill"></i> Bloqueado
+                                            </span>
+                                        {% elif not item.supervisor.ativo %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-x-circle"></i> Inativo
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle-fill"></i> Ativo
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('definir_senha_supervisor', id=item.supervisor.id) }}"
+                                               class="btn btn-outline-primary"
+                                               title="Definir Senha">
+                                                <i class="bi bi-key-fill"></i>
+                                            </a>
+                                            <a href="{{ url_for('editar_supervisor', id=item.supervisor.id) }}"
+                                               class="btn btn-outline-warning"
+                                               title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalDeletar{{ item.supervisor.id }}"
+                                                    title="Desativar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Modal de Confirmação de Exclusão -->
+                                <div class="modal fade" id="modalDeletar{{ item.supervisor.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title">
+                                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                                    Confirmar Desativação
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Tem certeza que deseja desativar o supervisor <strong>{{ item.supervisor.nome }}</strong>?</p>
+                                                <div class="alert alert-danger border-0 shadow-sm">
+                                                    <i class="bi bi-info-circle"></i>
+                                                    Esta ação irá desativar o supervisor e ele não poderá mais acessar o sistema.
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <form method="POST" action="{{ url_for('deletar_supervisor', id=item.supervisor.id) }}" style="display: inline;">
+                                                    <button type="submit" class="btn btn-danger">
+                                                        <i class="bi bi-trash"></i> Desativar
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5 my-5">
+                <div class="icon-modern bg-secondary bg-opacity-10 text-secondary mx-auto mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-badge" style="font-size: 2.5rem;"></i>
+                </div>
+                <h5 class="text-muted mb-2">Nenhum Supervisor Cadastrado</h5>
+                <p class="text-muted small mb-3">Comece criando o primeiro supervisor clicando no botão abaixo</p>
+                <a href="{{ url_for('novo_supervisor') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Criar Primeiro Supervisor
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if pagination and pagination.pages > 1 %}
+<div class="container-fluid pb-4">
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body py-2">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0 text-muted small">
+                        Mostrando {{ pagination.per_page * (pagination.page - 1) + 1 }}
+                        até {{ [pagination.per_page * pagination.page, pagination.total] | min }}
+                        de {{ pagination.total }} supervisores
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <nav>
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            {# Primeira página #}
+                            {% if pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_supervisores', page=1) }}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_supervisores', page=pagination.prev_num) }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                            </li>
+                            {% endif %}
+
+                            {# Páginas numeradas #}
+                            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                {% if page_num %}
+                                    {% if page_num == pagination.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('lista_supervisores', page=page_num) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {# Última página #}
+                            {% if pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_supervisores', page=pagination.next_num) }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('lista_supervisores', page=pagination.pages) }}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+/* Botões de Ação com Visibilidade Aprimorada */
+.btn-group-sm .btn {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn i {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Botão Definir Senha - Azul com ícone destacado */
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+    border-width: 1.5px;
+}
+
+.btn-outline-primary i {
+    color: #0d6efd;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #ffffff;
+}
+
+.btn-outline-primary:hover i {
+    color: #ffffff;
+}
+
+/* Botão Editar - Amarelo com ícone destacado */
+.btn-outline-warning {
+    color: #dc8a00;
+    border-color: #ffc107;
+    border-width: 1.5px;
+}
+
+.btn-outline-warning i {
+    color: #dc8a00;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.btn-outline-warning:hover i {
+    color: #000;
+}
+
+/* Botão Desativar - Vermelho com ícone destacado */
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    border-width: 1.5px;
+}
+
+.btn-outline-danger i {
+    color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #ffffff;
+}
+
+.btn-outline-danger:hover i {
+    color: #ffffff;
+}
+
+/* Hover na linha da tabela */
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+</style>
+
+{% endblock %}
