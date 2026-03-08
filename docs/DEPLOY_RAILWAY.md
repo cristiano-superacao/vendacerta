@@ -50,6 +50,17 @@ gh workflow run railway-deploy.yml
 railway logs
 ```
 
+### Smoke test (HTTP + DB + admin)
+Para uma validação rápida do ambiente `production` (sem depender de CSRF/login), rode:
+
+```powershell
+railway run python scripts/smoke_test_railway.py
+```
+
+Ele valida:
+- HTTP: `/ping`, `/login` e `/api/ranking` (não pode retornar 5xx)
+- Postgres: tabelas essenciais e o admin `ADMIN_EMAIL` (default `admin@sistema.com`)
+
 ### Verificar schema de manutenção/técnicos
 Após o deploy, valide que a tabela `faixas_comissao_manutencao` e a coluna `tecnicos.faixa_manutencao_id` existem:
 
