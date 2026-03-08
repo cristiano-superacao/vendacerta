@@ -38,6 +38,10 @@ Thumbs.db
 .env.local
 .railway_db_url.txt
 
+# Config envs locais (não versionar)
+config/.env.*
+!config/.env.example
+
 # Logs
 *.log
 
