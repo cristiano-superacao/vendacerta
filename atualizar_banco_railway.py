@@ -172,7 +172,26 @@ def atualizar_banco_railway():
     try:
         # Conectar ao banco
         print(f"\n[PROC] Conectando ao banco PostgreSQL...")
-        engine = create_engine(db_url, echo=False)
+
+        # Railway pode injetar PGSSLMODE vazio (""), o que quebra o psycopg2/libpq.
+        # Se estivermos usando DATABASE_PUBLIC_URL (proxy externo), exigir SSL por padrão.
+        for key in ("PGSSLMODE", "DB_SSLMODE"):
+            if os.getenv(key, "").strip() == "":
+                os.environ.pop(key, None)
+
+        sslmode = (os.getenv("DB_SSLMODE") or os.getenv("PGSSLMODE") or "").strip()
+        using_public = bool(os.getenv("DATABASE_PUBLIC_URL"))
+        connect_args = {}
+
+        if sslmode:
+            connect_args["sslmode"] = sslmode
+        elif using_public:
+            connect_args["sslmode"] = "require"
+
+        if connect_args:
+            engine = create_engine(db_url, echo=False, connect_args=connect_args)
+        else:
+            engine = create_engine(db_url, echo=False)
         
         with engine.connect() as conn:
             print("[OK] Conexao estabelecida!")

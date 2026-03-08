@@ -1,4 +1,10 @@
 import os
+import sys
+
+# Garante import do app mesmo se o script rodar fora do cwd do repo.
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from app import app, db
 from models import Usuario

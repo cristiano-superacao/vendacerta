@@ -19,10 +19,18 @@ class Config:
     # ==========================================
     # Prioridade:
     # 1. DATABASE_URL ou URL_DO_BANCO_DE_DADOS (se não vazia)
+    #    (Opcional) Se PREFER_DATABASE_PUBLIC_URL=1 e DATABASE_PUBLIC_URL existir,
+    #    usa a URL pública primeiro (útil para executar scripts via `railway run` local).
     # 2. Construção via variáveis PG* individuais (PGHOST, PGPORT, etc)
     # 3. SQLite local (fallback para desenvolvimento)
     
-    database_url = os.environ.get('DATABASE_URL') or os.environ.get('URL_DO_BANCO_DE_DADOS')
+    prefer_public = os.environ.get('PREFER_DATABASE_PUBLIC_URL', '0') == '1'
+    database_url = None
+
+    if prefer_public and os.environ.get('DATABASE_PUBLIC_URL'):
+        database_url = os.environ.get('DATABASE_PUBLIC_URL')
+    else:
+        database_url = os.environ.get('DATABASE_URL') or os.environ.get('URL_DO_BANCO_DE_DADOS')
     
     # IMPORTANTE: Remove strings vazias (Railway pode retornar "" ao invés de None)
     if database_url:
