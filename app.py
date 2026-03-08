@@ -240,9 +240,11 @@ try:
     # FunÃ§Ãµes de backup (opcional em produÃ§Ã£o/Railway)
     from backup_helper import criar_backup_db, listar_backups, restaurar_backup, deletar_backup
 except Exception as e:
-    # Evita falha de inicializaÃ§Ã£o caso o mÃ³dulo nÃ£o esteja disponÃ­vel no ambiente
-    print(f"[AVISO] MÃ³dulo 'backup_helper' indisponÃ­vel: {e}")
-    print("[INFO] Recursos de backup serÃ£o desativados, mantendo o app online.")
+    # Evita falha de inicializaÃ§Ã£o caso o mÃ³dulo nÃ£o esteja disponÃ­vel no ambiente.
+    # Em produÃ§Ã£o, manter fallback silencioso para reduzir ruÃ­do de logs.
+    if os.environ.get("FLASK_ENV") == "development":
+        print(f"[AVISO] Modulo 'backup_helper' indisponivel: {e}")
+        print("[INFO] Recursos de backup desativados neste ambiente.")
     def criar_backup_db(*args, **kwargs):
         return None
     def listar_backups(*args, **kwargs):
