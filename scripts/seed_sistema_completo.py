@@ -11,7 +11,7 @@ import argparse
 import sys
 import os
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -31,8 +31,6 @@ from models import (
     Meta,
     Cliente,
     CompraCliente,
-    VendedorConfig,
-    VisitaCliente,
     Produto,
     EstoqueMovimento,
     Tecnico,
@@ -223,12 +221,6 @@ def seed(reset: bool = False) -> None:
         cliente_a = upsert_cliente("Cliente Alpha", vendedor.id, empresa.id, "0001-0001", "segunda")
         cliente_b = upsert_cliente("Cliente Beta", vendedor.id, empresa.id, "0001-0002", "terca")
 
-        config_visita = VendedorConfig.query.filter_by(vendedor_id=vendedor.id).first()
-        if not config_visita:
-            config_visita = VendedorConfig(vendedor_id=vendedor.id)
-            db.session.add(config_visita)
-        config_visita.set_dias_permitidos([1, 2, 3, 4, 5, 6])
-
         compra = CompraCliente.query.filter_by(cliente_id=cliente_a.id, vendedor_id=vendedor.id).first()
         if not compra:
             compra = CompraCliente(
@@ -243,23 +235,6 @@ def seed(reset: bool = False) -> None:
             )
             db.session.add(compra)
             db.session.flush()
-
-        visita = VisitaCliente.query.filter_by(
-            cliente_id=cliente_b.id,
-            vendedor_id=vendedor.id,
-            data_visita=hoje.date(),
-        ).first()
-        if not visita:
-            visita = VisitaCliente(
-                cliente_id=cliente_b.id,
-                vendedor_id=vendedor.id,
-                data_visita=hoje.date(),
-                status="SEM_PEDIDO",
-                justificativa="Cliente fechado",
-                checkin_at=hoje,
-                checkout_at=hoje + timedelta(minutes=15),
-            )
-            db.session.add(visita)
 
         produto = Produto.query.filter_by(codigo="PROD-DEMO-001").first()
         if not produto:

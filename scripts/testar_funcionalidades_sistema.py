@@ -75,8 +75,6 @@ def run():
     modules = [
         "/dashboard",
         "/clientes",
-        "/clientes/relatorio-visitas",
-        "/vendedor/clientes-dia",
         "/mensagens",
         "/mensagens/enviadas",
         "/estoque/produtos",
