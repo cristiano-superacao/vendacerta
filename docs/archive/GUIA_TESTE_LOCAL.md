@@ -1,5 +1,8 @@
 # 🚀 Guia Rápido - Testar Sistema Localmente
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter exemplos antigos.
+> Não use credenciais/senhas fixas; siga `docs/GETTING_STARTED.md`.
+
 ## ⚡ Início Rápido (3 minutos)
 
 ### 1. Verificar Requisitos
@@ -39,7 +42,7 @@ http://127.0.0.1:5001
 ### Admin Padrão
 ```
 Email: admin@suameta.com
-Senha: admin123
+Senha: (defina no seu ambiente; sem senha padrão)
 ```
 
 ⚠️ **IMPORTANTE:** Altere esta senha após o primeiro acesso!

@@ -1,5 +1,8 @@
 # 🚀 Deploy Railway - Guia Final
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: instruções antigas.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md` e `docs/GETTING_STARTED.md`.
+
 **Data**: Dezembro 12, 2025  
 **Status**: ✅ GitHub Atualizado - Pronto para Deploy
 
@@ -136,8 +139,8 @@ python migrate.py
 O script irá:
 - ✅ Criar todas as tabelas
 - ✅ Criar empresa padrão
-- ✅ Criar Super Admin (superadmin@suameta.com / 18042016)
-- ✅ Criar Admin (admin@suameta.com / admin123)
+- ✅ Criar registros base (se aplicável)
+- ℹ️ **Admin não tem senha padrão**: crie/atualize via `ADMIN_PASSWORD` + `python scripts/create_admin.py`
 
 #### Opção 2: Via Railway CLI
 
@@ -168,15 +171,15 @@ https://suameta-production-XXXX.up.railway.app
 
 **Super Administrador**:
 - 📧 Email: `superadmin@suameta.com`
-- 🔑 Senha: `18042016`
+- 🔑 Senha: (defina no seu ambiente; sem senha padrão)
 - 👑 Acesso total a todas as empresas
 
 **Administrador**:
 - 📧 Email: `admin@suameta.com`
-- 🔑 Senha: `admin123`
+- 🔑 Senha: (defina via `ADMIN_PASSWORD` + `scripts/create_admin.py`)
 - 🔐 Acesso à empresa padrão
 
-⚠️ **IMPORTANTE**: Altere as senhas após o primeiro login!
+⚠️ **IMPORTANTE**: Defina senhas fortes e não reutilize exemplos.
 
 ---
 
@@ -195,7 +198,7 @@ https://suameta-production-XXXX.up.railway.app
 ### Como Verificar
 
 1. **Abra a URL do Railway**
-2. **Faça login** com admin@suameta.com / admin123
+2. **Crie/atualize o admin** e faça login (sem senha padrão)
 3. **Teste as funcionalidades**:
    - Criar vendedor
    - Criar meta

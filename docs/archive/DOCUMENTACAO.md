@@ -1,5 +1,8 @@
 # 📚 VendaCerta - Documentação Completa
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter instruções antigas.
+> Não use credenciais/senhas fixas; siga `docs/GETTING_STARTED.md` e `docs/DEPLOY_RAILWAY.md`.
+
 <div align="center">
 
 ![VendaCerta](https://img.shields.io/badge/VendaCerta-v2.0.0-blue?style=for-the-badge&logo=checkmarx)
@@ -223,15 +226,10 @@ docs/archive/
 | **Produção** | [vendacerta.up.railway.app](https://vendacerta.up.railway.app) | ✅ Ativo |
 | **Local** | http://127.0.0.1:5000 | 🔧 Dev |
 
-### 👤 Credenciais Padrão
+### 👤 Primeiro acesso (sem senha padrão)
 
-| Perfil | E-mail | Senha |
-|--------|--------|-------|
-| **Super Admin** | admin@sistema.com | admin123 |
-| **Supervisor** | supervisor@empresa.com | super123 |
-| **Vendedor** | vendedor@empresa.com | vend123 |
-
-> ⚠️ **IMPORTANTE**: Altere as senhas padrão imediatamente após o primeiro acesso!
+- **Não existem credenciais/senhas padrão** no sistema.
+- Defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` e execute `python scripts/create_admin.py`.
 
 ---
 

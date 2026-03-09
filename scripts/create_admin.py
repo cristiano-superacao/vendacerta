@@ -6,15 +6,23 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from app import app, db
-from models import Usuario
-from sqlalchemy import exc
+from app import app, db  # noqa: E402
+from models import Usuario  # noqa: E402
+from sqlalchemy import exc  # noqa: E402
 
 if __name__ == '__main__':
     with app.app_context():
         try:
-            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@metas.com').strip().lower()
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@sistema.com').strip().lower()
+            admin_password = (os.environ.get('ADMIN_PASSWORD') or '').strip()
+
+            if not admin_password:
+                print(
+                    "ERRO: ADMIN_PASSWORD não definido. Por segurança, "
+                    "este script não cria/reseta admin com senha padrão."
+                )
+                print('      Defina ADMIN_PASSWORD e execute novamente.')
+                raise SystemExit(2)
 
             existing = Usuario.query.filter_by(email=admin_email).first()
             if existing:
@@ -35,4 +43,5 @@ if __name__ == '__main__':
                 print(f'✅ Admin criado: {admin_email}')
         except exc.IntegrityError:
             db.session.rollback()
-            print(f'⚠️  Admin já existe: {os.environ.get("ADMIN_EMAIL", "admin@metas.com")}')
+            print(f'⚠️  Admin já existe: {os.environ.get("ADMIN_EMAIL", "admin@sistema.com")}')
+

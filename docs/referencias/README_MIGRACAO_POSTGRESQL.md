@@ -1,5 +1,8 @@
 # 🎯 Sistema VendaCerta - PostgreSQL Edition
 
+> ⚠️ **LEGADO/HISTÓRICO**: este arquivo descreve um fluxo antigo de migração.
+> Para o passo a passo atual, use `docs/GETTING_STARTED.md` e `docs/DEPLOY_RAILWAY.md`.
+
 ## Migração Completa para PostgreSQL Concluída
 
 [![Python](https://img.shields.io/badge/Python-3.13.9-blue.svg)](https://www.python.org/)
@@ -22,7 +25,7 @@ python app.py
 
 **Acesse:** http://127.0.0.1:5001/login  
 **Email:** admin@vendacerta.com  
-**Senha:** admin123
+**Senha:** (defina no primeiro acesso; sem senha padrão)
 
 ### Opção 2: Menu Interativo
 
@@ -227,7 +230,7 @@ python app.py
 
 # 4. Acesse
 # http://127.0.0.1:5001/login
-# admin@vendacerta.com / admin123
+# admin@vendacerta.com / (senha definida no seu ambiente)
 ```
 
 ### Tutorial 2: Migração PostgreSQL
@@ -248,7 +251,7 @@ python app.py
 
 # 5. Acesse
 # http://127.0.0.1:5001/login
-# admin@vendacerta.com / admin123
+# admin@vendacerta.com / (senha definida no seu ambiente)
 ```
 
 ### Tutorial 3: Deploy Produção
@@ -379,12 +382,17 @@ git push
 
 ## 📞 Informações Úteis
 
-### Credenciais Padrão
+### Primeiro acesso (sem senha padrão)
 
 **Sistema:**
 - URL: http://127.0.0.1:5001/login
-- Email: admin@vendacerta.com
-- Senha: admin123
+- Email: (defina em `ADMIN_EMAIL`)
+- Senha: (defina em `ADMIN_PASSWORD`)
+
+Crie/atualize o admin com:
+```powershell
+python scripts/create_admin.py
+```
 
 **PostgreSQL (após setup):**
 - Host: localhost

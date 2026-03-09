@@ -1,5 +1,8 @@
 # 🎉 Sistema VendaCerta - Teste Local Funcionando!
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter exemplos antigos.
+> Não use credenciais/senhas fixas; siga `docs/GETTING_STARTED.md`.
+
 ## ✅ Status do Sistema
 
 ### Banco de Dados
@@ -7,7 +10,7 @@
 - ✅ **Todas as tabelas criadas** (27 tabelas principais)
 - ✅ **Usuário admin criado**
   - Email: `admin@vendacerta.com`
-  - Senha: `admin123`
+  - Senha: (defina no seu ambiente; sem senha padrão)
 
 ### Servidor
 - ✅ **Rodando** em http://127.0.0.1:5001
@@ -172,7 +175,7 @@
 ```
 URL: http://127.0.0.1:5001/login
 Email: admin@vendacerta.com
-Senha: admin123
+Senha: (defina no seu ambiente; sem senha padrão)
 ```
 
 ### 2. Primeiro Acesso

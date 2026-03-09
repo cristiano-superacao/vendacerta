@@ -49,6 +49,7 @@
 ✅ **Multi-tenant**: Suporte a múltiplas empresas isoladas  
 ✅ **Hierarquias Complexas**: 10 tipos de cargos com permissões granulares  
 ✅ **Importação Excel**: 3 formatos suportados (11/18/23 colunas)  
+✅ **Pedidos Faturados (NF)**: Importação XLSX/CSV com auditoria e divergência (>2%)  
 ✅ **Relatórios Profissionais**: Exportação PDF e Excel  
 ✅ **API REST Completa**: Integração com outros sistemas  
 ✅ **PWA**: Instalável como aplicativo mobile  
@@ -357,16 +358,30 @@ python app.py
 
 **URL**: http://127.0.0.1:5000/login
 
-**Credenciais Padrão**:
+**Primeiro acesso (criar Admin)**
 
-| Perfil | E-mail | Senha |
-|--------|--------|-------|
-| **Super Admin** | admin@sistema.com | admin123 |
-| **Gerente** | gerente@empresa.com | gerente123 |
-| **Supervisor** | supervisor@empresa.com | super123 |
-| **Vendedor** | vendedor@empresa.com | vend123 |
+Por segurança, o sistema **não** depende de “senha padrão” para administrador.
 
-> ⚠️ **IMPORTANTE**: Altere as senhas após primeiro acesso!
+1) Defina `ADMIN_PASSWORD` (obrigatório) e, se quiser, `ADMIN_EMAIL`.
+2) Execute o seed do admin:
+
+Windows (PowerShell):
+```powershell
+$env:ADMIN_EMAIL="admin@sistema.com"
+$env:ADMIN_PASSWORD="SUA_SENHA_FORTE"
+python scripts/create_admin.py
+```
+
+Linux/macOS:
+```bash
+export ADMIN_EMAIL="admin@sistema.com"
+export ADMIN_PASSWORD="SUA_SENHA_FORTE"
+python scripts/create_admin.py
+```
+
+Depois, faça login com `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+
+> ⚠️ Importante: para usuários não-admin criados/importados pelo sistema, a senha temporária pode ser `senha123`. Oriente a troca no primeiro acesso.
 
 ### Deploy em Produção (Railway)
 
@@ -391,6 +406,8 @@ FLASK_ENV=production
 FLASK_DEBUG=False
 # DATABASE_URL é fornecido automaticamente pelo Railway
 ```
+
+> Para criar o primeiro admin em produção, rode `railway run python scripts/create_admin.py` definindo `ADMIN_PASSWORD`.
 
 #### Passo 4: Deploy Automático
 

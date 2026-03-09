@@ -1,5 +1,8 @@
 # 🚀 Guia Completo de Deploy - Sistema de Metas
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: instruções antigas.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md` e `docs/GETTING_STARTED.md`.
+
 ## 📋 Índice Rápido
 
 1. [Deploy no Railway (Recomendado)](#-railway-deploy-recomendado)
@@ -79,8 +82,8 @@ O script irá:
 
 ```
 🌐 URL: https://seu-dominio.up.railway.app
-👤 Super Admin: superadmin@suameta.com / 18042016
-🔑 Admin: admin@suameta.com / admin123
+👤 Super Admin: superadmin@suameta.com (senha definida no seu ambiente)
+🔑 Admin: (defina `ADMIN_EMAIL`/`ADMIN_PASSWORD` e execute `python scripts/create_admin.py`)
 ```
 
 ---
@@ -431,7 +434,7 @@ gunicorn app:app
 # Após o deploy:
 
 1. Acesse a URL fornecida
-2. Faça login: admin@metas.com / admin123
+2. Faça login com o admin criado via `ADMIN_PASSWORD` + `scripts/create_admin.py`
 3. Cadastre vendedores, metas e equipes
 4. Exporte relatórios em PDF
 5. Compartilhe a URL com sua equipe!

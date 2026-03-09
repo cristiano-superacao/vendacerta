@@ -9,7 +9,7 @@
 
 ### Para Usuários Iniciantes
 1. 📘 **Guia de início rápido**
-  - [docs/guias/COMECE_AQUI.md](../docs/guias/COMECE_AQUI.md) – instalação, execução e usuários padrão
+  - [docs/guias/COMECE_AQUI.md](../docs/guias/COMECE_AQUI.md) – instalação, execução e primeiro acesso (criar admin)
 
 2. 📚 **Manual resumido de módulos**
   - [docs/MANUAL_RESUMO_MODULOS.md](MANUAL_RESUMO_MODULOS.md) – visão geral e passo a passo por módulo
@@ -124,6 +124,15 @@
   - Versão final do formulário
   - Todos os recursos
   - Como usar
+
+---
+
+### 🧾 Pedidos e Faturamento (NF)
+
+- **[GUIA IMPORTAÇÃO PEDIDOS FATURADOS (NF)](../GUIA_IMPORTACAO_PEDIDOS_FATURADOS.md)**
+  - Importação XLSX/CSV
+  - Divergência >2% (FATURADO x DIVERGENTE)
+  - Auditoria e relatórios
 
 ---
 

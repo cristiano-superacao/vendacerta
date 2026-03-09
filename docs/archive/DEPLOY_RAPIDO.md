@@ -1,5 +1,8 @@
 # 🚀 DEPLOY RÁPIDO - Railway
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter exemplos antigos.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md`.
+
 ## ⚡ 5 Minutos para Colocar no Ar
 
 ### 1️⃣ Login no Railway
@@ -54,11 +57,11 @@ Aguarde 3-5 minutos e acesse:
 
 Login inicial:
 ```
-📧 Email: admin@sistema.com
-🔑 Senha: admin123
+📧 Email: (defina em `ADMIN_EMAIL`)
+🔑 Senha: (defina em `ADMIN_PASSWORD`)
 ```
 
-⚠️ **Trocar senha imediatamente após primeiro login!**
+Crie/atualize o admin via `python scripts/create_admin.py`.
 
 ---
 

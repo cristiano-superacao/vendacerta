@@ -51,7 +51,7 @@ railway logs
 ```
 
 ### Smoke test (HTTP + DB + admin)
-Para uma validação rápida do ambiente `production` (sem depender de CSRF/login), rode:
+Para uma validação rápida do ambiente `production`, rode:
 
 ```powershell
 railway run python scripts/smoke_test_railway.py
@@ -60,6 +60,9 @@ railway run python scripts/smoke_test_railway.py
 Ele valida:
 - HTTP: `/ping`, `/login` e `/api/ranking` (não pode retornar 5xx)
 - Postgres: tabelas essenciais (inclui `vendedor_dias_liberados`) e o admin `ADMIN_EMAIL` (default `admin@sistema.com`)
+
+Observação:
+- Para validação ponta a ponta de login, defina `ADMIN_PASSWORD` no ambiente (sem ele, o script pode pular o login e não consegue fazer fallback via `/status/*`).
 
 ### Verificar schema de manutenção/técnicos
 Após o deploy, valide que a tabela `faixas_comissao_manutencao` e a coluna `tecnicos.faixa_manutencao_id` existem:

@@ -28,7 +28,7 @@
 python app.py
 
 # Acessar http://127.0.0.1:5001/login
-# Login: admin@vendacerta.com / admin123
+# Primeiro acesso: crie o admin definindo ADMIN_PASSWORD (ver docs/guias/COMECE_AQUI.md)
 ```
 
 **Verificar:**
@@ -390,7 +390,7 @@ https://vendacerta.up.railway.app
 
 ## Credenciais Iniciais
 - Email: admin@vendacerta.com
-- Senha: admin123
+- Senha: definida via `ADMIN_PASSWORD` (sem senha padrão)
 
 ## Primeiro Acesso
 1. Faça login com credenciais acima

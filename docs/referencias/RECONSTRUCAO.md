@@ -180,9 +180,9 @@ c:\Users\Superação\Desktop\Sistema\Metas\backups\templates_old\
 
 **Servidor rodando em:** http://127.0.0.1:5001
 
-**Credenciais de Teste:**
-- **Admin:** admin@metas.com / admin123
-- **Supervisor:** supervisor@metas.com / super123
+**Credenciais de Teste (sem senha padrão):**
+- **Admin:** admin@metas.com (senha definida no seu ambiente)
+- **Supervisor:** supervisor@metas.com (senha definida no seu ambiente)
 
 **Status:** ✅ Servidor ativo e funcional
 

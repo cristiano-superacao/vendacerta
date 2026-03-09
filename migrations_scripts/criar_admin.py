@@ -13,20 +13,29 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from app import app, db
-from models import Usuario, Empresa
+from app import app, db  # noqa: E402
+from models import Usuario, Empresa  # noqa: E402
+
 
 def criar_admin():
     """Cria usuário administrador padrão"""
     
     with app.app_context():
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("🔐 CRIANDO USUÁRIO ADMINISTRADOR")
-        print("="*70 + "\n")
+        print("=" * 70 + "\n")
         
         # Permite parametrizar credenciais via env (útil para seed e Railway)
-        admin_email = os.environ.get('ADMIN_EMAIL', 'admin@metas.com').strip().lower()
-        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+        admin_email = os.environ.get('ADMIN_EMAIL', 'admin@sistema.com').strip().lower()
+        admin_password = (os.environ.get('ADMIN_PASSWORD') or '').strip()
+
+        if not admin_password:
+            print(
+                "\n[ERRO] ADMIN_PASSWORD não definido. Por segurança, "
+                "não é permitido criar/resetar admin com senha padrão."
+            )
+            print("       Defina ADMIN_PASSWORD e execute novamente.\n")
+            raise SystemExit(2)
         admin_existe = Usuario.query.filter_by(email=admin_email).first()
         
         if admin_existe:
@@ -44,7 +53,7 @@ def criar_admin():
             
             print("\n✅ Senha resetada com sucesso!")
         else:
-            print(f"➕ Criando novo administrador...")
+            print("➕ Criando novo administrador...")
             
             # Criar empresa padrão se não existir
             empresa = Empresa.query.filter_by(cnpj='00000000000000').first()
@@ -78,15 +87,16 @@ def criar_admin():
             db.session.add(admin)
             db.session.commit()
             
-            print(f"\n✅ Administrador criado com sucesso!")
+            print("\n✅ Administrador criado com sucesso!")
         
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("📋 CREDENCIAIS DE ACESSO")
-        print("="*70)
+        print("=" * 70)
         print(f"\n📧 Email:  {admin_email}")
         print("🔑 Senha:  (definida via ADMIN_PASSWORD)")
-        print(f"\n🌐 Acesse: http://127.0.0.1:5001/login")
-        print("\n" + "="*70 + "\n")
+        print("\n🌐 Acesse: http://127.0.0.1:5001/login")
+        print("\n" + "=" * 70 + "\n")
+
 
 if __name__ == '__main__':
     criar_admin()

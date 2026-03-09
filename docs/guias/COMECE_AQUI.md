@@ -48,9 +48,18 @@ python app.py
 
 Acesse: **http://127.0.0.1:5001/login**
 
-**Credenciais padrão:**
-- Email: `admin@vendacerta.com`
-- Senha: `admin123`
+**Primeiro acesso (criar Admin):**
+
+Por segurança, o sistema **não** usa “senha padrão” para administrador.
+
+Windows (PowerShell):
+```powershell
+$env:ADMIN_EMAIL="admin@sistema.com"
+$env:ADMIN_PASSWORD="SUA_SENHA_FORTE"
+python scripts/create_admin.py
+```
+
+Depois, faça login com `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 ---
 
@@ -76,11 +85,9 @@ python quick_start.py
 
 ## 🔑 USUÁRIOS DO SISTEMA
 
-| Perfil | Email | Senha | Permissões |
-|--------|-------|-------|------------|
-| Super Admin | `admin@vendacerta.com` | `admin123` | Acesso total |
-| Supervisor | `supervisor@vendacerta.com` | `super123` | Gestão de equipe |
-| Vendedor | `vendedor@vendacerta.com` | `vend123` | Vendas e clientes |
+O acesso inicial é feito criando o Admin via `ADMIN_PASSWORD` (veja acima).
+
+> Nota: usuários não-admin criados/importados podem receber senha temporária (`senha123`) e devem alterá-la no primeiro acesso.
 
 ---
 

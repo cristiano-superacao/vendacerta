@@ -1,5 +1,8 @@
 # 🚀 Instruções de Deploy - Sistema Pronto
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter instruções antigas.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md` e `docs/GETTING_STARTED.md`.
+
 **Status**: ✅ **PRONTO PARA PRODUÇÃO**  
 **Data**: 16/12/2025  
 **Versão**: 2.9.0
@@ -102,8 +105,8 @@ python init_data.py
 1. Railway gerará URL: https://vendacerta-production.up.railway.app
 2. Abrir aplicação
 3. Testar login:
-   - Email: admin@sistema.com
-   - Senha: admin123
+   - Email: (defina em `ADMIN_EMAIL`)
+   - Senha: (defina em `ADMIN_PASSWORD`)
 ```
 
 ---
@@ -159,7 +162,7 @@ gunicorn app:app --bind 0.0.0.0:8000 --workers 2 --threads 4 --worker-class gthr
 ```
 URL: http://localhost:5000
 Login: admin@sistema.com
-Senha: admin123
+Senha: (defina no seu ambiente; sem senha padrão)
 ```
 
 ---
@@ -307,9 +310,9 @@ cat railway.json
 ```
 🔐 Super Admin:
    Email: admin@sistema.com
-   Senha: admin123
+   Senha: (defina no seu ambiente; sem senha padrão)
 
-⚠️ IMPORTANTE: Alterar senha após primeiro login!
+Use `python scripts/create_admin.py` para criar/atualizar o admin.
 ```
 
 ### Backups

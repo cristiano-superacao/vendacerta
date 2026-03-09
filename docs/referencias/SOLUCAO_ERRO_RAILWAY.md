@@ -1,5 +1,8 @@
 # ✅ SOLUÇÃO DO ERRO - ADICIONE SERVIÇO WEB
 
+> ⚠️ **LEGADO/HISTÓRICO**: este guia descreve um fluxo antigo.
+> Para o deploy atual, use `docs/DEPLOY_RAILWAY.md`.
+
 ## 🔴 PROBLEMA IDENTIFICADO:
 
 Você está fazendo deploy no serviço **Postgres** (que é só o banco de dados).  
@@ -75,7 +78,7 @@ Ainda no **serviço web**:
 3. Nos logs você verá:
    ```
    ✅ Tabelas do banco de dados criadas/verificadas!
-   ✅ Usuário admin criado: admin@suameta.com / admin123
+   ℹ️ Admin não é criado automaticamente (crie via `ADMIN_PASSWORD` + `scripts/create_admin.py`)
    ```
 
 ---
@@ -84,8 +87,8 @@ Ainda no **serviço web**:
 
 ```
 🌐 URL: [sua-url-do-passo-4]/login
-📧 Email: admin@suameta.com
-🔑 Senha: admin123
+📧 Email: (defina em `ADMIN_EMAIL`)
+🔑 Senha: (defina em `ADMIN_PASSWORD`)
 ```
 
 ---

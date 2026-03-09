@@ -11,12 +11,12 @@ Uso recomendado (puxa variáveis do Railway no seu terminal local):
 
 Opcional:
   BASE_URL=https://metacerta.up.railway.app railway run python scripts/smoke_test_railway.py
-  ADMIN_EMAIL=admin@sistema.com ADMIN_PASSWORD=admin123 railway run python scripts/smoke_test_railway.py
+    ADMIN_EMAIL=admin@sistema.com ADMIN_PASSWORD='<sua_senha>' railway run python scripts/smoke_test_railway.py
 
-Observação: este script NÃO faz login via formulário/CSRF. Ele valida apenas que:
-- o app está respondendo
-- o banco está acessível
-- o admin existe e está com flags corretas
+Observação:
+- Sem ADMIN_PASSWORD, o script valida apenas HTTP e tenta validar DB direto (conectando via env de DB).
+- Com ADMIN_PASSWORD, ele também faz login real (/login -> CSRF -> POST) e valida endpoints protegidos,
+    além de permitir fallback de diagnóstico via /status/*.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, text  # noqa: E402
 
 
 def _fail(msg: str) -> int:

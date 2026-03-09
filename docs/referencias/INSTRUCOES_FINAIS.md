@@ -54,7 +54,7 @@ O Railway fará o redeploy automaticamente (1-2 minutos).
 ## 🎉 Resultado Final:
 
 - ✅ Banco de dados com tabelas corretas
-- ✅ Super Admin criado (email: superadmin@suameta.com, senha: 18042016)
+- ✅ Super Admin criado (se aplicável; **sem senha padrão**)
 - ✅ Aplicação funcionando sem erros 500
 - ✅ Layout responsivo e profissional mantido
 

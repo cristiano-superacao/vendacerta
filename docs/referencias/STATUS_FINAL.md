@@ -1,5 +1,8 @@
 # ✅ SISTEMA CONFIGURADO - ÚLTIMAS ETAPAS
 
+> ⚠️ **LEGADO/HISTÓRICO**: este documento contém instruções antigas.
+> Para o passo a passo atual, use `docs/DEPLOY_RAILWAY.md` e `docs/GETTING_STARTED.md`.
+
 ## 🎉 Commit Enviado com Sucesso!
 
 Acabei de fazer push das correções para o GitHub.
@@ -77,11 +80,11 @@ Se quiser testar rapidamente:
 
 ## ✅ Depois da Migração:
 
-Acesse: **https://web-production-90dab.up.railway.app**
+Acesse a URL do seu deploy e faça o **primeiro acesso** criando/atualizando o admin de forma segura:
 
-**Credenciais:**
-- 👑 Super Admin: `superadmin@suameta.com` / `18042016`
-- 🔑 Admin: `admin@suameta.com` / `admin123`
+1. Defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` nas variáveis do serviço web
+2. Execute `python scripts/create_admin.py`
+3. Faça login com o e-mail configurado
 
 ---
 
@@ -103,10 +106,10 @@ Acesse: **https://web-production-90dab.up.railway.app**
 3. Execute script de migração
 4. Teste o login
 
-**SE QUISER TESTAR RÁPIDO (sem empresas/super admin):**
+**SE QUISER TESTAR RÁPIDO:**
 1. Adicione DATABASE_URL no Railway
 2. Aguarde redeploy
-3. Teste com: admin@suameta.com / admin123
+3. Valide o endpoint `/ping` e crie o admin via `ADMIN_PASSWORD` + `scripts/create_admin.py`
 
 ---
 

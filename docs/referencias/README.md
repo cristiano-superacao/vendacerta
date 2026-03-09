@@ -8,8 +8,8 @@ Esta pasta contém documentação técnica, histórico de desenvolvimento e refe
 
 | Documento | Descrição |
 |-----------|-----------|
-| [CREDENCIAIS.md](CREDENCIAIS.md) | Credenciais padrão do sistema |
-| [COMO_ACESSAR.md](COMO_ACESSAR.md) | Como acessar o sistema |
+| [CREDENCIAIS.md](CREDENCIAIS.md) | Primeiro acesso (criar admin) e notas de credenciais |
+| [COMO_ACESSAR.md](COMO_ACESSAR.md) | (Legado) Como acessar via Railway – use o guia de deploy atual |
 | [COMO_OBTER_DATABASE_URL.md](COMO_OBTER_DATABASE_URL.md) | Obter URL do banco Railway |
 | [COMO_VER_DATABASE_URL.md](COMO_VER_DATABASE_URL.md) | Visualizar configurações do banco |
 
@@ -52,7 +52,7 @@ Esta pasta contém documentação técnica, histórico de desenvolvimento e refe
 - Revise **Status Final** para validação
 
 ### Para Administradores
-- Leia [CREDENCIAIS.md](CREDENCIAIS.md) para acessos padrão
+- Leia [CREDENCIAIS.md](CREDENCIAIS.md) para primeiro acesso (criar admin)
 - Veja [SUPER_ADMIN_README.md](SUPER_ADMIN_README.md) para gestão
 - Consulte **Como Acessar** para configuração
 

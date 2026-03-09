@@ -1,5 +1,8 @@
 # 🚀 Deploy no Railway - Guia Completo Atualizado
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter exemplos antigos.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md`.
+
 ## ✅ Correções Implementadas
 
 ### 🔧 Problemas Corrigidos:
@@ -115,7 +118,7 @@ Healthcheck:
 ### 🔑 **Credenciais Padrão do Super Admin:**
 ```
 Email: admin@vendacerta.com
-Senha: admin123
+Senha: (defina no seu ambiente; sem senha padrão)
 ```
 
 **⚠️ ALTERE A SENHA IMEDIATAMENTE!**

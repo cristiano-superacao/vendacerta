@@ -34,7 +34,10 @@ SKIP_INIT=0
 1. **Deployments** → Aguarde ✅ Success (~2-3 min)
 2. **Settings** → **Generate Domain**
 3. Teste: `seu-app.up.railway.app/ping`
-4. Login: `admin@vendacerta.com` / `admin123`
+4. Primeiro acesso: crie o admin e faça login:
+	```bash
+	ADMIN_EMAIL=admin@sistema.com ADMIN_PASSWORD=SUA_SENHA_FORTE railway run python scripts/create_admin.py
+	```
 
 ---
 

@@ -1,4 +1,7 @@
-# 🚀 ACESSE SEU SISTEMA NO RAILWAY
+# 🚀 ACESSE SEU SISTEMA NO RAILWAY (LEGADO)
+
+> ⚠️ Este documento foi mantido apenas como **referência histórica** e pode conter nomes de projetos/URLs antigas.
+> Para o VendaCerta, use o guia atualizado: `docs/DEPLOY_RAILWAY.md`.
 
 ## ✅ Seu Projeto Já Foi Criado!
 
@@ -83,15 +86,9 @@ Você verá:
    - ⏳ Running...
    - ✅ Success
 
-3. Clique no deployment para ver os logs. Você verá:
-   ```
-   🔧 Inicializando banco de dados...
-   ✅ Tabelas criadas com sucesso!
-   👤 Criando usuário administrador padrão...
-   ✅ Usuário admin criado!
-   📧 Email: admin@suameta.com
-   🔑 Senha: admin123
-   ```
+3. Clique no deployment para ver os logs.
+
+> Por segurança, o sistema não deve imprimir senhas em logs.
 
 ---
 
@@ -101,8 +98,8 @@ Após o deploy completar:
 
 ```
 🌐 URL: [sua-url-gerada-no-passo-4]
-📧 Email: admin@suameta.com
-🔑 Senha: admin123
+📧 Email: definido por `ADMIN_EMAIL` (ex.: `admin@sistema.com`)
+🔑 Senha: definida por `ADMIN_PASSWORD` (sem senha padrão)
 ```
 
 ### Exemplo:
@@ -169,7 +166,7 @@ Após login, você poderá:
 4. Gere domínio público
 5. Aguarde deploy
 6. Acesse URL gerada
-7. Login: admin@suameta.com / admin123
+7. Crie o admin via `ADMIN_EMAIL`/`ADMIN_PASSWORD` + `python scripts/create_admin.py` e faça login
 
 **Tempo total: 3-4 minutos** ⏱️
 

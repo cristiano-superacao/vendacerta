@@ -1,5 +1,8 @@
 # 🎉 SISTEMA COMPLETO - RESUMO FINAL
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: contém instruções antigas.
+> Não use credenciais/senhas fixas; siga `docs/GETTING_STARTED.md` e `docs/DEPLOY_RAILWAY.md`.
+
 **Data:** 13 de dezembro de 2025  
 **Status:** ✅ **100% CONCLUÍDO E PRONTO PARA PRODUÇÃO**
 
@@ -13,7 +16,7 @@
 - ✅ Rota `/setup-inicial-sistema` corrigida (campo `ativa` → `ativo`)
 - ✅ Deploy feito no Railway
 - 🔗 **Acesse:** `https://suameta.up.railway.app/setup-inicial-sistema`
-- 👤 **Credenciais:** `superadmin@suameta.com` / `18042016`
+- 👤 **Credenciais:** `superadmin@suameta.com` / (senha definida no ambiente)
 
 ### 2. ✅ Corrigir os Problemas de Linting
 **Status:** CONCLUÍDO
@@ -126,7 +129,7 @@ templates/
 
 1. **Acesse:** `https://suameta.up.railway.app/setup-inicial-sistema`
 2. **Resultado:** Página de sucesso com credenciais
-3. **Login:** `superadmin@suameta.com` / `18042016`
+3. **Login:** `superadmin@suameta.com` / (senha definida no ambiente)
 
 ### Passo 2: Acessar o Sistema
 
@@ -139,8 +142,8 @@ templates/
 1. No menu lateral, clique em **"Supervisores"**
 2. Clique em **"Novo Supervisor"**
 3. Preencha: Nome, Email, Empresa
-4. Senha padrão será: `senha123`
-5. Oriente o supervisor a trocar a senha
+4. Senha temporária pode ser: `senha123`
+5. Oriente o supervisor a trocar a senha no primeiro acesso
 
 ### Passo 4: Explorar Todas as Funcionalidades
 

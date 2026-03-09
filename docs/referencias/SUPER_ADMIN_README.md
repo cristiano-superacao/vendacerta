@@ -158,19 +158,18 @@
   - 1 administrador
   - 1 supervisor
 
-## 🔐 Credenciais Padrão
+## 🔐 Credenciais (sem senha padrão)
 
-### Super Administrador
-```
-Email: superadmin@suameta.com
-Senha: super123
-```
+⚠️ Este documento é uma referência técnica e pode refletir exemplos de e-mails usados em ambientes antigos.
 
-### Administrador da Empresa Padrão
-```
-Email: admin@suameta.com
-Senha: admin123
-```
+- **Não existem credenciais/senhas padrão** no sistema.
+- A senha deve ser **definida na criação** do usuário.
+
+**Exemplos de e-mails** (podem variar por ambiente):
+- Super Admin: `superadmin@suameta.com`
+- Admin (empresa): `admin@suameta.com`
+
+Para primeiro acesso/criação de admin, siga o fluxo seguro em `docs/referencias/CREDENCIAIS.md` (via `ADMIN_EMAIL`/`ADMIN_PASSWORD` e `python scripts/create_admin.py`).
 
 ## 📁 Arquivos Criados/Modificados
 

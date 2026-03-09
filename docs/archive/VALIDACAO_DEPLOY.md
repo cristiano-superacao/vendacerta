@@ -1,5 +1,8 @@
 # ✅ Validação Completa - Deploy Railway
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter instruções antigas.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md` e `docs/GETTING_STARTED.md`.
+
 **Data**: Dezembro 12, 2025  
 **Status**: ✅ Sistema 100% Pronto para Deploy
 
@@ -29,8 +32,8 @@
 #### Inicialização ([app.py](app.py), [init_db.py](init_db.py))
 - ✅ **db.init_app(app)**: Linha 22 do app.py
 - ✅ **db.create_all()**: Nas linhas 785 e 809 do app.py
-- ✅ **Script init_db.py**: Cria tabelas e admin padrão
-- ✅ **Usuário Admin**: admin@suameta.com / admin123
+- ✅ **Script init_db.py**: Cria tabelas
+- ℹ️ **Admin sem senha padrão**: crie/atualize via `ADMIN_PASSWORD` + `python scripts/create_admin.py`
 
 #### Migração ([migrate.py](migrate.py))
 - ✅ **Script Consolidado**: Detecta ambiente automaticamente
@@ -220,17 +223,10 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
    # Cole DATABASE_URL do Railway quando solicitado
    ```
 
-### Credenciais Padrão
+### Primeiro acesso (sem senha padrão)
 
-**Super Admin** (criado pelo migrate.py):
-- Email: `superadmin@suameta.com`
-- Senha: `18042016`
-
-**Admin** (criado automaticamente):
-- Email: `admin@suameta.com`
-- Senha: `admin123`
-
-⚠️ **IMPORTANTE**: Altere as senhas após o primeiro login!
+- Defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` no ambiente
+- Execute `python scripts/create_admin.py`
 
 ---
 

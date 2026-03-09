@@ -13,6 +13,7 @@
         <span>Empresas</span>
     </a>
     {% endif %}
+    {% if current_user.is_authenticated and not (current_user.cargo == 'vendedor' or current_user.vendedor_id) %}
     <a href="{{ url_for('lista_metas') }}" class="btn-primary-clean">
         <i class="bi bi-plus-lg"></i>
         <span>Nova Meta</span>
@@ -21,6 +22,7 @@
         <i class="bi bi-file-earmark-pdf"></i>
         <span>Exportar PDF</span>
     </a>
+    {% endif %}
 {% endcall %}
 
 <!-- Cards de Estatísticas - Padrão Prescrimed -->

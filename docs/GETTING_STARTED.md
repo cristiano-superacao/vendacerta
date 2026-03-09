@@ -27,14 +27,27 @@
 
 ### 2. Credenciais Padrão
 
-| Perfil | E-mail | Senha |
-|--------|--------|-------|
-| **Super Admin** | admin@sistema.com | admin123 |
-| **Gerente** | gerente@empresa.com | gerente123 |
-| **Supervisor** | supervisor@empresa.com | super123 |
-| **Vendedor** | vendedor@empresa.com | vend123 |
+Por segurança, o sistema **não possui senha padrão** para o usuário administrador.
 
-> ⚠️ **IMPORTANTE**: Altere sua senha imediatamente após o primeiro login em **Meu Perfil** → **Alterar Senha**
+#### ✅ Como criar o primeiro Admin
+
+Local (Windows/PowerShell):
+```powershell
+$env:ADMIN_EMAIL="admin@sistema.com"
+$env:ADMIN_PASSWORD="SUA_SENHA_FORTE"
+python scripts/create_admin.py
+```
+
+Produção (Railway):
+```powershell
+$env:ADMIN_EMAIL="admin@sistema.com"
+$env:ADMIN_PASSWORD="SUA_SENHA_FORTE"
+railway run python scripts/create_admin.py
+```
+
+Depois, faça login com `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+
+> ⚠️ Para usuários não-admin criados/importados pelo sistema, pode existir senha temporária (`senha123`). Oriente a troca no primeiro acesso.
 
 ### 3. Criar Nova Conta
 

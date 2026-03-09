@@ -1,5 +1,8 @@
 # ✅ RESUMO: Migração para vendacerta.up.railway.app
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter exemplos antigos.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md`.
+
 ## 🎯 Status: CONCLUÍDO
 
 **Data:** 17 de dezembro de 2025  
@@ -138,10 +141,10 @@ https://vendacerta.up.railway.app
 #### 9. Primeiro Login
 ```
 Email: admin@sistema.com
-Senha: admin123
+Senha: (defina em `ADMIN_PASSWORD`; sem senha padrão)
 ```
 
-⚠️ **TROCAR SENHA IMEDIATAMENTE!**
+Crie/atualize o admin via `python scripts/create_admin.py`.
 
 #### 10. Configurar Sistema
 - Criar empresa

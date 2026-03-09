@@ -331,8 +331,8 @@ curl https://SEU-DOMINIO.up.railway.app/health
 1. **Abra:** `https://SEU-DOMINIO.up.railway.app`
 2. **Deve carregar:** Página de login
 3. **Login:**
-   - Email: `admin@vendacerta.com`
-   - Senha: `admin123`
+   - Email: `admin@sistema.com` (ou o valor de `ADMIN_EMAIL`)
+   - Senha: definida via `ADMIN_PASSWORD` (sem senha padrão)
 4. **Deve redirecionar:** Dashboard
 
 ### 8.3 Testar Funcionalidades
@@ -363,7 +363,7 @@ curl https://SEU-DOMINIO.up.railway.app/health
 
 1. **Faça login** como admin
 2. **Vá em:** Configurações ou Perfil
-3. **Altere senha** para algo forte:
+3. **Defina uma senha forte** (se ainda estiver usando senha temporária):
    - Mínimo 12 caracteres
    - Letras maiúsculas e minúsculas
    - Números

@@ -339,8 +339,9 @@ python app.py
 ```
 
 **Credenciais Padrão**:
-- 👑 Super Admin: `superadmin@suameta.com` / `18042016`
-- 🔑 Admin: `admin@suameta.com` / `admin123`
+**Primeiro acesso (sem senha padrão)**:
+- 👑 Super Admin: `superadmin@suameta.com` (senha definida no seu ambiente)
+- 🔑 Admin: defina `ADMIN_EMAIL`/`ADMIN_PASSWORD` e execute `python scripts/create_admin.py`
 
 ### 2️⃣ Deploy em Produção
 

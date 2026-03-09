@@ -7,13 +7,13 @@ Objetivo: validar rapidamente banco/tabelas, seed do admin, rotas públicas e AP
 Uso (local/SQLite):
   $env:ALLOW_SQLITE_DEV='1'
   $env:ADMIN_EMAIL='admin@sistema.com'
-  $env:ADMIN_PASSWORD='admin123'
+    $env:ADMIN_PASSWORD='<sua_senha>'
   python scripts/smoke_test_app.py
 
 Uso (Railway/Postgres):
   $env:DATABASE_URL='...'
   $env:ADMIN_EMAIL='admin@sistema.com'
-  $env:ADMIN_PASSWORD='admin123'
+    $env:ADMIN_PASSWORD='<sua_senha>'
   python scripts/smoke_test_app.py
 """
 
@@ -30,7 +30,12 @@ def main() -> int:
     os.environ.setdefault("SKIP_DB_INIT_ON_START", "1")
 
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@sistema.com").strip().lower()
-    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    admin_password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+
+    if not admin_password:
+        return _fail(
+            "ADMIN_PASSWORD não definido. Defina ADMIN_PASSWORD para validar login/senha do admin no smoke test."
+        )
 
     try:
         from app import app, db
@@ -135,3 +140,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -1,3 +1,7 @@
+# ✅ VALIDAÇÃO FINAL - ROTAS
+
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter instruções antigas.
+> Não use credenciais/senhas fixas; siga `docs/DEPLOY_RAILWAY.md`.
 # ✅ VALIDAÇÃO FINAL - SISTEMA COMPLETO
 
 **Data:** 13 de dezembro de 2025  
@@ -349,7 +353,7 @@ GET       /manual                     ✅ File Download
 1. **Acessar Railway:**
    - URL: `https://suameta.up.railway.app/setup-inicial-sistema`
    - Criar super admin no banco de produção
-   - Fazer login: `superadmin@suameta.com` / `18042016`
+   - Fazer login: `superadmin@suameta.com` / (senha definida no ambiente)
 
 2. **Validar Sistema:**
    - Criar primeira empresa

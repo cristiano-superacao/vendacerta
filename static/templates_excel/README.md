@@ -68,9 +68,11 @@ Template para importar supervisores em massa.
 
 ### Supervisores:
 - Email deve ser único
-- Senha padrão será: senha123
+- Senha temporária será: `senha123`
 - Cargo padrão: supervisor
 - Empresa será a do usuário logado
+
+> ⚠️ Recomenda-se orientar a troca da senha no primeiro acesso.
 
 ## 🎯 Exemplo de Dados:
 

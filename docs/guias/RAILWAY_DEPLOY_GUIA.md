@@ -161,9 +161,10 @@ curl https://seu-app.up.railway.app/ping
 https://seu-app.up.railway.app/login
 # Deve carregar o formulário com Bootstrap
 
-# 3. Fazer login com credenciais padrão
-Email: admin@vendacerta.com
-Senha: admin123
+# 3. Criar o Admin (seed) e fazer login
+# Por segurança, não existe "senha padrão" para Admin.
+# Rode uma vez:
+ADMIN_EMAIL=admin@sistema.com ADMIN_PASSWORD=SUA_SENHA_FORTE railway run python scripts/create_admin.py
 
 # 4. Verificar o dashboard
 https://seu-app.up.railway.app/dashboard
@@ -345,7 +346,7 @@ FLASK_SECRET_KEY=${{ secret() }}
 
 ### Antes do Deploy:
 - [x] Código testado localmente
-- [x] Login funcionando (admin@vendacerta.com / admin123)
+- [x] Admin criado via `scripts/create_admin.py` (sem senha padrão)
 - [x] Bootstrap 5.3.3 responsivo ativo
 - [x] Commits enviados para GitHub
 - [x] railway.json configurado
@@ -362,7 +363,7 @@ FLASK_SECRET_KEY=${{ secret() }}
 ### Pós-Deploy:
 - [ ] Testar `/ping` → `{"status": "ok"}`
 - [ ] Acessar `/login` → Formulário Bootstrap
-- [ ] Fazer login com credenciais padrão
+- [ ] Fazer login com o admin criado via `ADMIN_EMAIL` / `ADMIN_PASSWORD`
 - [ ] Verificar dashboard funcionando
 - [ ] Confirmar layout responsivo
 

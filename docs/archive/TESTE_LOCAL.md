@@ -1,5 +1,8 @@
 # 🧪 Guia de Testes Locais - Sistema VendaCerta
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter exemplos antigos.
+> Não use credenciais/senhas fixas; siga `docs/GETTING_STARTED.md`.
+
 ## 🚀 Status do Servidor
 
 ✅ **Servidor Flask rodando em:**
@@ -15,13 +18,13 @@
 ### Super Admin (Acesso Total)
 ```
 Email: admin@sistema.com
-Senha: admin123
+Senha: (defina no seu ambiente; sem senha padrão)
 ```
 
 ### Usuário de Teste (se criado)
 ```
 Email: teste@vendacerta.com
-Senha: teste123
+Senha: (defina no seu ambiente)
 ```
 
 ---

@@ -52,11 +52,15 @@ Este manual foi criado para ajudá-lo a usar todas as funcionalidades do sistema
 
 ### Credenciais Padrão do Administrador
 
-Se você é o primeiro usuário do sistema, use:
-- **Email:** `admin@suameta.com`
-- **Senha:** `admin123`
+Se você é o primeiro usuário do sistema, crie o Admin definindo `ADMIN_PASSWORD` e executando:
 
-⚠️ **IMPORTANTE:** Altere esta senha após o primeiro acesso!
+```powershell
+$env:ADMIN_EMAIL="admin@sistema.com"
+$env:ADMIN_PASSWORD="SUA_SENHA_FORTE"
+python scripts/create_admin.py
+```
+
+Depois faça login com `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 ---
 

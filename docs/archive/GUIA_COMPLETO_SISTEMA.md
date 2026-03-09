@@ -1,5 +1,8 @@
 # 📚 Guia Completo do Sistema SuaMeta v2.9.1
 
+> ⚠️ **ARQUIVO LEGADO/ARQUIVADO**: pode conter exemplos antigos.
+> Não use credenciais/senhas fixas; siga `docs/GETTING_STARTED.md` e `docs/DEPLOY_RAILWAY.md`.
+
 > **Sistema Profissional de Gestão de Metas e Comissões**  
 > Layout 100% Responsivo | Multi-Tenant | Cloud-Native | PWA
 
@@ -64,12 +67,12 @@ Sistema completo para gerenciar metas de vendas, calcular comissões automaticam
 
 **Super Administrador:**
 - Email: `superadmin@suameta.com`
-- Senha: `super123`
+- Senha: (defina no seu ambiente; sem senha padrão)
 - Acesso: Total (todas as empresas)
 
 **Administrador Empresa 1:**
 - Email: `admin@empresa.com`
-- Senha: `admin123`
+- Senha: (defina no seu ambiente; sem senha padrão)
 - Acesso: Gestão completa da empresa
 
 **Vendedor:**

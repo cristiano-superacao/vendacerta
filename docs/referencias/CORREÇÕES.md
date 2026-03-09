@@ -201,9 +201,9 @@ http://127.0.0.1:5001/login
 ```
 
 ### 4. Credenciais de Teste
-- **Admin**: admin@metas.com / admin123
-- **Supervisor 1**: joao.silva@metas.com / supervisor123
-- **Supervisor 2**: maria.santos@metas.com / supervisor123
+- **Admin**: admin@metas.com (senha definida no seu ambiente)
+- **Supervisor 1**: joao.silva@metas.com (senha definida no seu ambiente)
+- **Supervisor 2**: maria.santos@metas.com (senha definida no seu ambiente)
 
 ## ✨ Melhorias Implementadas
 
