@@ -930,7 +930,16 @@ class Cliente(db.Model):
 
     def get_ultima_compra(self):
         """Retorna a última compra do cliente"""
-        return self.compras.first()
+        return (
+            self.compras.filter(
+                db.or_(
+                    CompraCliente.status_compra.is_(None),
+                    CompraCliente.status_compra != "CANCELADA",
+                )
+            )
+            .order_by(CompraCliente.data_compra.desc())
+            .first()
+        )
 
     def get_status_cor(self):
         """
@@ -1083,10 +1092,16 @@ class Cliente(db.Model):
             ano = datetime.utcnow().year
 
         from sqlalchemy import extract
-        return self.compras.filter(
-            extract('month', CompraCliente.data_compra) == mes,
-            extract('year', CompraCliente.data_compra) == ano
-        ).count()
+        return (
+            self.compras.filter(
+                extract('month', CompraCliente.data_compra) == mes,
+                extract('year', CompraCliente.data_compra) == ano,
+                db.or_(
+                    CompraCliente.status_compra.is_(None),
+                    CompraCliente.status_compra != "CANCELADA",
+                ),
+            ).count()
+        )
 
     def pode_comprar_no_mes(self, mes=None, ano=None):
         """
@@ -1186,6 +1201,12 @@ class CompraCliente(db.Model):
     # Observações
     observacoes = db.Column(db.Text)
 
+    # Status da compra (para cancelamento sem apagar histórico)
+    status_compra = db.Column(db.String(20), nullable=False, default='ATIVA', index=True)
+    cancelado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
+    data_cancelamento = db.Column(db.DateTime, nullable=True, index=True)
+    motivo_cancelamento = db.Column(db.Text)
+
     # Auditoria
     data_registro = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -1242,6 +1263,13 @@ class Pedido(db.Model):
     valor_total = db.Column(db.Float, nullable=False, default=0.0)
 
     status = db.Column(db.String(20), nullable=False, default='Pendente', index=True)
+
+    # Status do pedido (nível pedido/numero_pedido)
+    # ABERTO | FATURADO | CANCELADO
+    status_pedido = db.Column(db.String(20), nullable=False, default='ABERTO', index=True)
+    cancelado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
+    data_cancelamento = db.Column(db.DateTime, nullable=True, index=True)
+    motivo_cancelamento = db.Column(db.Text)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True, index=True)
@@ -1249,6 +1277,28 @@ class Pedido(db.Model):
 
     def __repr__(self):
         return f'<Pedido {self.numero_pedido} {self.status}>'
+
+
+class PedidoLog(db.Model):
+    """Auditoria de ações realizadas em pedidos (ex.: cancelamento)."""
+
+    __tablename__ = 'pedidos_log'
+
+    __table_args__ = (
+        db.Index('idx_pedidos_log_numero', 'numero_pedido'),
+        db.Index('idx_pedidos_log_data', 'data_acao'),
+        db.Index('idx_pedidos_log_empresa', 'empresa_id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    numero_pedido = db.Column(db.String(50), nullable=False, index=True)
+    acao = db.Column(db.String(50), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
+    data_acao = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    motivo = db.Column(db.Text)
+
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True, index=True)
+    empresa = db.relationship('Empresa', backref='pedidos_logs')
 
 # ============================================================================
 # MÓDULO DE ESTOQUE E MANUTENÇÃO

@@ -265,12 +265,21 @@ def atualizar_banco_railway():
             """
 
             criar_tabela_se_nao_existe(conn, 'pedidos', ddl_pedidos)
+
+            # Novos campos de status/auditoria para cancelamento (sem apagar histórico)
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'status_pedido', 'VARCHAR(20)', "'ABERTO'")
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'cancelado_por', 'INTEGER')
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'data_cancelamento', 'TIMESTAMP')
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'motivo_cancelamento', 'TEXT')
+
             criar_indice_se_nao_existe(conn, 'index_pedidos_cliente', 'pedidos', 'codigo_cliente')
             criar_indice_se_nao_existe(conn, 'index_pedidos_vendedor', 'pedidos', 'codigo_vendedor')
             criar_indice_se_nao_existe(conn, 'index_pedidos_data', 'pedidos', 'data_pedido')
             criar_indice_se_nao_existe(conn, 'idx_pedidos_numero', 'pedidos', 'numero_pedido')
             criar_indice_se_nao_existe(conn, 'idx_pedidos_status', 'pedidos', 'status')
             criar_indice_se_nao_existe(conn, 'idx_pedidos_empresa', 'pedidos', 'empresa_id')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_status_pedido', 'pedidos', 'status_pedido')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_data_cancelamento', 'pedidos', 'data_cancelamento')
 
             if 'empresas' in tabelas:
                 criar_fk_se_nao_existe(
@@ -282,6 +291,102 @@ def atualizar_banco_railway():
                     coluna_ref='id',
                     on_delete='SET NULL',
                 )
+
+            if 'usuarios' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='pedidos',
+                    nome_fk='fk_pedidos_cancelado_por',
+                    coluna='cancelado_por',
+                    tabela_ref='usuarios',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
+
+            # Backfill: garantir status_pedido preenchido para registros antigos
+            try:
+                conn.execute(
+                    text(
+                        """
+                        UPDATE pedidos
+                        SET status_pedido = CASE
+                            WHEN status = 'Pendente' THEN 'ABERTO'
+                            ELSE 'FATURADO'
+                        END
+                        WHERE status_pedido IS NULL OR status_pedido = ''
+                        """
+                    )
+                )
+            except Exception as e:
+                print(f"[AVISO] Falha ao backfill status_pedido em pedidos: {e}")
+
+            # Auditoria de pedidos
+            print("\n" + "-"*80)
+            print("CRIANDO/ATUALIZANDO TABELA: pedidos_log")
+            print("-"*80)
+
+            ddl_pedidos_log = """
+            CREATE TABLE pedidos_log (
+                id SERIAL PRIMARY KEY,
+                numero_pedido VARCHAR(50) NOT NULL,
+                acao VARCHAR(50) NOT NULL,
+                usuario_id INTEGER NULL,
+                data_acao TIMESTAMP NOT NULL DEFAULT NOW(),
+                motivo TEXT NULL,
+                empresa_id INTEGER NULL
+            )
+            """
+
+            criar_tabela_se_nao_existe(conn, 'pedidos_log', ddl_pedidos_log)
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_log_numero', 'pedidos_log', 'numero_pedido')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_log_data', 'pedidos_log', 'data_acao')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_log_empresa', 'pedidos_log', 'empresa_id')
+
+            if 'usuarios' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='pedidos_log',
+                    nome_fk='fk_pedidos_log_usuario_id',
+                    coluna='usuario_id',
+                    tabela_ref='usuarios',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
+            if 'empresas' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='pedidos_log',
+                    nome_fk='fk_pedidos_log_empresa_id',
+                    coluna='empresa_id',
+                    tabela_ref='empresas',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
+
+            # Atualizar tabela compras_clientes para suportar cancelamento (sem apagar histórico)
+            if 'compras_clientes' in tabelas:
+                print("\n" + "-"*80)
+                print("ATUALIZANDO TABELA: compras_clientes (cancelamento)")
+                print("-"*80)
+
+                adicionar_coluna_se_nao_existe(conn, 'compras_clientes', 'status_compra', 'VARCHAR(20)', "'ATIVA'")
+                adicionar_coluna_se_nao_existe(conn, 'compras_clientes', 'cancelado_por', 'INTEGER')
+                adicionar_coluna_se_nao_existe(conn, 'compras_clientes', 'data_cancelamento', 'TIMESTAMP')
+                adicionar_coluna_se_nao_existe(conn, 'compras_clientes', 'motivo_cancelamento', 'TEXT')
+
+                criar_indice_se_nao_existe(conn, 'idx_compras_status_compra', 'compras_clientes', 'status_compra')
+                criar_indice_se_nao_existe(conn, 'idx_compras_data_cancelamento', 'compras_clientes', 'data_cancelamento')
+
+                if 'usuarios' in tabelas:
+                    criar_fk_se_nao_existe(
+                        conn,
+                        tabela='compras_clientes',
+                        nome_fk='fk_compras_cancelado_por',
+                        coluna='cancelado_por',
+                        tabela_ref='usuarios',
+                        coluna_ref='id',
+                        on_delete='SET NULL',
+                    )
 
             # Criar tabela de dias extras liberados por vendedor
             print("\n" + "-"*80)

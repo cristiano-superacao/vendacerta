@@ -46,6 +46,7 @@ from models import (
     Vendedor,
     VendedorDiaLiberado,
     Pedido,
+    PedidoLog,
     Meta,
     Equipe,
     Empresa,
@@ -82,6 +83,7 @@ from forms import (
     UsuarioForm,
     AdminVendedoresDiasLiberadosForm,
     PedidosExportForm,
+    CancelarPedidoForm,
 )
 from calculo_projecao import calcular_projecao_mes, formatar_moeda
 
@@ -5884,13 +5886,22 @@ def ver_cliente(id):
 
     # Buscar histórico de compras
     compras = (
-        cliente.compras.order_by(CompraCliente.data_compra.desc())
+        CompraCliente.query.filter(
+            CompraCliente.cliente_id == cliente.id,
+            db.or_(CompraCliente.status_compra.is_(None), CompraCliente.status_compra != "CANCELADA"),
+        )
+        .order_by(CompraCliente.data_compra.desc())
         .limit(20)
         .all()
     )
 
     # Estatísticas do cliente
-    total_compras = cliente.compras.count()
+    total_compras = (
+        CompraCliente.query.filter(
+            CompraCliente.cliente_id == cliente.id,
+            db.or_(CompraCliente.status_compra.is_(None), CompraCliente.status_compra != "CANCELADA"),
+        ).count()
+    )
     total_compras_mes = cliente.get_total_compras_mes()
     agora = datetime.utcnow()
 
@@ -6345,6 +6356,7 @@ def registrar_compra(id):
                         preco_unitario=float(preco_unitario or 0),
                         valor_total=float(subtotal or 0),
                         status="Pendente",
+                        status_pedido="ABERTO",
                         empresa_id=cliente.empresa_id,
                     )
                 )
@@ -6553,6 +6565,7 @@ def relatorio_vendas():
         compras_ano_todos = CompraCliente.query.filter(
             CompraCliente.cliente_id.in_(cliente_ids),
             extract("year", CompraCliente.data_compra) == ano,
+            db.or_(CompraCliente.status_compra.is_(None), CompraCliente.status_compra != "CANCELADA"),
         ).all()
 
         from collections import defaultdict
@@ -6567,7 +6580,10 @@ def relatorio_vendas():
                 CompraCliente.cliente_id,
                 db.func.max(CompraCliente.data_compra).label("ultima_data"),
             )
-            .filter(CompraCliente.cliente_id.in_(cliente_ids))
+            .filter(
+                CompraCliente.cliente_id.in_(cliente_ids),
+                db.or_(CompraCliente.status_compra.is_(None), CompraCliente.status_compra != "CANCELADA"),
+            )
             .group_by(CompraCliente.cliente_id)
             .all()
         )
@@ -6729,9 +6745,29 @@ def _pedidos_base_query():
     return query
 
 
+def _can_cancelar_pedidos() -> bool:
+    """Permissão para cancelar pedidos (sem apagar histórico)."""
+    if getattr(current_user, "is_super_admin", False):
+        return True
+
+    cargo = (getattr(current_user, "cargo", "") or "").lower()
+    departamento = (getattr(current_user, "departamento", "") or "").lower()
+
+    # Mantém compatibilidade com diferentes nomenclaturas de perfil
+    if cargo in ["admin", "super_admin", "analista", "financeiro"]:
+        return True
+    if departamento in ["financeiro", "administrativo"]:
+        return True
+    return False
+
+
 def _require_admin_for_pedidos():
-    if current_user.cargo not in ["admin", "super_admin", "gerente"] and not current_user.is_super_admin:
-        flash("Acesso negado! Apenas Admin pode acessar.", "danger")
+    if (
+        current_user.cargo not in ["admin", "super_admin", "gerente", "analista", "financeiro"]
+        and (getattr(current_user, "departamento", None) not in ["financeiro", "administrativo"])
+        and not current_user.is_super_admin
+    ):
+        flash("Acesso negado! Perfil sem permissão para acessar Pedidos.", "danger")
         return False
     return True
 
@@ -6753,6 +6789,7 @@ def lista_pedidos():
     numero_pedido = (request.args.get("numero_pedido") or "").strip()
 
     export_form = PedidosExportForm()
+    cancelar_form = CancelarPedidoForm()
 
     query = _pedidos_base_query()
 
@@ -6773,9 +6810,6 @@ def lista_pedidos():
                 Pedido.nome_cliente.ilike(f"%{cliente}%"),
             )
         )
-
-    if status and status != "Todos":
-        query = query.filter(Pedido.status == status)
 
     if canal:
         query = query.filter(Pedido.canal.ilike(f"%{canal}%"))
@@ -6802,10 +6836,14 @@ def lista_pedidos():
     # Listagem por PEDIDO (1 linha por numero_pedido)
     from sqlalchemy import case
 
-    has_pendente = db.func.bool_or(Pedido.status == "Pendente")
-    status_calc = case(
-        (has_pendente.is_(True), "Pendente"),
-        else_="Exportado",
+    has_cancelado = db.func.bool_or(Pedido.status_pedido == "CANCELADO")
+    has_pendente_item = db.func.bool_or(Pedido.status == "Pendente")
+    has_exportado_item = db.func.bool_or(Pedido.status == "Exportado")
+
+    status_pedido_calc = case(
+        (has_cancelado.is_(True), "CANCELADO"),
+        (has_pendente_item.is_(True), "ABERTO"),
+        else_="FATURADO",
     )
 
     grouped_q = _pedidos_base_query()
@@ -6846,18 +6884,24 @@ def lista_pedidos():
             db.func.max(Pedido.canal).label("canal"),
             db.func.count(Pedido.id).label("itens"),
             db.func.coalesce(db.func.sum(Pedido.valor_total), 0).label("valor_total"),
-            status_calc.label("status"),
+            status_pedido_calc.label("status_pedido"),
+            has_exportado_item.label("has_exportado"),
+            db.func.max(Pedido.cancelado_por).label("cancelado_por"),
+            db.func.max(Pedido.data_cancelamento).label("data_cancelamento"),
+            db.func.max(Pedido.motivo_cancelamento).label("motivo_cancelamento"),
         )
         .group_by(Pedido.numero_pedido)
     )
 
-    if status and status != "Todos":
-        if status == "Pendente":
-            grouped_q = grouped_q.having(has_pendente.is_(True))
-        elif status == "Exportado":
-            grouped_q = grouped_q.having(has_pendente.is_(False))
-        else:
-            grouped_q = grouped_q.having(status_calc == status)
+    # Compatibilidade: aceitar filtros antigos (Pendente/Exportado)
+    status_norm = (status or "").strip()
+    if status_norm == "Pendente":
+        status_norm = "ABERTO"
+    elif status_norm == "Exportado":
+        status_norm = "FATURADO"
+
+    if status_norm and status_norm != "Todos":
+        grouped_q = grouped_q.having(status_pedido_calc == status_norm)
 
     grouped_q = grouped_q.order_by(db.func.max(Pedido.data_pedido).desc(), db.func.min(Pedido.id).desc())
 
@@ -6875,7 +6919,10 @@ def lista_pedidos():
     hoje = datetime.utcnow().date()
     inicio_hoje = datetime.combine(hoje, datetime.min.time())
     fim_hoje = datetime.combine(hoje, datetime.max.time())
-    base_stats_q = _pedidos_base_query().filter(Pedido.data_pedido.between(inicio_hoje, fim_hoje))
+    base_stats_q = _pedidos_base_query().filter(
+        Pedido.data_pedido.between(inicio_hoje, fim_hoje),
+        db.or_(Pedido.status_pedido.is_(None), Pedido.status_pedido != "CANCELADO"),
+    )
     pedidos_hoje = base_stats_q.with_entities(db.func.count(db.func.distinct(Pedido.numero_pedido))).scalar() or 0
     valor_total_hoje = base_stats_q.with_entities(db.func.coalesce(db.func.sum(Pedido.valor_total), 0)).scalar() or 0
     clientes_hoje = base_stats_q.with_entities(db.func.count(db.func.distinct(Pedido.codigo_cliente))).scalar() or 0
@@ -6885,6 +6932,8 @@ def lista_pedidos():
         pedidos=pedidos,
         pagination=pagination,
         export_form=export_form,
+        cancelar_form=cancelar_form,
+        can_cancelar_pedidos=_can_cancelar_pedidos(),
         vendedores=vendedores,
         # filtros
         data_inicio=data_inicio,
@@ -6922,7 +6971,10 @@ def exportar_pedidos_excel():
     produto = (request.form.get("produto") or "").strip()
     numero_pedido = (request.form.get("numero_pedido") or "").strip()
 
-    query = _pedidos_base_query().filter(Pedido.status == "Pendente")
+    query = _pedidos_base_query().filter(
+        Pedido.status == "Pendente",
+        db.or_(Pedido.status_pedido.is_(None), Pedido.status_pedido != "CANCELADO"),
+    )
 
     di = _parse_date_yyyy_mm_dd(data_inicio)
     df = _parse_date_yyyy_mm_dd(data_fim)
@@ -7010,9 +7062,19 @@ def exportar_pedidos_excel():
         if not ok or not buffer:
             raise RuntimeError(err or "Falha ao gerar planilha")
 
-        # Marcar exportados para evitar duplicidade
+        # Marcar exportados para evitar duplicidade e refletir faturamento
+        numeros_atualizados = set()
         for p in rows:
             p.status = "Exportado"
+            p.status_pedido = "FATURADO"
+            if p.numero_pedido:
+                numeros_atualizados.add(p.numero_pedido)
+
+        if numeros_atualizados:
+            _pedidos_base_query().filter(Pedido.numero_pedido.in_(list(numeros_atualizados))).update(
+                {Pedido.status_pedido: "FATURADO"},
+                synchronize_session=False,
+            )
         db.session.commit()
 
         return send_file(
@@ -7045,12 +7107,174 @@ def visualizar_pedido(id):
     )
     total = sum(float(i.valor_total or 0) for i in itens)
 
+    status_pedido = "FATURADO"
+    if any((i.status_pedido or "").upper() == "CANCELADO" for i in itens):
+        status_pedido = "CANCELADO"
+    elif any((i.status or "") == "Pendente" for i in itens):
+        status_pedido = "ABERTO"
+
+    cancelamento = None
+    if status_pedido == "CANCELADO":
+        item_cancelado = next(
+            (
+                i
+                for i in itens
+                if (i.status_pedido or "").upper() == "CANCELADO"
+            ),
+            None,
+        )
+        if item_cancelado:
+            usuario = None
+            try:
+                if item_cancelado.cancelado_por:
+                    usuario = Usuario.query.get(int(item_cancelado.cancelado_por))
+            except Exception:
+                usuario = None
+
+            cancelamento = {
+                "usuario": (getattr(usuario, "nome", None) or getattr(usuario, "username", None) or str(item_cancelado.cancelado_por or "")),
+                "data": item_cancelado.data_cancelamento,
+                "motivo": item_cancelado.motivo_cancelamento,
+            }
+
     return render_template(
         "pedidos/visualizar.html",
         pedido=pedido,
         itens=itens,
         total=total,
+        status_pedido=status_pedido,
+        cancelamento=cancelamento,
+        cancelar_form=CancelarPedidoForm(),
+        can_cancelar_pedidos=_can_cancelar_pedidos(),
     )
+
+
+@app.route("/pedidos/cancelar", methods=["POST"])
+@login_required
+def cancelar_pedido():
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+    if not _can_cancelar_pedidos():
+        flash("Acesso negado! Você não pode cancelar pedidos.", "danger")
+        return redirect(url_for("lista_pedidos"))
+
+    form = CancelarPedidoForm()
+    if not form.validate_on_submit():
+        flash("Falha de validação do cancelamento.", "danger")
+        return redirect(request.referrer or url_for("lista_pedidos"))
+
+    numero_pedido = (form.numero_pedido.data or "").strip()
+    motivo = (form.motivo_cancelamento.data or "").strip()
+    if not numero_pedido:
+        flash("Pedido inválido.", "danger")
+        return redirect(request.referrer or url_for("lista_pedidos"))
+
+    try:
+        itens = (
+            _pedidos_base_query()
+            .filter(Pedido.numero_pedido == numero_pedido)
+            .order_by(Pedido.id.asc())
+            .all()
+        )
+
+        if not itens:
+            flash("Pedido não encontrado.", "warning")
+            return redirect(request.referrer or url_for("lista_pedidos"))
+
+        # Regras de segurança
+        if any((i.status_pedido or "").upper() == "CANCELADO" for i in itens):
+            flash("Este pedido já está cancelado.", "info")
+            return redirect(request.referrer or url_for("lista_pedidos"))
+
+        if any((i.status or "") == "Exportado" for i in itens) or any((i.status_pedido or "").upper() == "FATURADO" for i in itens):
+            flash("Cancelamento bloqueado: pedido já foi exportado/faturado.", "danger")
+            return redirect(request.referrer or url_for("lista_pedidos"))
+
+        agora = datetime.utcnow()
+        empresa_id = itens[0].empresa_id
+
+        # Atualizar compra (venda) relacionada, quando aplicável
+        compra = None
+        compra_id = None
+        if numero_pedido.isdigit():
+            try:
+                compra_id = int(numero_pedido)
+            except Exception:
+                compra_id = None
+
+        if compra_id:
+            compra_q = CompraCliente.query
+            if not current_user.is_super_admin:
+                compra_q = compra_q.filter(CompraCliente.empresa_id == current_user.empresa_id)
+            compra = compra_q.filter(CompraCliente.id == compra_id).first()
+            if compra and (getattr(compra, "status_compra", "ATIVA") != "CANCELADA"):
+                compra.status_compra = "CANCELADA"
+                compra.cancelado_por = current_user.id
+                compra.data_cancelamento = agora
+                compra.motivo_cancelamento = motivo
+
+        # Atualizar itens do pedido
+        for i in itens:
+            i.status_pedido = "CANCELADO"
+            i.cancelado_por = current_user.id
+            i.data_cancelamento = agora
+            i.motivo_cancelamento = motivo
+
+        # Estorno de estoque (se existir produto correspondente)
+        for i in itens:
+            codigo = (i.codigo_produto or "").strip()
+            if not codigo:
+                continue
+
+            produto_q = Produto.query.filter_by(codigo=codigo)
+            if empresa_id is not None:
+                produto_q = produto_q.filter(Produto.empresa_id == empresa_id)
+
+            produto = produto_q.with_for_update().first()
+            if not produto:
+                continue
+
+            qtd = float(i.quantidade or 0)
+            if qtd <= 0:
+                continue
+
+            produto.estoque_atual = float(produto.estoque_atual or 0) + qtd
+
+            db.session.add(
+                EstoqueMovimento(
+                    produto_id=produto.id,
+                    tipo="entrada",
+                    motivo="cancelamento_venda",
+                    quantidade=qtd,
+                    valor_unitario=float(i.preco_unitario or 0),
+                    valor_total=float(i.valor_total or 0),
+                    documento=f"Cancelamento Pedido #{numero_pedido}",
+                    observacoes=motivo,
+                    cliente_id=(compra.cliente_id if compra else None),
+                    usuario_id=current_user.id,
+                    empresa_id=empresa_id,
+                )
+            )
+
+        # Auditoria
+        db.session.add(
+            PedidoLog(
+                numero_pedido=numero_pedido,
+                acao="cancelado",
+                usuario_id=current_user.id,
+                data_acao=agora,
+                motivo=motivo,
+                empresa_id=empresa_id,
+            )
+        )
+
+        db.session.commit()
+        flash(f"Pedido {numero_pedido} cancelado com sucesso.", "success")
+        return redirect(request.referrer or url_for("lista_pedidos"))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao cancelar pedido: {str(e)}", "danger")
+        return redirect(request.referrer or url_for("lista_pedidos"))
 
 
 @app.route("/clientes/relatorio-vendas/exportar")
@@ -7153,6 +7377,7 @@ def exportar_relatorio_vendas():
             compras_ano = CompraCliente.query.filter(
                 CompraCliente.cliente_id == cliente.id,
                 extract("year", CompraCliente.data_compra) == ano,
+                db.or_(CompraCliente.status_compra.is_(None), CompraCliente.status_compra != "CANCELADA"),
             ).all()
 
             total_compras_ano = len(compras_ano)
@@ -7160,9 +7385,14 @@ def exportar_relatorio_vendas():
                 sum([c.valor for c in compras_ano]) if compras_ano else 0
             )
 
-            ultima_compra = cliente.compras.order_by(
-                CompraCliente.data_compra.desc()
-            ).first()
+            ultima_compra = (
+                CompraCliente.query.filter(
+                    CompraCliente.cliente_id == cliente.id,
+                    db.or_(CompraCliente.status_compra.is_(None), CompraCliente.status_compra != "CANCELADA"),
+                )
+                .order_by(CompraCliente.data_compra.desc())
+                .first()
+            )
 
             formas_usadas = set(
                 [c.forma_pagamento for c in compras_ano if c.forma_pagamento]
@@ -7426,9 +7656,14 @@ def exportar_clientes():
         # Dados dos clientes
         for row, cliente in enumerate(clientes, 2):
             # Buscar última compra
-            ultima_compra = cliente.compras.order_by(
-                CompraCliente.data_compra.desc()
-            ).first()
+            ultima_compra = (
+                CompraCliente.query.filter(
+                    CompraCliente.cliente_id == cliente.id,
+                    db.or_(CompraCliente.status_compra.is_(None), CompraCliente.status_compra != "CANCELADA"),
+                )
+                .order_by(CompraCliente.data_compra.desc())
+                .first()
+            )
             data_ultima = (
                 ultima_compra.data_compra.strftime("%d/%m/%Y")
                 if ultima_compra

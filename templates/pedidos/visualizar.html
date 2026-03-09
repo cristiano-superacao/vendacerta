@@ -15,7 +15,43 @@
 
   <div class="d-flex flex-wrap gap-2 mb-3">
     <a href="{{ url_for('lista_pedidos') }}" class="btn btn-outline-secondary">Voltar</a>
+    {% if can_cancelar_pedidos and status_pedido == 'ABERTO' %}
+      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelarPedidoModal">
+        Cancelar pedido
+      </button>
+    {% endif %}
   </div>
+
+  {% if can_cancelar_pedidos and status_pedido == 'ABERTO' %}
+    <div class="modal fade" id="cancelarPedidoModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form method="POST" action="{{ url_for('cancelar_pedido') }}">
+            <div class="modal-header">
+              <h5 class="modal-title">Cancelar pedido {{ pedido.numero_pedido }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+              {{ cancelar_form.csrf_token }}
+              <input type="hidden" name="numero_pedido" value="{{ pedido.numero_pedido }}" />
+              <div class="mb-2">
+                <label class="form-label">Motivo do cancelamento</label>
+                <textarea name="motivo_cancelamento" class="form-control" rows="3" maxlength="500" required></textarea>
+                <div class="form-text">Obrigatório. Até 500 caracteres.</div>
+              </div>
+              <div class="alert alert-warning mb-0" role="alert">
+                O cancelamento não apaga o histórico e estorna o estoque.
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+              <button type="submit" class="btn btn-danger">Confirmar cancelamento</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 
   <div class="row g-3 mb-3">
     <div class="col-12 col-lg-4">
@@ -29,14 +65,30 @@
 
           <div class="text-muted small">Status</div>
           <div class="mb-0">
-            {% if pedido.status == 'Pendente' %}
-              <span class="badge text-bg-warning">Pendente</span>
-            {% elif pedido.status == 'Exportado' %}
-              <span class="badge text-bg-success">Exportado</span>
+            {% if status_pedido == 'ABERTO' %}
+              <span class="badge text-bg-warning">Aberto</span>
+            {% elif status_pedido == 'FATURADO' %}
+              <span class="badge text-bg-success">Faturado</span>
+            {% elif status_pedido == 'CANCELADO' %}
+              <span class="badge text-bg-danger">Cancelado</span>
             {% else %}
-              <span class="badge text-bg-secondary">{{ pedido.status }}</span>
+              <span class="badge text-bg-secondary">{{ status_pedido or '' }}</span>
             {% endif %}
           </div>
+
+          {% if status_pedido == 'CANCELADO' and cancelamento %}
+            <hr class="my-3" />
+            <div class="text-muted small">Cancelado por</div>
+            <div class="fw-semibold">{{ cancelamento.usuario or '' }}</div>
+            {% if cancelamento.data %}
+              <div class="text-muted small">Data do cancelamento</div>
+              <div class="mb-2">{{ cancelamento.data.strftime('%d/%m/%Y %H:%M') }}</div>
+            {% endif %}
+            {% if cancelamento.motivo %}
+              <div class="text-muted small">Motivo</div>
+              <div class="mb-0" style="white-space: pre-wrap;">{{ cancelamento.motivo }}</div>
+            {% endif %}
+          {% endif %}
         </div>
       </div>
     </div>

@@ -583,6 +583,20 @@ class PedidosExportForm(FlaskForm):
 
     submit = SubmitField('Exportar Excel')
 
+
+class CancelarPedidoForm(FlaskForm):
+    """Form para cancelamento de pedido (auditoria + CSRF)."""
+
+    numero_pedido = HiddenField(validators=[DataRequired(message='Pedido inválido')])
+    motivo_cancelamento = TextAreaField(
+        'Motivo do cancelamento',
+        validators=[
+            DataRequired(message='Informe o motivo do cancelamento'),
+            Length(max=500, message='Motivo deve ter no máximo 500 caracteres'),
+        ],
+    )
+    submit = SubmitField('Confirmar cancelamento')
+
 # ============================================================================
 # FORMULÁRIOS DE ESTOQUE E MANUTENÇÃO
 # ============================================================================

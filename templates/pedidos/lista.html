@@ -82,8 +82,9 @@
           <label class="form-label">Status</label>
           <select name="status" class="form-select">
             <option value="" {% if not status_filtro %}selected{% endif %}>Todos</option>
-            <option value="Pendente" {% if status_filtro == 'Pendente' %}selected{% endif %}>Pendente</option>
-            <option value="Exportado" {% if status_filtro == 'Exportado' %}selected{% endif %}>Exportado</option>
+            <option value="ABERTO" {% if status_filtro in ['ABERTO','Pendente'] %}selected{% endif %}>Aberto</option>
+            <option value="FATURADO" {% if status_filtro in ['FATURADO','Exportado'] %}selected{% endif %}>Faturado</option>
+            <option value="CANCELADO" {% if status_filtro == 'CANCELADO' %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
 
@@ -118,8 +119,8 @@
         <input type="hidden" name="canal" value="{{ canal_filtro }}" />
         <input type="hidden" name="produto" value="{{ produto_filtro }}" />
         <input type="hidden" name="numero_pedido" value="{{ numero_pedido_filtro }}" />
-        <button type="submit" class="btn btn-success">Exportar pendentes (Excel)</button>
-        <div class="text-muted small">A exportação marca como <strong>Exportado</strong>.</div>
+        <button type="submit" class="btn btn-success">Exportar em aberto (Excel)</button>
+        <div class="text-muted small">A exportação marca como <strong>Faturado</strong>.</div>
       </form>
     </div>
   </div>
@@ -142,7 +143,7 @@
           </thead>
           <tbody>
             {% for p in pedidos %}
-              <tr>
+              <tr class="{% if p.status_pedido == 'CANCELADO' %}table-danger{% endif %}">
                 <td>
                   <div class="fw-semibold">{{ p.numero_pedido }}</div>
                   <div class="text-muted small">{{ p.canal or '' }}</div>
@@ -159,16 +160,60 @@
                 <td class="text-end">{{ p.itens or 0 }}</td>
                 <td class="text-end">R$ {{ '%.2f'|format(p.valor_total or 0) }}</td>
                 <td>
-                  {% if p.status == 'Pendente' %}
-                    <span class="badge text-bg-warning">Pendente</span>
-                  {% elif p.status == 'Exportado' %}
-                    <span class="badge text-bg-success">Exportado</span>
+                  {% if p.status_pedido == 'ABERTO' %}
+                    <span class="badge text-bg-warning">Aberto</span>
+                  {% elif p.status_pedido == 'FATURADO' %}
+                    <span class="badge text-bg-success">Faturado</span>
+                  {% elif p.status_pedido == 'CANCELADO' %}
+                    <span class="badge text-bg-danger">Cancelado</span>
                   {% else %}
-                    <span class="badge text-bg-secondary">{{ p.status }}</span>
+                    <span class="badge text-bg-secondary">{{ p.status_pedido or '' }}</span>
+                  {% endif %}
+                  {% if p.status_pedido == 'CANCELADO' and (p.data_cancelamento or p.motivo_cancelamento) %}
+                    <div class="text-muted small mt-1">
+                      {% if p.data_cancelamento %}{{ p.data_cancelamento.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+                      {% if p.motivo_cancelamento %}
+                        <div class="text-truncate" style="max-width: 260px;">{{ p.motivo_cancelamento }}</div>
+                      {% endif %}
+                    </div>
                   {% endif %}
                 </td>
                 <td class="text-end">
                   <a class="btn btn-outline-primary btn-sm" href="{{ url_for('visualizar_pedido', id=p.id) }}">Ver</a>
+                  {% if can_cancelar_pedidos and p.status_pedido == 'ABERTO' and not p.has_exportado %}
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#cancelarPedidoModal{{ loop.index }}">
+                      Cancelar
+                    </button>
+
+                    <div class="modal fade" id="cancelarPedidoModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                          <form method="POST" action="{{ url_for('cancelar_pedido') }}">
+                            <div class="modal-header">
+                              <h5 class="modal-title">Cancelar pedido {{ p.numero_pedido }}</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                            </div>
+                            <div class="modal-body">
+                              {{ cancelar_form.csrf_token }}
+                              <input type="hidden" name="numero_pedido" value="{{ p.numero_pedido }}" />
+                              <div class="mb-2">
+                                <label class="form-label">Motivo do cancelamento</label>
+                                <textarea name="motivo_cancelamento" class="form-control" rows="3" maxlength="500" required></textarea>
+                                <div class="form-text">Obrigatório. Até 500 caracteres.</div>
+                              </div>
+                              <div class="alert alert-warning mb-0" role="alert">
+                                O cancelamento não apaga o histórico e estorna o estoque.
+                              </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+                              <button type="submit" class="btn btn-danger">Confirmar cancelamento</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}
