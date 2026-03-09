@@ -354,6 +354,13 @@ def main() -> int:
             opener = _login_and_validate(base_url, admin_email, admin_password)
             print("OK: LOGIN (/login -> /dashboard)")
 
+            if os.environ.get("PRINT_ENV_PRESENCE", "0") == "1":
+                env = _fetch_json(opener, f"{base_url}/status/env")
+                presence = (env.get("env") or {})
+                print("OK: /status/env (presenca)")
+                for key in ("RUN_DB_INIT_ON_START", "SKIP_DB_INIT_ON_START", "RESET_ADMIN_PASSWORD_ON_START"):
+                    print(f"- {key}: {presence.get(key)}")
+
             # Fallback de conectividade/vars via HTTP autenticado
             if not db_direct_ok:
                 status = _fetch_json(opener, f"{base_url}/status/db")
