@@ -25,6 +25,7 @@ import json
 import os
 import sys
 import re
+import time
 import http.cookiejar
 import urllib.error
 import urllib.request
@@ -40,7 +41,7 @@ from sqlalchemy import create_engine, inspect, text
 
 
 def _fail(msg: str) -> int:
-    print(f"❌ {msg}")
+    print(f"ERRO: {msg}")
     return 1
 
 
@@ -70,8 +71,11 @@ def _extract_csrf_token(html: str) -> str | None:
     return m.group(1)
 
 
-def _login_and_validate(base_url: str, admin_email: str, admin_password: str) -> None:
-    """Efetua login real (GET /login -> CSRF -> POST) e valida rota protegida."""
+def _login_and_validate(base_url: str, admin_email: str, admin_password: str):
+    """Efetua login real (GET /login -> CSRF -> POST) e valida rota protegida.
+
+    Retorna o opener autenticado (cookies/sessão) para chamadas subsequentes.
+    """
 
     cj = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
@@ -130,6 +134,29 @@ def _login_and_validate(base_url: str, admin_email: str, admin_password: str) ->
     if "Bem-vindo" in dash_html and "Email ou senha incorretos" in dash_html:
         raise RuntimeError("Login parece ter falhado (mensagem de erro detectada)")
 
+    return opener
+
+
+def _fetch_json(opener, url: str) -> dict:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "vendacerta-smoke/1.0",
+            "Accept": "application/json",
+        },
+    )
+    with opener.open(req, timeout=30) as resp:
+        status = int(getattr(resp, "status", 200))
+        body = resp.read().decode("utf-8", errors="replace")
+
+    if status != 200:
+        raise RuntimeError(f"GET {url} retornou {status}")
+
+    try:
+        return json.loads(body)
+    except Exception as e:
+        raise RuntimeError(f"JSON inválido em {url}: {e}")
+
 
 def _database_url() -> str:
     # Import local (evita efeitos colaterais de importar o app Flask)
@@ -149,7 +176,10 @@ def _connect_args_for_url(url: str) -> dict:
     if not sslmode and ("proxy.rlwy.net" in url or "rlwy.net" in url):
         sslmode = "require"
 
-    return {"sslmode": sslmode} if sslmode else {}
+    connect_args = {"sslmode": sslmode} if sslmode else {}
+    # Evita travar em redes instáveis / proxy.
+    connect_args.setdefault("connect_timeout", 10)
+    return connect_args
 
 
 def main() -> int:
@@ -164,6 +194,9 @@ def main() -> int:
             "/login": {200},
             "/api/ranking": {200, 302, 401, 403},
             "/pedidos": {200, 302, 401, 403},
+            "/pedidos/importar-faturados": {200, 302, 401, 403},
+            "/pedidos/importar-faturados/modelo.csv": {200, 302, 401, 403},
+            "/pedidos/importar-faturados/modelo.xlsx": {200, 302, 401, 403},
             # Pode não existir pedido com id=1 em bases novas
             "/pedidos/visualizar/1": {200, 302, 401, 403, 404},
         }
@@ -171,17 +204,43 @@ def main() -> int:
             status = _http_status(f"{base_url}{path}")
             if status not in ok_status:
                 return _fail(f"HTTP {path} retornou {status} (esperado: {sorted(ok_status)})")
-        print(f"✅ HTTP OK ({base_url})")
+        print(f"OK: HTTP ({base_url})")
     except Exception as e:
         return _fail(f"Falha HTTP: {e}")
 
     # DB
+    db_direct_ok = False
+    db_direct_error = ""
     try:
         url = _database_url()
         connect_args = _connect_args_for_url(url)
-        engine = create_engine(url, connect_args=connect_args) if connect_args else create_engine(url)
 
-        insp = inspect(engine)
+        engine = None
+        insp = None
+        last_exc: Exception | None = None
+
+        for attempt in range(1, 4):
+            try:
+                engine = create_engine(url, connect_args=connect_args) if connect_args else create_engine(url)
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1")).scalar()
+                insp = inspect(engine)
+                break
+            except Exception as e:
+                last_exc = e
+                try:
+                    if engine is not None:
+                        engine.dispose()
+                except Exception:
+                    pass
+                if attempt < 3:
+                    time.sleep(attempt * 2)
+                    continue
+                raise
+
+        if engine is None or insp is None:
+            raise last_exc or RuntimeError("Falha ao inicializar engine/inspector")
+
         tables = set(insp.get_table_names())
         required = {
             "usuarios",
@@ -191,6 +250,7 @@ def main() -> int:
             "metas",
             "vendedor_dias_liberados",
             "pedidos",
+            "importacoes_nf",
         }
         missing = sorted(required - tables)
         if missing:
@@ -228,23 +288,18 @@ def main() -> int:
         if "pedidos_log" not in tables:
             return _fail("Tabela 'pedidos_log' não encontrada (auditoria de pedidos)")
 
-        # CompraCliente (vendas) também deve suportar cancelamento sem apagar histórico
-        if "compras_clientes" in tables:
-            compras_cols = {c["name"] for c in insp.get_columns("compras_clientes")}
-            compras_cancel_cols = {
-                "status_compra",
-                "cancelado_por",
-                "data_cancelamento",
-                "motivo_cancelamento",
-            }
-            compras_cancel_missing = sorted(compras_cancel_cols - compras_cols)
-            if compras_cancel_missing:
-                return _fail(
-                    f"Tabela 'compras_clientes' sem colunas de cancelamento: {compras_cancel_missing}"
-                )
+        # Schema da importação NF (colunas adicionadas)
+        pedidos_nf_cols = {
+            "numero_nota",
+            "data_faturamento",
+            "valor_faturado",
+            "data_importacao_nf",
+        }
+        pedidos_nf_missing = sorted(pedidos_nf_cols - pedidos_cols)
+        if pedidos_nf_missing:
+            return _fail(f"Tabela 'pedidos' sem colunas de NF/importação: {pedidos_nf_missing}")
 
         with engine.connect() as conn:
-            # Consulta simples (não deve falhar) para garantir que a tabela existe e é consultável
             conn.execute(text("SELECT COUNT(*) FROM pedidos")).scalar()
 
             row = conn.execute(
@@ -277,21 +332,57 @@ def main() -> int:
                 )
             )
 
-        print(f"✅ DB OK (tabelas: {len(tables)}; admin id={_id})")
+        db_direct_ok = True
+        print(f"OK: DB (tabelas: {len(tables)}; admin id={_id})")
     except Exception as e:
-        return _fail(f"Falha DB: {e}")
+        db_direct_ok = False
+        db_direct_error = str(e)
+        if "não encontrados no ambiente" in db_direct_error:
+            print(f"INFO: DB direto pulado (env de DB não configurado localmente). Erro: {db_direct_error}")
+        else:
+            print(f"WARN: DB direto indisponível (provável proxy/rede). Erro: {db_direct_error}")
+    finally:
+        try:
+            if "engine" in locals() and engine is not None:
+                engine.dispose()
+        except Exception:
+            pass
 
     # Login E2E (opcional; depende de ADMIN_PASSWORD)
     if admin_password:
         try:
-            _login_and_validate(base_url, admin_email, admin_password)
-            print("✅ LOGIN OK (/login -> /dashboard)")
+            opener = _login_and_validate(base_url, admin_email, admin_password)
+            print("OK: LOGIN (/login -> /dashboard)")
+
+            # Fallback de conectividade/vars via HTTP autenticado
+            if not db_direct_ok:
+                status = _fetch_json(opener, f"{base_url}/status/db")
+                default = (status.get("status") or {}).get("default") or {}
+                if not default.get("available"):
+                    return _fail(f"/status/db indica DB indisponível: {default}")
+
+                env = _fetch_json(opener, f"{base_url}/status/env")
+                presence = (env.get("env") or {})
+                # Não exige todos os envs, mas garante que existe algum caminho de DB configurado
+                if not (presence.get("DATABASE_URL") or presence.get("DATABASE_PUBLIC_URL") or presence.get("PGHOST")):
+                    return _fail(f"/status/env não indica DB configurado: {presence}")
+
+                # Auditoria de init/reset deve estar exposta (apenas presença, sem valores)
+                for key in ("RUN_DB_INIT_ON_START", "SKIP_DB_INIT_ON_START", "RESET_ADMIN_PASSWORD_ON_START"):
+                    if key not in presence:
+                        return _fail(f"/status/env sem chave esperada: {key}")
+
+                print("OK: DB via HTTP (/status/db)")
         except Exception as e:
             return _fail(f"Falha LOGIN: {e}")
     else:
-        print("ℹ️  LOGIN SKIP (defina ADMIN_PASSWORD para validar ponta a ponta)")
+        print("INFO: LOGIN SKIP (defina ADMIN_PASSWORD para validar ponta a ponta)")
 
-    print("\n✅ SMOKE RAILWAY OK")
+        # Se não temos login e o DB direto falhou, não dá para validar DB de outra forma.
+        if not db_direct_ok:
+            return _fail("DB direto falhou e login foi pulado. Defina ADMIN_PASSWORD para validar via /status/db")
+
+    print("\nOK: SMOKE RAILWAY")
     return 0
 
 

@@ -69,12 +69,29 @@
               <span class="badge text-bg-warning">Aberto</span>
             {% elif status_pedido == 'FATURADO' %}
               <span class="badge text-bg-success">Faturado</span>
+            {% elif status_pedido == 'DIVERGENTE' %}
+              <span class="badge text-bg-info">Divergente</span>
             {% elif status_pedido == 'CANCELADO' %}
               <span class="badge text-bg-danger">Cancelado</span>
             {% else %}
               <span class="badge text-bg-secondary">{{ status_pedido or '' }}</span>
             {% endif %}
           </div>
+
+          {% if pedido.numero_nota or pedido.data_faturamento or pedido.valor_faturado or pedido.data_importacao_nf %}
+            <hr class="my-3" />
+            <div class="text-muted small">Nota Fiscal</div>
+            <div class="fw-semibold">{{ pedido.numero_nota or '' }}</div>
+
+            <div class="text-muted small mt-2">Data de faturamento</div>
+            <div>{{ pedido.data_faturamento.strftime('%d/%m/%Y') if pedido.data_faturamento else '' }}</div>
+
+            <div class="text-muted small mt-2">Valor faturado</div>
+            <div>R$ {{ '%.2f'|format(pedido.valor_faturado or 0) }}</div>
+
+            <div class="text-muted small mt-2">Importado em</div>
+            <div>{{ pedido.data_importacao_nf.strftime('%d/%m/%Y %H:%M') if pedido.data_importacao_nf else '' }}</div>
+          {% endif %}
 
           {% if status_pedido == 'CANCELADO' and cancelamento %}
             <hr class="my-3" />

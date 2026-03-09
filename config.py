@@ -147,7 +147,7 @@ class Config:
     ITEMS_PER_PAGE = 10
 
     # Configurações de upload (se necessário no futuro)
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max
+    MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20MB max
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 
     # Timezone

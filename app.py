@@ -47,6 +47,7 @@ from models import (
     VendedorDiaLiberado,
     Pedido,
     PedidoLog,
+    ImportacaoNF,
     Meta,
     Equipe,
     Empresa,
@@ -84,6 +85,7 @@ from forms import (
     AdminVendedoresDiasLiberadosForm,
     PedidosExportForm,
     CancelarPedidoForm,
+    ImportarPedidosFaturadosForm,
 )
 from calculo_projecao import calcular_projecao_mes, formatar_moeda
 
@@ -868,6 +870,9 @@ def status_env():
         "FLASK_SECRET_KEY",
         "SECRET_KEY",
         "INIT_DB_ONLY",
+        "RUN_DB_INIT_ON_START",
+        "SKIP_DB_INIT_ON_START",
+        "RESET_ADMIN_PASSWORD_ON_START",
     ]
 
     presence = {name: bool(os.environ.get(name)) for name in expected}
@@ -888,54 +893,87 @@ def init_database():
             
             # Criar todas as tabelas se não existirem
             db.create_all()
-            
+
             # Verificar e garantir acesso de admin (Auto-Recovery)
-            admins_to_check = ['admin@vendacerta.com', 'admin@metas.com']
+            # IMPORTANTE: nunca logar senha e não resetar senha automaticamente.
+            # Reset de senha só deve ocorrer quando explicitamente habilitado via env.
+            admin_email_env = (os.environ.get("ADMIN_EMAIL") or "").strip().lower()
+            reset_admin_password = os.environ.get("RESET_ADMIN_PASSWORD_ON_START", "0") == "1"
+            admin_password_env = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+
+            # Ordem de checagem: ADMIN_EMAIL (se definido) -> legados
+            admins_to_check = [e for e in [admin_email_env, "admin@vendacerta.com", "admin@metas.com"] if e]
+            seen = set()
+            admins_to_check = [e for e in admins_to_check if not (e in seen or seen.add(e))]
+
             admin_found = False
-            
             for email in admins_to_check:
                 admin = Usuario.query.filter_by(email=email).first()
-                if admin:
-                    # Se existir, garantir que a senha seja admin123 e seja super admin
-                    from werkzeug.security import generate_password_hash
-                    admin.senha_hash = generate_password_hash('admin123')
-                    admin.is_super_admin = True
-                    admin.ativo = True
-                    admin.cargo = 'admin'
-                    db.session.commit()
-                    app.logger.info(f"[OK] Admin {email} recuperado/resetado para senha 'admin123'")
-                    admin_found = True
-            
-            # Se nenhum dos dois existir, criar o padrão
-            if not admin_found:
-                app.logger.info("[PROC] Criando usuario admin padrao...")
-                from werkzeug.security import generate_password_hash
-                
-                # Criar empresa padrão se necessário
-                empresa_padrao = Empresa.query.filter_by(cnpj='00000000000000').first()
-                if not empresa_padrao:
-                    empresa_padrao = Empresa(
-                        nome='Empresa Padrão',
-                        cnpj='00000000000000',
-                        email='contato@empresa.com',
-                        plano='enterprise',
-                        ativo=True
-                    )
-                    db.session.add(empresa_padrao)
-                    db.session.commit()
+                if not admin:
+                    continue
 
-                admin = Usuario(
-                    nome='Administrador',
-                    email='admin@vendacerta.com',
-                    senha_hash=generate_password_hash('admin123'),
-                    cargo='admin',
-                    is_super_admin=True,
-                    ativo=True,
-                    empresa_id=empresa_padrao.id
-                )
-                db.session.add(admin)
+                # Garantir flags mínimas (não mexe na senha por padrão)
+                admin.is_super_admin = True
+                admin.ativo = True
+                admin.bloqueado = False
+                admin.cargo = "admin"
+
+                if reset_admin_password:
+                    if not admin_password_env:
+                        app.logger.warning(
+                            "[AVISO] RESET_ADMIN_PASSWORD_ON_START=1, mas ADMIN_PASSWORD vazio; pulando reset de senha"
+                        )
+                    else:
+                        admin.set_senha(admin_password_env)
+                        app.logger.info(f"[OK] Admin {email} verificado (flags) e senha resetada via env")
+                else:
+                    app.logger.info(f"[OK] Admin {email} verificado (flags)")
+
                 db.session.commit()
-                app.logger.info("[OK] Usuario admin criado (email: admin@vendacerta.com, senha: admin123)")
+                admin_found = True
+
+            # Bootstrap: criar admin apenas se NÃO existir nenhum usuário.
+            if not admin_found:
+                try:
+                    from sqlalchemy import text as _sql_text
+
+                    usuarios_total = db.session.execute(_sql_text("SELECT COUNT(*) FROM usuarios")).scalar() or 0
+                except Exception:
+                    usuarios_total = 0
+
+                if usuarios_total == 0:
+                    app.logger.info("[PROC] Criando usuario admin bootstrap (base vazia)...")
+                    bootstrap_email = admin_email_env or "admin@sistema.com"
+                    bootstrap_password = admin_password_env or "admin123"
+
+                    # Criar empresa padrão se necessário
+                    empresa_padrao = Empresa.query.filter_by(cnpj="00000000000000").first()
+                    if not empresa_padrao:
+                        empresa_padrao = Empresa(
+                            nome="Empresa Padrão",
+                            cnpj="00000000000000",
+                            email="contato@empresa.com",
+                            plano="enterprise",
+                            ativo=True,
+                        )
+                        db.session.add(empresa_padrao)
+                        db.session.commit()
+
+                    admin = Usuario(
+                        nome="Administrador",
+                        email=bootstrap_email,
+                        cargo="admin",
+                        is_super_admin=True,
+                        ativo=True,
+                        bloqueado=False,
+                        empresa_id=empresa_padrao.id,
+                    )
+                    admin.set_senha(bootstrap_password)
+                    db.session.add(admin)
+                    db.session.commit()
+                    app.logger.info(f"[OK] Usuario admin bootstrap criado (email: {bootstrap_email})")
+                else:
+                    app.logger.info("[INFO] Nenhum admin encontrado na lista de recovery; base já possui usuários. Seed/admin deve ser gerenciado por script.")
 
             app.logger.info("[OK] Banco de dados inicializado com sucesso!")
             return True
@@ -6837,11 +6875,13 @@ def lista_pedidos():
     from sqlalchemy import case
 
     has_cancelado = db.func.bool_or(Pedido.status_pedido == "CANCELADO")
+    has_divergente = db.func.bool_or(Pedido.status_pedido == "DIVERGENTE")
     has_pendente_item = db.func.bool_or(Pedido.status == "Pendente")
     has_exportado_item = db.func.bool_or(Pedido.status == "Exportado")
 
     status_pedido_calc = case(
         (has_cancelado.is_(True), "CANCELADO"),
+        (has_divergente.is_(True), "DIVERGENTE"),
         (has_pendente_item.is_(True), "ABERTO"),
         else_="FATURADO",
     )
@@ -6889,6 +6929,10 @@ def lista_pedidos():
             db.func.max(Pedido.cancelado_por).label("cancelado_por"),
             db.func.max(Pedido.data_cancelamento).label("data_cancelamento"),
             db.func.max(Pedido.motivo_cancelamento).label("motivo_cancelamento"),
+            db.func.max(Pedido.numero_nota).label("numero_nota"),
+            db.func.max(Pedido.data_faturamento).label("data_faturamento"),
+            db.func.max(Pedido.valor_faturado).label("valor_faturado"),
+            db.func.max(Pedido.data_importacao_nf).label("data_importacao_nf"),
         )
         .group_by(Pedido.numero_pedido)
     )
@@ -7186,7 +7230,7 @@ def cancelar_pedido():
             flash("Este pedido já está cancelado.", "info")
             return redirect(request.referrer or url_for("lista_pedidos"))
 
-        if any((i.status or "") == "Exportado" for i in itens) or any((i.status_pedido or "").upper() == "FATURADO" for i in itens):
+        if any((i.status or "") == "Exportado" for i in itens) or any((i.status_pedido or "").upper() in ("FATURADO", "DIVERGENTE") for i in itens):
             flash("Cancelamento bloqueado: pedido já foi exportado/faturado.", "danger")
             return redirect(request.referrer or url_for("lista_pedidos"))
 
@@ -7275,6 +7319,604 @@ def cancelar_pedido():
         db.session.rollback()
         flash(f"Erro ao cancelar pedido: {str(e)}", "danger")
         return redirect(request.referrer or url_for("lista_pedidos"))
+
+
+@app.route("/pedidos/importar-faturados", methods=["GET", "POST"])
+@login_required
+def importar_pedidos_faturados():
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+
+    form = ImportarPedidosFaturadosForm()
+
+    def _normalize_header(value: str) -> str:
+        value = (value or "").strip().lower()
+        value = re.sub(r"\s+", " ", value)
+        return value
+
+    def _parse_float(value):
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        s = str(value).strip()
+        if not s:
+            return None
+        s = s.replace("R$", "").replace(" ", "")
+        # aceita 1.234,56 e 1234.56
+        if s.count(",") == 1 and s.count(".") >= 1:
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            s = s.replace(",", ".")
+        try:
+            return float(s)
+        except Exception:
+            return None
+
+    def _parse_date(value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, datetime):
+            return value
+        # openpyxl pode retornar date/datetime
+        try:
+            import datetime as _dt
+
+            if isinstance(value, _dt.date) and not isinstance(value, _dt.datetime):
+                return datetime.combine(value, _dt.time.min)
+        except Exception:
+            pass
+
+        s = str(value).strip()
+        if not s:
+            return None
+
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+            try:
+                d = datetime.strptime(s, fmt)
+                return d
+            except Exception:
+                continue
+        return None
+
+    REQUIRED = {
+        "romaneio": {"romaneio"},
+        "pedido": {"pedido", "nº pedido", "no pedido", "numero pedido", "número do pedido"},
+        "cliente": {"cliente", "código cliente", "codigo cliente"},
+        "data_faturamento": {"data faturamento", "data", "data nf", "data de faturamento"},
+        "nota": {"nota fiscal", "nota", "nf"},
+        "valor": {"valor", "valor faturado", "valor total"},
+    }
+
+    def _map_columns(headers_norm):
+        idx_map = {}
+        for i, h in enumerate(headers_norm):
+            for key, aliases in REQUIRED.items():
+                if key in idx_map:
+                    continue
+                if h in aliases:
+                    idx_map[key] = i
+        return idx_map
+
+    def _read_rows(file_storage):
+        filename = secure_filename(file_storage.filename or "")
+        ext = (filename.rsplit(".", 1)[-1].lower() if "." in filename else "")
+
+        # carrega em memória (<= 20MB pelo MAX_CONTENT_LENGTH)
+        data = file_storage.read()
+        file_storage.stream.seek(0)
+        if not data:
+            return False, filename, [], ["Arquivo vazio."], 0
+
+        rows = []
+        errors = []
+        total = 0
+
+        if ext == "xlsx":
+            try:
+                from openpyxl import load_workbook
+
+                wb = load_workbook(filename=BytesIO(data), read_only=True, data_only=True)
+                ws = wb.active
+                header = None
+                for r_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
+                    if r_idx == 1:
+                        header = [str(c or "").strip() for c in row]
+                        headers_norm = [_normalize_header(h) for h in header]
+                        idx_map = _map_columns(headers_norm)
+                        missing = [k for k in REQUIRED.keys() if k not in idx_map]
+                        if missing:
+                            return False, filename, [], [f"Colunas obrigatórias ausentes: {', '.join(missing)}"], 0
+                        continue
+
+                    if not any((c is not None and str(c).strip() != "") for c in row):
+                        continue
+
+                    total += 1
+                    rows.append(
+                        {
+                            "linha": r_idx,
+                            "romaneio": (row[idx_map["romaneio"]] if idx_map.get("romaneio") is not None else None),
+                            "pedido": (row[idx_map["pedido"]] if idx_map.get("pedido") is not None else None),
+                            "cliente": (row[idx_map["cliente"]] if idx_map.get("cliente") is not None else None),
+                            "data_faturamento": row[idx_map["data_faturamento"]],
+                            "nota": row[idx_map["nota"]],
+                            "valor": row[idx_map["valor"]],
+                        }
+                    )
+            except Exception as e:
+                return False, filename, [], [f"Falha ao ler .xlsx: {str(e)}"], 0
+        elif ext == "csv":
+            try:
+                import csv
+
+                text = data.decode("utf-8-sig", errors="replace")
+                first_line = (text.splitlines()[0] if text.splitlines() else "")
+                delimiter = ";" if first_line.count(";") > first_line.count(",") else ","
+                reader = csv.reader(text.splitlines(), delimiter=delimiter)
+                header = next(reader, None)
+                if not header:
+                    return False, filename, [], ["CSV sem cabeçalho."], 0
+                headers_norm = [_normalize_header(h) for h in header]
+                idx_map = _map_columns(headers_norm)
+                missing = [k for k in REQUIRED.keys() if k not in idx_map]
+                if missing:
+                    return False, filename, [], [f"Colunas obrigatórias ausentes: {', '.join(missing)}"], 0
+                for r_idx, row in enumerate(reader, start=2):
+                    if not any((c is not None and str(c).strip() != "") for c in row):
+                        continue
+                    total += 1
+                    # pad para índices
+                    if len(row) < len(header):
+                        row = row + ([""] * (len(header) - len(row)))
+                    rows.append(
+                        {
+                            "linha": r_idx,
+                            "romaneio": row[idx_map["romaneio"]],
+                            "pedido": row[idx_map["pedido"]],
+                            "cliente": row[idx_map["cliente"]],
+                            "data_faturamento": row[idx_map["data_faturamento"]],
+                            "nota": row[idx_map["nota"]],
+                            "valor": row[idx_map["valor"]],
+                        }
+                    )
+            except Exception as e:
+                return False, filename, [], [f"Falha ao ler .csv: {str(e)}"], 0
+        else:
+            return False, filename, [], ["Formato inválido. Envie .xlsx ou .csv."], 0
+
+        return True, filename, rows, errors, total
+
+    resultados = None
+    importacao_id = None
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip().lower()
+        if action not in ("validar", "importar"):
+            action = "validar"
+
+        if not form.validate_on_submit():
+            flash("Falha de validação do upload.", "danger")
+            return render_template("pedidos/importar_faturados.html", form=form, resultados=None)
+
+        ok, filename, rows, parse_errors, total_rows = _read_rows(form.arquivo.data)
+        if not ok:
+            for err in parse_errors:
+                flash(err, "danger")
+            return render_template("pedidos/importar_faturados.html", form=form, resultados=None)
+
+        if total_rows > 20000:
+            flash("Arquivo possui mais de 20000 linhas. Divida a importação em arquivos menores.", "danger")
+            return render_template("pedidos/importar_faturados.html", form=form, resultados=None)
+
+        agora = datetime.utcnow()
+        empresa_id = None if current_user.is_super_admin else current_user.empresa_id
+
+        # Normalizar dados e detectar duplicados
+        seen_keys = set()
+        normalized = []
+        issues = []
+
+        for r in rows:
+            pedido = (str(r.get("pedido") or "").strip() if r.get("pedido") is not None else "")
+            romaneio = (str(r.get("romaneio") or "").strip() if r.get("romaneio") is not None else "")
+            cliente = (str(r.get("cliente") or "").strip() if r.get("cliente") is not None else "")
+            nota = (str(r.get("nota") or "").strip() if r.get("nota") is not None else "")
+            dt = _parse_date(r.get("data_faturamento"))
+            valor = _parse_float(r.get("valor"))
+
+            key = pedido or ""
+            if not key and romaneio:
+                key = romaneio
+
+            if not key:
+                issues.append({"tipo": "linha_invalida", "linha": r.get("linha"), "detalhe": "Sem Pedido/Romaneio"})
+                continue
+            if key in seen_keys:
+                issues.append({"tipo": "duplicado_no_arquivo", "linha": r.get("linha"), "pedido": key, "detalhe": "Duplicado no arquivo (usando o primeiro)"})
+                continue
+            seen_keys.add(key)
+
+            if not cliente:
+                issues.append({"tipo": "linha_invalida", "linha": r.get("linha"), "pedido": key, "detalhe": "Cliente vazio"})
+                continue
+            if not dt:
+                issues.append({"tipo": "linha_invalida", "linha": r.get("linha"), "pedido": key, "detalhe": "Data inválida"})
+                continue
+            if not nota:
+                issues.append({"tipo": "linha_invalida", "linha": r.get("linha"), "pedido": key, "detalhe": "Nota vazia"})
+                continue
+            if valor is None:
+                issues.append({"tipo": "linha_invalida", "linha": r.get("linha"), "pedido": key, "detalhe": "Valor inválido"})
+                continue
+
+            normalized.append(
+                {
+                    "linha": r.get("linha"),
+                    "romaneio": romaneio,
+                    "pedido": pedido,
+                    "pedido_key": key,
+                    "cliente": cliente,
+                    "nota": nota,
+                    "data_faturamento": dt,
+                    "valor": float(valor),
+                }
+            )
+
+        keys = [n["pedido_key"] for n in normalized]
+
+        # Buscar totais/status no banco (em blocos)
+        from sqlalchemy import func
+
+        found = {}
+        for i in range(0, len(keys), 2000):
+            block = keys[i : i + 2000]
+            q = _pedidos_base_query().with_entities(
+                Pedido.numero_pedido.label("numero_pedido"),
+                func.coalesce(func.sum(Pedido.valor_total), 0).label("total_sistema"),
+                func.bool_or(Pedido.status_pedido == "CANCELADO").label("is_cancelado"),
+                func.max(Pedido.status_pedido).label("status_pedido"),
+                func.max(Pedido.codigo_cliente).label("codigo_cliente"),
+            ).filter(Pedido.numero_pedido.in_(block)).group_by(Pedido.numero_pedido)
+
+            for row in q.all():
+                found[str(row.numero_pedido)] = {
+                    "total_sistema": float(row.total_sistema or 0),
+                    "is_cancelado": bool(row.is_cancelado),
+                    "status_pedido": (row.status_pedido or "").upper(),
+                    "codigo_cliente": (row.codigo_cliente or ""),
+                }
+
+        # Comparação + métricas
+        pedidos_importados = len(normalized)
+        pedidos_atualizados = 0
+        pedidos_divergentes = 0
+        pedidos_nao_encontrados = 0
+
+        detalhes_divergentes = []
+        detalhes_nao_encontrados = []
+
+        def _diff_percent(excel_val, sistema_val):
+            if sistema_val is None:
+                return None
+            s = float(sistema_val or 0)
+            e = float(excel_val or 0)
+            if s == 0:
+                return 0.0 if e == 0 else 100.0
+            return abs(e - s) / s * 100.0
+
+        comparacao = []
+        for n in normalized:
+            key = n["pedido_key"]
+            banco = found.get(key)
+            if not banco:
+                pedidos_nao_encontrados += 1
+                detalhes_nao_encontrados.append({"linha": n["linha"], "pedido": key, "cliente": n["cliente"], "romaneio": n["romaneio"]})
+                continue
+
+            # Validação de cliente (quando possível)
+            codigo_cliente_sistema = (banco.get("codigo_cliente") or "").strip()
+            if codigo_cliente_sistema and str(n["cliente"]).strip() != codigo_cliente_sistema:
+                issues.append({"tipo": "cliente_nao_confere", "linha": n["linha"], "pedido": key, "cliente_excel": n["cliente"], "cliente_sistema": codigo_cliente_sistema})
+
+            if banco.get("is_cancelado"):
+                issues.append({"tipo": "pedido_cancelado", "linha": n["linha"], "pedido": key, "detalhe": "Pedido cancelado no sistema"})
+                continue
+
+            pct = _diff_percent(n["valor"], banco.get("total_sistema"))
+            divergente = pct is not None and pct > 2.0
+            if divergente:
+                pedidos_divergentes += 1
+                detalhes_divergentes.append({
+                    "linha": n["linha"],
+                    "pedido": key,
+                    "cliente": n["cliente"],
+                    "valor_excel": n["valor"],
+                    "valor_sistema": banco.get("total_sistema"),
+                    "diferenca_percentual": round(pct, 3),
+                })
+
+            comparacao.append({
+                "pedido": key,
+                "nota": n["nota"],
+                "data_faturamento": n["data_faturamento"],
+                "valor_faturado": n["valor"],
+                "novo_status": "DIVERGENTE" if divergente else "FATURADO",
+            })
+
+        if action == "importar":
+            # Cria registro de auditoria (sucesso será definido ao final)
+            imp = ImportacaoNF(
+                arquivo=filename,
+                data_importacao=agora,
+                usuario_id=current_user.id,
+                empresa_id=empresa_id,
+                linhas=pedidos_importados,
+                sucesso=False,
+            )
+            db.session.add(imp)
+            db.session.flush()
+            importacao_id = imp.id
+
+            # Atualizações em blocos (2000)
+            for i in range(0, len(comparacao), 2000):
+                block = comparacao[i : i + 2000]
+                for item in block:
+                    key = item["pedido"]
+                    novo_status = item["novo_status"]
+                    values = {
+                        Pedido.numero_nota: str(item["nota"])[:50],
+                        Pedido.data_faturamento: item["data_faturamento"],
+                        Pedido.valor_faturado: float(item["valor_faturado"] or 0),
+                        Pedido.data_importacao_nf: agora,
+                        Pedido.status_pedido: novo_status,
+                    }
+
+                    if novo_status == "FATURADO":
+                        values[Pedido.status] = "Exportado"
+
+                    updated = (
+                        _pedidos_base_query()
+                        .filter(Pedido.numero_pedido == key)
+                        .update(values, synchronize_session=False)
+                    )
+                    if updated:
+                        pedidos_atualizados += 1
+
+                db.session.commit()
+
+            # Atualiza auditoria
+            imp.pedidos_importados = pedidos_importados
+            imp.pedidos_atualizados = pedidos_atualizados
+            imp.pedidos_divergentes = pedidos_divergentes
+            imp.pedidos_nao_encontrados = pedidos_nao_encontrados
+            imp.sucesso = True
+            try:
+                import json
+
+                imp.erros = json.dumps({
+                    "issues": issues,
+                    "divergentes": detalhes_divergentes,
+                    "nao_encontrados": detalhes_nao_encontrados,
+                }, ensure_ascii=False)
+            except Exception:
+                imp.erros = None
+
+            # Log de auditoria simplificado
+            try:
+                db.session.add(
+                    PedidoLog(
+                        numero_pedido="*",
+                        acao="importacao_nf",
+                        usuario_id=current_user.id,
+                        data_acao=agora,
+                        motivo=f"Importação NF {filename} (id={imp.id})",
+                        empresa_id=empresa_id,
+                    )
+                )
+            except Exception:
+                pass
+
+            db.session.commit()
+            flash("Importação concluída.", "success")
+        else:
+            flash("Validação concluída (nenhuma alteração foi aplicada).", "info")
+
+        resultados = {
+            "action": action,
+            "arquivo": filename,
+            "linhas": pedidos_importados,
+            "atualizados": pedidos_atualizados,
+            "divergentes": pedidos_divergentes,
+            "nao_encontrados": pedidos_nao_encontrados,
+            "issues": issues[:200],
+            "divergentes_detalhes": detalhes_divergentes[:200],
+            "nao_encontrados_detalhes": detalhes_nao_encontrados[:200],
+        }
+
+    return render_template(
+        "pedidos/importar_faturados.html",
+        form=form,
+        resultados=resultados,
+        importacao_id=importacao_id,
+    )
+
+
+@app.route("/pedidos/importar-faturados/modelo.xlsx")
+@login_required
+def baixar_modelo_importacao_nf_xlsx():
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+
+    # Gera um modelo simples com as colunas esperadas
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Importacao"
+
+    headers = [
+        "Romaneio",
+        "Pedido",
+        "Cliente",
+        "Data Faturamento",
+        "Nota Fiscal",
+        "Valor",
+    ]
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        ws.cell(row=1, column=col).font = Font(bold=True)
+
+    # Exemplo (remova/edite antes de importar no sistema)
+    ws.append([
+        "ROM-001",
+        "12345",
+        "000123",
+        datetime.utcnow(),
+        "NF-123456",
+        1000.50,
+    ])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="modelo_importacao_pedidos_faturados.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@app.route("/pedidos/importar-faturados/modelo.csv")
+@login_required
+def baixar_modelo_importacao_nf_csv():
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+
+    import csv
+
+    output = BytesIO()
+    # Excel BR costuma abrir melhor com ; e UTF-8 BOM
+    output.write("\ufeff".encode("utf-8"))
+
+    class _Writer:
+        def __init__(self, buff):
+            self.buff = buff
+
+        def write(self, s):
+            self.buff.write(s.encode("utf-8"))
+
+    w = csv.writer(_Writer(output), delimiter=";")
+    w.writerow([
+        "Romaneio",
+        "Pedido",
+        "Cliente",
+        "Data Faturamento",
+        "Nota Fiscal",
+        "Valor",
+    ])
+    w.writerow([
+        "ROM-001",
+        "12345",
+        "000123",
+        datetime.utcnow().strftime("%d/%m/%Y"),
+        "NF-123456",
+        "1000,50",
+    ])
+
+    output.seek(0)
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="modelo_importacao_pedidos_faturados.csv",
+        mimetype="text/csv; charset=utf-8",
+    )
+
+
+@app.route("/pedidos/importacoes-nf/<int:importacao_id>/relatorio.csv")
+@login_required
+def exportar_relatorio_importacao_nf(importacao_id: int):
+    if not _require_admin_for_pedidos():
+        return redirect(url_for("dashboard"))
+
+    q = ImportacaoNF.query
+    if not current_user.is_super_admin:
+        q = q.filter(ImportacaoNF.empresa_id == current_user.empresa_id)
+
+    imp = q.filter(ImportacaoNF.id == importacao_id).first_or_404()
+
+    # exporta um CSV simples com resumo + (quando disponível) erros/divergências
+    import csv
+    import json
+
+    output = BytesIO()
+    # Excel BR costuma abrir melhor com ; e UTF-8 BOM
+    output.write("\ufeff".encode("utf-8"))
+    text_stream = output
+
+    # writer para bytes
+    class _Writer:
+        def __init__(self, buff):
+            self.buff = buff
+
+        def write(self, s):
+            self.buff.write(s.encode("utf-8"))
+
+    w = csv.writer(_Writer(output), delimiter=";")
+    w.writerow(["importacao_id", imp.id])
+    w.writerow(["arquivo", imp.arquivo or ""]) 
+    w.writerow(["data_importacao", imp.data_importacao.isoformat() if imp.data_importacao else ""]) 
+    w.writerow(["linhas", imp.linhas])
+    w.writerow(["pedidos_importados", imp.pedidos_importados])
+    w.writerow(["pedidos_atualizados", imp.pedidos_atualizados])
+    w.writerow(["pedidos_divergentes", imp.pedidos_divergentes])
+    w.writerow(["pedidos_nao_encontrados", imp.pedidos_nao_encontrados])
+    w.writerow([])
+    w.writerow(["tipo", "linha", "pedido", "cliente", "detalhe", "valor_excel", "valor_sistema", "diferenca_percentual"]) 
+
+    payload = {}
+    try:
+        payload = json.loads(imp.erros or "{}")
+    except Exception:
+        payload = {}
+
+    for it in (payload.get("issues") or []):
+        w.writerow([
+            it.get("tipo") or "issue",
+            it.get("linha") or "",
+            it.get("pedido") or "",
+            it.get("cliente") or it.get("cliente_excel") or "",
+            it.get("detalhe") or "",
+            it.get("valor_excel") or "",
+            it.get("valor_sistema") or "",
+            it.get("diferenca_percentual") or "",
+        ])
+
+    for it in (payload.get("nao_encontrados") or []):
+        w.writerow(["pedido_nao_encontrado", it.get("linha") or "", it.get("pedido") or "", it.get("cliente") or "", "", "", "", ""]) 
+
+    for it in (payload.get("divergentes") or []):
+        w.writerow([
+            "divergente",
+            it.get("linha") or "",
+            it.get("pedido") or "",
+            it.get("cliente") or "",
+            "diferença > 2%",
+            it.get("valor_excel") or "",
+            it.get("valor_sistema") or "",
+            it.get("diferenca_percentual") or "",
+        ])
+
+    output.seek(0)
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"relatorio_importacao_nf_{imp.id}.csv",
+        mimetype="text/csv; charset=utf-8",
+    )
 
 
 @app.route("/clientes/relatorio-vendas/exportar")
@@ -10801,28 +11443,39 @@ def init_db():
 @app.cli.command()
 def create_admin():
     """Cria um usuário administrador"""
-    admin = Usuario(
-        nome="Administrador", email="admin@metas.com", cargo="admin"
-    )
-    admin.set_senha("admin123")
+    admin_email = (os.environ.get("ADMIN_EMAIL") or "").strip().lower() or "admin@sistema.com"
+    admin_password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+
+    if not admin_password:
+        print("[ERRO] ADMIN_PASSWORD não definido. Por segurança, não é permitido criar/resetar admin com senha padrão.")
+        print("       Defina ADMIN_PASSWORD e execute novamente.")
+        return
+
+    admin = Usuario.query.filter_by(email=admin_email).first()
+    if not admin:
+        admin = Usuario(nome="Administrador", email=admin_email)
+
+    admin.cargo = "admin"
+    admin.is_super_admin = True
+    admin.ativo = True
+    admin.bloqueado = False
+    admin.set_senha(admin_password)
 
     db.session.add(admin)
     db.session.commit()
-    print("[OK] Usuario administrador criado!")
-    print("   Email: admin@metas.com")
-    print("   Senha: admin123")
+    print("[OK] Usuario administrador criado/atualizado!")
+    print(f"   Email: {admin_email}")
 
-# Inicialização automática do banco de dados  # Apenas se não estiver sendo importado por outro script
-if __name__ != "__main__" and os.environ.get("SKIP_INIT") != "1":
+# Inicialização automática do banco (legado): manter apenas para ambiente DEV explícito.
+# Em produção, a inicialização é feita pelo fluxo resiliente acima (background) e
+# deve respeitar SKIP_DB_INIT_ON_START.
+if __name__ != "__main__" and os.environ.get("SKIP_INIT") != "1" and RUN_DB_INIT_ON_START:
     with app.app_context():
         try:
             db.create_all()
             print("[OK] Tabelas do banco de dados criadas/verificadas!")
 
-            # Iniciar sistema de backup automático (com try/except para não
-            # bloquear o app)
             try:
-                # Só iniciar scheduler se não estiver em modo de init
                 if not os.environ.get("INIT_DB_ONLY"):
                     iniciar_backup_automatico()
             except Exception as e:

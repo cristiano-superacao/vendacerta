@@ -1265,11 +1265,17 @@ class Pedido(db.Model):
     status = db.Column(db.String(20), nullable=False, default='Pendente', index=True)
 
     # Status do pedido (nível pedido/numero_pedido)
-    # ABERTO | FATURADO | CANCELADO
+    # ABERTO | FATURADO | CANCELADO | DIVERGENTE
     status_pedido = db.Column(db.String(20), nullable=False, default='ABERTO', index=True)
     cancelado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
     data_cancelamento = db.Column(db.DateTime, nullable=True, index=True)
     motivo_cancelamento = db.Column(db.Text)
+
+    # Faturamento (importação de NF/ERP)
+    numero_nota = db.Column(db.String(50), nullable=True, index=True)
+    data_faturamento = db.Column(db.DateTime, nullable=True, index=True)
+    valor_faturado = db.Column(db.Float, nullable=True)
+    data_importacao_nf = db.Column(db.DateTime, nullable=True, index=True)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True, index=True)
@@ -1299,6 +1305,39 @@ class PedidoLog(db.Model):
 
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True, index=True)
     empresa = db.relationship('Empresa', backref='pedidos_logs')
+
+
+class ImportacaoNF(db.Model):
+    """Controle/auditoria de importações de pedidos faturados (NF/ERP)."""
+
+    __tablename__ = 'importacoes_nf'
+
+    __table_args__ = (
+        db.Index('idx_importacoes_nf_data', 'data_importacao'),
+        db.Index('idx_importacoes_nf_empresa', 'empresa_id'),
+        db.Index('idx_importacoes_nf_usuario', 'usuario_id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    arquivo = db.Column(db.String(255), nullable=True)
+    data_importacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
+    usuario = db.relationship('Usuario', backref='importacoes_nf')
+
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=True, index=True)
+    empresa = db.relationship('Empresa', backref='importacoes_nf')
+
+    linhas = db.Column(db.Integer, nullable=False, default=0)
+    sucesso = db.Column(db.Boolean, nullable=False, default=False)
+
+    pedidos_importados = db.Column(db.Integer, nullable=False, default=0)
+    pedidos_atualizados = db.Column(db.Integer, nullable=False, default=0)
+    pedidos_divergentes = db.Column(db.Integer, nullable=False, default=0)
+    pedidos_nao_encontrados = db.Column(db.Integer, nullable=False, default=0)
+
+    erros = db.Column(db.Text)  # JSON/texto resumido para auditoria
 
 # ============================================================================
 # MÓDULO DE ESTOQUE E MANUTENÇÃO

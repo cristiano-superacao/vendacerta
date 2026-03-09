@@ -1,5 +1,6 @@
 # forms.py
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import StringField, PasswordField, FloatField, SelectField, TextAreaField, IntegerField, BooleanField, SelectMultipleField, SubmitField, DateField, HiddenField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional
 from models import Usuario, Vendedor, Equipe, Empresa, Cliente
@@ -596,6 +597,19 @@ class CancelarPedidoForm(FlaskForm):
         ],
     )
     submit = SubmitField('Confirmar cancelamento')
+
+
+class ImportarPedidosFaturadosForm(FlaskForm):
+    """Form para upload/CSRF na importação de pedidos faturados (NF)."""
+
+    arquivo = FileField(
+        'Selecionar arquivo Excel',
+        validators=[
+            FileRequired(message='Selecione um arquivo .xlsx ou .csv'),
+            FileAllowed(['xlsx', 'csv'], message='Formato inválido. Envie .xlsx ou .csv'),
+        ],
+    )
+    submit = SubmitField('Enviar')
 
 # ============================================================================
 # FORMULÁRIOS DE ESTOQUE E MANUTENÇÃO

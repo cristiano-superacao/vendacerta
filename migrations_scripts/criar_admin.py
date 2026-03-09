@@ -84,7 +84,7 @@ def criar_admin():
         print("📋 CREDENCIAIS DE ACESSO")
         print("="*70)
         print(f"\n📧 Email:  {admin_email}")
-        print(f"🔑 Senha:  {admin_password}")
+        print("🔑 Senha:  (definida via ADMIN_PASSWORD)")
         print(f"\n🌐 Acesse: http://127.0.0.1:5001/login")
         print("\n" + "="*70 + "\n")
 

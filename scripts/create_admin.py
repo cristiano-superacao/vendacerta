@@ -15,11 +15,24 @@ if __name__ == '__main__':
         try:
             admin_email = os.environ.get('ADMIN_EMAIL', 'admin@metas.com').strip().lower()
             admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-            u = Usuario(nome='Administrador', email=admin_email, cargo='admin', ativo=True)
-            u.set_senha(admin_password)
-            db.session.add(u)
-            db.session.commit()
-            print(f'Admin criado: {admin_email} / {admin_password}')
+
+            existing = Usuario.query.filter_by(email=admin_email).first()
+            if existing:
+                existing.set_senha(admin_password)
+                existing.ativo = True
+                existing.bloqueado = False
+                existing.cargo = 'admin'
+                existing.is_super_admin = True
+                db.session.commit()
+                print(f'✅ Admin atualizado (senha/flags): {admin_email}')
+            else:
+                u = Usuario(nome='Administrador', email=admin_email, cargo='admin', ativo=True)
+                u.is_super_admin = True
+                u.bloqueado = False
+                u.set_senha(admin_password)
+                db.session.add(u)
+                db.session.commit()
+                print(f'✅ Admin criado: {admin_email}')
         except exc.IntegrityError:
             db.session.rollback()
-            print(f'Admin já existe: {os.environ.get("ADMIN_EMAIL", "admin@metas.com")}')
+            print(f'⚠️  Admin já existe: {os.environ.get("ADMIN_EMAIL", "admin@metas.com")}')

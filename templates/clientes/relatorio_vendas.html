@@ -12,8 +12,8 @@
             </h2>
             <p class="page-subtitle-clean mb-0">Análise detalhada de clientes e vendas do ano {{ ano }}</p>
         </div>
-        <div class="btn-group d-flex gap-2 flex-wrap">
-            <button onclick="window.print()" class="btn btn-secondary-clean">
+        <div class="btn-group d-flex gap-2 flex-wrap d-print-none">
+            <button type="button" onclick="window.print()" class="btn btn-secondary-clean">
                 <i class="bi bi-printer me-2"></i>Imprimir
             </button>
             {% if current_user.pode_exportar_dados %}
@@ -83,7 +83,7 @@
     </div>
 
     <!-- Filtros -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm mb-4 d-print-none">
         <div class="card-header bg-light py-3">
             <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h6>
         </div>
@@ -181,7 +181,7 @@
                 <table class="table table-hover table-striped align-middle mb-0" id="tabelaRelatorio">
                     <thead class="table-dark">
                         <tr>
-                            <th class="text-center">#</th>
+                            <th class="text-center d-print-none">#</th>
                             <th>Nome do Cliente</th>
                             <th>CPF</th>
                             <th>CNPJ</th>
@@ -199,7 +199,7 @@
                     <tbody>
                         {% for item in relatorio %}
                         <tr>
-                            <td class="text-center">
+                            <td class="text-center d-print-none">
                                 <a href="{{ url_for('ver_cliente', id=item.id) }}" class="btn btn-sm btn-outline-primary" title="Ver cliente" aria-label="Ver cliente {{ item.nome }}">
                                     <i class="bi bi-eye"></i>
                                 </a>
@@ -283,21 +283,6 @@
 
 {% block scripts %}
 <style>
-    @media print {
-        .btn-group, .card-header, nav, .sidebar {
-            display: none !important;
-        }
-
-        .card {
-            border: 1px solid #dee2e6 !important;
-            box-shadow: none !important;
-        }
-
-        .table {
-            font-size: 10px;
-        }
-    }
-
     .table-hover tbody tr:hover {
         background-color: rgba(13, 110, 253, 0.05);
     }

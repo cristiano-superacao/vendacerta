@@ -1674,3 +1674,79 @@
     width: 110px;
 }
 
+/* ===== IMPRESSÃO (PADRÃO GLOBAL) ===== */
+
+@media print {
+    :where(body) {
+        background: white !important;
+    }
+
+    nav,
+    .navbar,
+    .sidebar,
+    .sidebar-toggle,
+    .breadcrumb,
+    footer,
+    .toast-container,
+    .modal,
+    .offcanvas,
+    .dropdown-menu {
+        display: none !important;
+    }
+
+    .btn,
+    .btn-group,
+    .pagination,
+    .dropdown,
+    .form-control,
+    .form-select,
+    .form-label,
+    .form-check,
+    .input-group,
+    #buscaRapida,
+    .d-print-none {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+
+    .container,
+    .container-fluid {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .card,
+    .page-header-clean {
+        box-shadow: none !important;
+    }
+
+    .card {
+        border: 1px solid var(--gray-200) !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .table {
+        font-size: 10pt;
+    }
+
+    .table thead th {
+        position: static !important;
+        top: auto !important;
+    }
+
+    .table-dark th,
+    .table-dark td {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-900) !important;
+    }
+}
+

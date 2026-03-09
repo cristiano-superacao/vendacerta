@@ -272,6 +272,12 @@ def atualizar_banco_railway():
             adicionar_coluna_se_nao_existe(conn, 'pedidos', 'data_cancelamento', 'TIMESTAMP')
             adicionar_coluna_se_nao_existe(conn, 'pedidos', 'motivo_cancelamento', 'TEXT')
 
+            # Campos de faturamento (importação NF/ERP)
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'numero_nota', 'VARCHAR(50)')
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'data_faturamento', 'TIMESTAMP')
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'valor_faturado', 'DOUBLE PRECISION')
+            adicionar_coluna_se_nao_existe(conn, 'pedidos', 'data_importacao_nf', 'TIMESTAMP')
+
             criar_indice_se_nao_existe(conn, 'index_pedidos_cliente', 'pedidos', 'codigo_cliente')
             criar_indice_se_nao_existe(conn, 'index_pedidos_vendedor', 'pedidos', 'codigo_vendedor')
             criar_indice_se_nao_existe(conn, 'index_pedidos_data', 'pedidos', 'data_pedido')
@@ -280,6 +286,9 @@ def atualizar_banco_railway():
             criar_indice_se_nao_existe(conn, 'idx_pedidos_empresa', 'pedidos', 'empresa_id')
             criar_indice_se_nao_existe(conn, 'idx_pedidos_status_pedido', 'pedidos', 'status_pedido')
             criar_indice_se_nao_existe(conn, 'idx_pedidos_data_cancelamento', 'pedidos', 'data_cancelamento')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_numero_nota', 'pedidos', 'numero_nota')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_data_faturamento', 'pedidos', 'data_faturamento')
+            criar_indice_se_nao_existe(conn, 'idx_pedidos_data_importacao_nf', 'pedidos', 'data_importacao_nf')
 
             if 'empresas' in tabelas:
                 criar_fk_se_nao_existe(
@@ -357,6 +366,54 @@ def atualizar_banco_railway():
                     conn,
                     tabela='pedidos_log',
                     nome_fk='fk_pedidos_log_empresa_id',
+                    coluna='empresa_id',
+                    tabela_ref='empresas',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
+
+            # Controle/auditoria das importações de NF
+            print("\n" + "-"*80)
+            print("CRIANDO/ATUALIZANDO TABELA: importacoes_nf")
+            print("-"*80)
+
+            ddl_importacoes_nf = """
+            CREATE TABLE importacoes_nf (
+                id SERIAL PRIMARY KEY,
+                arquivo VARCHAR(255) NULL,
+                data_importacao TIMESTAMP NOT NULL DEFAULT NOW(),
+                usuario_id INTEGER NULL,
+                empresa_id INTEGER NULL,
+                linhas INTEGER NOT NULL DEFAULT 0,
+                sucesso BOOLEAN NOT NULL DEFAULT FALSE,
+                pedidos_importados INTEGER NOT NULL DEFAULT 0,
+                pedidos_atualizados INTEGER NOT NULL DEFAULT 0,
+                pedidos_divergentes INTEGER NOT NULL DEFAULT 0,
+                pedidos_nao_encontrados INTEGER NOT NULL DEFAULT 0,
+                erros TEXT NULL
+            )
+            """
+
+            criar_tabela_se_nao_existe(conn, 'importacoes_nf', ddl_importacoes_nf)
+            criar_indice_se_nao_existe(conn, 'idx_importacoes_nf_data', 'importacoes_nf', 'data_importacao')
+            criar_indice_se_nao_existe(conn, 'idx_importacoes_nf_empresa', 'importacoes_nf', 'empresa_id')
+            criar_indice_se_nao_existe(conn, 'idx_importacoes_nf_usuario', 'importacoes_nf', 'usuario_id')
+
+            if 'usuarios' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='importacoes_nf',
+                    nome_fk='fk_importacoes_nf_usuario_id',
+                    coluna='usuario_id',
+                    tabela_ref='usuarios',
+                    coluna_ref='id',
+                    on_delete='SET NULL',
+                )
+            if 'empresas' in tabelas:
+                criar_fk_se_nao_existe(
+                    conn,
+                    tabela='importacoes_nf',
+                    nome_fk='fk_importacoes_nf_empresa_id',
                     coluna='empresa_id',
                     tabela_ref='empresas',
                     coluna_ref='id',

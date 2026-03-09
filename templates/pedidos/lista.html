@@ -84,6 +84,7 @@
             <option value="" {% if not status_filtro %}selected{% endif %}>Todos</option>
             <option value="ABERTO" {% if status_filtro in ['ABERTO','Pendente'] %}selected{% endif %}>Aberto</option>
             <option value="FATURADO" {% if status_filtro in ['FATURADO','Exportado'] %}selected{% endif %}>Faturado</option>
+            <option value="DIVERGENTE" {% if status_filtro == 'DIVERGENTE' %}selected{% endif %}>Divergente</option>
             <option value="CANCELADO" {% if status_filtro == 'CANCELADO' %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
@@ -120,6 +121,9 @@
         <input type="hidden" name="produto" value="{{ produto_filtro }}" />
         <input type="hidden" name="numero_pedido" value="{{ numero_pedido_filtro }}" />
         <button type="submit" class="btn btn-success">Exportar em aberto (Excel)</button>
+        <a class="btn btn-warning" href="{{ url_for('importar_pedidos_faturados') }}">
+          <i class="bi bi-upload me-1" aria-hidden="true"></i>Importar Pedidos Faturados
+        </a>
         <div class="text-muted small">A exportação marca como <strong>Faturado</strong>.</div>
       </form>
     </div>
@@ -143,7 +147,7 @@
           </thead>
           <tbody>
             {% for p in pedidos %}
-              <tr class="{% if p.status_pedido == 'CANCELADO' %}table-danger{% endif %}">
+              <tr class="{% if p.status_pedido == 'CANCELADO' %}table-danger{% elif p.status_pedido == 'DIVERGENTE' %}table-warning{% endif %}">
                 <td>
                   <div class="fw-semibold">{{ p.numero_pedido }}</div>
                   <div class="text-muted small">{{ p.canal or '' }}</div>
@@ -164,6 +168,8 @@
                     <span class="badge text-bg-warning">Aberto</span>
                   {% elif p.status_pedido == 'FATURADO' %}
                     <span class="badge text-bg-success">Faturado</span>
+                  {% elif p.status_pedido == 'DIVERGENTE' %}
+                    <span class="badge text-bg-info">Divergente</span>
                   {% elif p.status_pedido == 'CANCELADO' %}
                     <span class="badge text-bg-danger">Cancelado</span>
                   {% else %}

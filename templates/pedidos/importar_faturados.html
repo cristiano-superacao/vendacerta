@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+  {% if page_header_clean is defined %}
+    {{ page_header_clean('Importar Pedidos Faturados', 'Importe .xlsx/.csv, valide divergências e atualize o sistema com auditoria.') }}
+  {% else %}
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h3 class="mb-0">Importar Pedidos Faturados</h3>
+        <small class="text-muted">Importe .xlsx/.csv, valide divergências e atualize o sistema com auditoria.</small>
+      </div>
+      <a class="btn btn-outline-secondary" href="{{ url_for('lista_pedidos') }}">
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Voltar
+      </a>
+    </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="alert alert-info" role="alert">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <div class="fw-semibold">Regras e limites</div>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('baixar_modelo_importacao_nf_xlsx') }}">
+              <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Baixar modelo (XLSX)
+            </a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('baixar_modelo_importacao_nf_csv') }}">
+              <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i>Baixar modelo (CSV)
+            </a>
+          </div>
+        </div>
+        <ul class="mb-0">
+          <li>Formato aceito: <strong>.xlsx</strong> ou <strong>.csv</strong></li>
+          <li>Tamanho máximo: <strong>20MB</strong>; Linhas máximas: <strong>20000</strong></li>
+          <li>Se a diferença entre <strong>Valor</strong> (arquivo) e o total do pedido no sistema for &gt; <strong>2%</strong>, o pedido é marcado como <strong>DIVERGENTE</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="mb-3">
+        <div class="fw-semibold">Colunas obrigatórias no arquivo</div>
+        <div class="text-muted small">Cabeçalhos esperados (nomes equivalentes também são aceitos):</div>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          <span class="badge text-bg-secondary">Romaneio</span>
+          <span class="badge text-bg-secondary">Pedido</span>
+          <span class="badge text-bg-secondary">Cliente</span>
+          <span class="badge text-bg-secondary">Data Faturamento</span>
+          <span class="badge text-bg-secondary">Nota Fiscal</span>
+          <span class="badge text-bg-secondary">Valor</span>
+        </div>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" class="row g-2 align-items-end" id="formImportacaoNF">
+        {{ form.hidden_tag() }}
+
+        <div class="col-12 col-lg-7">
+          <label class="form-label">Arquivo (.xlsx/.csv)</label>
+
+          <div class="drop-zone" id="dropZone">
+            {{ form.arquivo(class_='d-none', id='arquivo', accept='.xlsx,.csv') }}
+
+            <div class="drop-zone-content text-center">
+              <i class="bi bi-cloud-upload display-6 text-primary mb-2 d-block" aria-hidden="true"></i>
+              <div class="fw-semibold mb-1">Arraste o arquivo aqui</div>
+              <div class="text-muted small mb-2">ou</div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('arquivo').click()">
+                <i class="bi bi-folder2-open me-2" aria-hidden="true"></i>Escolher arquivo
+              </button>
+              <div class="mt-3">
+                <small class="text-muted d-block">Formatos: .xlsx, .csv</small>
+                <small class="text-muted d-block">Tamanho máximo: 20 MB</small>
+              </div>
+            </div>
+
+            <div class="drop-zone-file-info d-none">
+              <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-file-earmark-spreadsheet text-success fs-3 me-3" aria-hidden="true"></i>
+                  <div>
+                    <div class="fw-bold" id="fileName"></div>
+                    <small class="text-muted" id="fileSize"></small>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnRemoveFile" onclick="removeFile()" aria-label="Remover arquivo">
+                  <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {% if form.arquivo.errors %}
+            <div class="text-danger small mt-1">
+              {% for err in form.arquivo.errors %}
+                <div>{{ err }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="col-12 col-lg-5 d-flex gap-2">
+          <button type="submit" name="action" value="validar" class="btn btn-primary flex-grow-1" id="btnValidar">
+            <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="spinnerValidar"></span>
+            <i class="bi bi-check2-circle me-1" aria-hidden="true" id="iconValidar"></i>
+            <span id="textValidar">Validar arquivo</span>
+          </button>
+          <button type="submit" name="action" value="importar" class="btn btn-success flex-grow-1" id="btnImportar" onclick="return confirm('Confirmar importação? Isso vai atualizar os pedidos no sistema.')">
+            <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="spinnerImportar"></span>
+            <i class="bi bi-cloud-arrow-up me-1" aria-hidden="true" id="iconImportar"></i>
+            <span id="textImportar">Importar e atualizar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if resultados %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div>
+            <div class="fw-semibold">Resultado ({{ resultados.action|capitalize }})</div>
+            <div class="text-muted small">Arquivo: <strong>{{ resultados.arquivo }}</strong></div>
+          </div>
+
+          {% if importacao_id %}
+            <a class="btn btn-outline-primary" href="{{ url_for('exportar_relatorio_importacao_nf', importacao_id=importacao_id) }}">
+              <i class="bi bi-download me-1" aria-hidden="true"></i>Exportar relatório (CSV)
+            </a>
+          {% endif %}
+        </div>
+
+        <hr class="my-3" />
+
+        <div class="row g-3">
+          <div class="col-12 col-md-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="text-muted small">Linhas válidas (arquivo)</div>
+                <div class="h4 mb-0">{{ resultados.linhas or 0 }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="text-muted small">Pedidos atualizados</div>
+                <div class="h4 mb-0">{{ resultados.atualizados or 0 }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="text-muted small">Divergentes</div>
+                <div class="h4 mb-0">{{ resultados.divergentes or 0 }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="text-muted small">Não encontrados</div>
+                <div class="h4 mb-0">{{ resultados.nao_encontrados or 0 }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if (resultados.issues and resultados.issues|length) or (resultados.divergentes_detalhes and resultados.divergentes_detalhes|length) or (resultados.nao_encontrados_detalhes and resultados.nao_encontrados_detalhes|length) %}
+          <div class="text-muted small mt-3">Mostrando no máximo 200 itens por seção.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if resultados.issues and resultados.issues|length %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="fw-semibold mb-2">Ocorrências / Avisos</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th class="text-end">Linha</th>
+                  <th>Pedido</th>
+                  <th>Detalhe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in resultados.issues %}
+                  <tr>
+                    <td><span class="badge text-bg-secondary">{{ it.tipo or '' }}</span></td>
+                    <td class="text-end">{{ it.linha or '' }}</td>
+                    <td>{{ it.pedido or '' }}</td>
+                    <td class="text-muted">{{ it.detalhe or (it.cliente_excel and it.cliente_sistema and ('Cliente Excel: ' ~ it.cliente_excel ~ ' | Sistema: ' ~ it.cliente_sistema)) or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if resultados.divergentes_detalhes and resultados.divergentes_detalhes|length %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="fw-semibold mb-2">Pedidos divergentes (diferença &gt; 2%)</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th class="text-end">Linha</th>
+                  <th>Pedido</th>
+                  <th>Cliente</th>
+                  <th class="text-end">Valor (arquivo)</th>
+                  <th class="text-end">Valor (sistema)</th>
+                  <th class="text-end">Diferença (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in resultados.divergentes_detalhes %}
+                  <tr>
+                    <td class="text-end">{{ it.linha or '' }}</td>
+                    <td>{{ it.pedido or '' }}</td>
+                    <td>{{ it.cliente or '' }}</td>
+                    <td class="text-end">{{ '%.2f'|format(it.valor_excel or 0) }}</td>
+                    <td class="text-end">{{ '%.2f'|format(it.valor_sistema or 0) }}</td>
+                    <td class="text-end">{{ it.diferenca_percentual or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if resultados.nao_encontrados_detalhes and resultados.nao_encontrados_detalhes|length %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="fw-semibold mb-2">Pedidos não encontrados no sistema</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th class="text-end">Linha</th>
+                  <th>Pedido</th>
+                  <th>Cliente</th>
+                  <th>Romaneio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in resultados.nao_encontrados_detalhes %}
+                  <tr>
+                    <td class="text-end">{{ it.linha or '' }}</td>
+                    <td>{{ it.pedido or '' }}</td>
+                    <td>{{ it.cliente or '' }}</td>
+                    <td>{{ it.romaneio or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{{ url_for('static', filename='js/vc_import_dropzone.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.VCImportDropZone && typeof window.VCImportDropZone.init === 'function') {
+        window.VCImportDropZone.init({
+          dropZoneId: 'dropZone',
+          fileInputId: 'arquivo',
+          dropZoneContentSelector: '.drop-zone-content',
+          dropZoneFileInfoSelector: '.drop-zone-file-info',
+          fileNameId: 'fileName',
+          fileSizeId: 'fileSize',
+          removeFileGlobalName: 'removeFile'
+        });
+      }
+
+      var form = document.getElementById('formImportacaoNF');
+      var btnValidar = document.getElementById('btnValidar');
+      var btnImportar = document.getElementById('btnImportar');
+      var inputArquivo = document.getElementById('arquivo');
+
+      function setLoading(which) {
+        if (btnValidar) btnValidar.disabled = true;
+        if (btnImportar) btnImportar.disabled = true;
+        if (inputArquivo) inputArquivo.disabled = true;
+        var btnRemove = document.getElementById('btnRemoveFile');
+        if (btnRemove) btnRemove.disabled = true;
+
+        if (which === 'validar') {
+          var spV = document.getElementById('spinnerValidar');
+          var icV = document.getElementById('iconValidar');
+          var txV = document.getElementById('textValidar');
+          if (spV) spV.classList.remove('d-none');
+          if (icV) icV.classList.add('d-none');
+          if (txV) txV.textContent = 'Processando...';
+        } else {
+          var spI = document.getElementById('spinnerImportar');
+          var icI = document.getElementById('iconImportar');
+          var txI = document.getElementById('textImportar');
+          if (spI) spI.classList.remove('d-none');
+          if (icI) icI.classList.add('d-none');
+          if (txI) txI.textContent = 'Processando...';
+        }
+      }
+
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          var maxBytes = 20 * 1024 * 1024; // 20MB
+          try {
+            var files = inputArquivo && inputArquivo.files ? inputArquivo.files : null;
+            var file = files && files.length ? files[0] : null;
+            if (file && file.size && file.size > maxBytes) {
+              e.preventDefault();
+              window.alert('Arquivo muito grande. Limite: 20MB.');
+              return;
+            }
+          } catch (err) {
+            // Se não der para inspecionar o tamanho, o servidor ainda valida.
+          }
+
+          // Detecta qual botão disparou o submit
+          var submitter = e && e.submitter ? e.submitter : null;
+          var which = (submitter && submitter.value) ? String(submitter.value) : '';
+          setLoading(which === 'validar' ? 'validar' : 'importar');
+        });
+      }
+    });
+  </script>
+{% endblock %}
