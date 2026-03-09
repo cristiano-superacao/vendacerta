@@ -10260,6 +10260,10 @@ def deletar_meta(id):
 @login_required
 def exportar_pdf_metas():
     """Exportar relatório de metas em PDF"""
+    if current_user.cargo == "vendedor" or current_user.vendedor_id:
+        flash("Você não tem permissão para exportar PDF de metas.", "danger")
+        return redirect(url_for("vendedor_dashboard"))
+
     mes = request.args.get("mes", datetime.now().month, type=int)
     ano = request.args.get("ano", datetime.now().year, type=int)
 
@@ -10309,6 +10313,10 @@ def exportar_pdf_metas():
 @login_required
 def exportar_pdf_dashboard():
     """Exportar relatório do dashboard em PDF"""
+    if current_user.cargo == "vendedor" or current_user.vendedor_id:
+        flash("Você não tem permissão para exportar PDF do dashboard.", "danger")
+        return redirect(url_for("vendedor_dashboard"))
+
     # Calcular resumo global
     mes_atual = datetime.now().month
     ano_atual = datetime.now().year

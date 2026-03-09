@@ -17,15 +17,19 @@
         <a href="{{ url_for('lista_equipes') }}" class="btn btn-secondary-clean">
             <i class="bi bi-diagram-3-fill"></i> Equipes
         </a>
+        {% if current_user.is_authenticated and not (current_user.cargo == 'vendedor' or current_user.vendedor_id) %}
         <a href="{{ url_for('exportar_pdf_metas', mes=mes, ano=ano) }}" class="btn btn-secondary-clean">
             <i class="bi bi-file-earmark-pdf"></i> PDF
         </a>
+        {% endif %}
         <a href="{{ url_for('importar_metas') }}" class="btn btn-secondary-clean">
             <i class="bi bi-upload"></i> Importar
         </a>
+        {% if current_user.is_authenticated and not (current_user.cargo == 'vendedor' or current_user.vendedor_id) %}
         <a href="{{ url_for('nova_meta') }}" class="btn btn-primary-clean">
             <i class="bi bi-plus-circle"></i> Nova Meta
         </a>
+        {% endif %}
     {% endcall %}
 
     <!-- Filtros Modernizados -->
