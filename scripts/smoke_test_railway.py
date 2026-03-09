@@ -91,7 +91,8 @@ def main() -> int:
             "/login": {200},
             "/api/ranking": {200, 302, 401, 403},
             "/pedidos": {200, 302, 401, 403},
-            "/pedidos/visualizar/1": {200, 302, 401, 403},
+            # Pode não existir pedido com id=1 em bases novas
+            "/pedidos/visualizar/1": {200, 302, 401, 403, 404},
         }
         for path, ok_status in checks.items():
             status = _http_status(f"{base_url}{path}")
@@ -138,6 +139,36 @@ def main() -> int:
         pedidos_missing_cols = sorted(pedidos_required_cols - pedidos_cols)
         if pedidos_missing_cols:
             return _fail(f"Tabela 'pedidos' sem colunas esperadas: {pedidos_missing_cols}")
+
+        # Schema do cancelamento (colunas adicionadas)
+        pedidos_cancel_cols = {
+            "status_pedido",
+            "cancelado_por",
+            "data_cancelamento",
+            "motivo_cancelamento",
+        }
+        pedidos_cancel_missing = sorted(pedidos_cancel_cols - pedidos_cols)
+        if pedidos_cancel_missing:
+            return _fail(f"Tabela 'pedidos' sem colunas de cancelamento: {pedidos_cancel_missing}")
+
+        # Auditoria
+        if "pedidos_log" not in tables:
+            return _fail("Tabela 'pedidos_log' não encontrada (auditoria de pedidos)")
+
+        # CompraCliente (vendas) também deve suportar cancelamento sem apagar histórico
+        if "compras_clientes" in tables:
+            compras_cols = {c["name"] for c in insp.get_columns("compras_clientes")}
+            compras_cancel_cols = {
+                "status_compra",
+                "cancelado_por",
+                "data_cancelamento",
+                "motivo_cancelamento",
+            }
+            compras_cancel_missing = sorted(compras_cancel_cols - compras_cols)
+            if compras_cancel_missing:
+                return _fail(
+                    f"Tabela 'compras_clientes' sem colunas de cancelamento: {compras_cancel_missing}"
+                )
 
         with engine.connect() as conn:
             # Consulta simples (não deve falhar) para garantir que a tabela existe e é consultável
