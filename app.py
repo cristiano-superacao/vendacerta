@@ -944,7 +944,15 @@ def init_database():
                 if usuarios_total == 0:
                     app.logger.info("[PROC] Criando usuario admin bootstrap (base vazia)...")
                     bootstrap_email = admin_email_env or "admin@sistema.com"
-                    bootstrap_password = admin_password_env or "admin123"
+                    if not admin_password_env:
+                        app.logger.warning(
+                            "[AVISO] Base vazia e ADMIN_PASSWORD vazio; por seguranca, nao sera criado admin bootstrap com senha padrao. "
+                            "Defina ADMIN_PASSWORD (e opcionalmente ADMIN_EMAIL) e reinicie, ou rode scripts/create_admin.py."
+                        )
+                        app.logger.info("[INFO] Pulando criacao de admin bootstrap.")
+                        app.logger.info("[OK] Banco de dados inicializado com sucesso!")
+                        return True
+                    bootstrap_password = admin_password_env
 
                     # Criar empresa padrão se necessário
                     empresa_padrao = Empresa.query.filter_by(cnpj="00000000000000").first()
