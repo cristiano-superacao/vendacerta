@@ -24,8 +24,11 @@ from __future__ import annotations
 import json
 import os
 import sys
+import re
+import http.cookiejar
 import urllib.error
 import urllib.request
+import urllib.parse
 
 # Garante que o diretório raiz do projeto esteja no PYTHONPATH,
 # mesmo quando o script é executado fora do cwd do repo (ex.: `railway run`).
@@ -59,6 +62,75 @@ def _http_status(url: str, timeout: int = 20) -> int:
         return int(e.code)
 
 
+def _extract_csrf_token(html: str) -> str | None:
+    # WTForms normalmente gera: <input id="csrf_token" name="csrf_token" type="hidden" value="...">
+    m = re.search(r'name=["\']csrf_token["\'][^>]*value=["\']([^"\']+)["\']', html, re.IGNORECASE)
+    if not m:
+        return None
+    return m.group(1)
+
+
+def _login_and_validate(base_url: str, admin_email: str, admin_password: str) -> None:
+    """Efetua login real (GET /login -> CSRF -> POST) e valida rota protegida."""
+
+    cj = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+
+    # 1) GET /login para pegar CSRF
+    login_url = f"{base_url}/login"
+    req = urllib.request.Request(login_url, headers={"User-Agent": "vendacerta-smoke/1.0"})
+    with opener.open(req, timeout=30) as resp:
+        status = int(getattr(resp, "status", 200))
+        html = resp.read().decode("utf-8", errors="replace")
+
+    if status != 200:
+        raise RuntimeError(f"GET /login retornou {status}")
+
+    csrf = _extract_csrf_token(html)
+    if not csrf:
+        raise RuntimeError("Não foi possível extrair csrf_token do HTML de /login")
+
+    # 2) POST credenciais
+    payload = urllib.parse.urlencode(
+        {
+            "csrf_token": csrf,
+            "email": admin_email,
+            "senha": admin_password,
+        }
+    ).encode("utf-8")
+
+    post_req = urllib.request.Request(
+        login_url,
+        data=payload,
+        method="POST",
+        headers={
+            "User-Agent": "vendacerta-smoke/1.0",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+
+    # opener segue redirects automaticamente
+    with opener.open(post_req, timeout=30) as post_resp:
+        post_status = int(getattr(post_resp, "status", 200))
+        _ = post_resp.read()  # drenar
+
+    if post_status not in {200}:
+        # Em geral após redirect já vira 200
+        raise RuntimeError(f"POST /login retornou {post_status}")
+
+    # 3) Validar rota protegida com sessão
+    protected_url = f"{base_url}/dashboard"
+    dash_req = urllib.request.Request(protected_url, headers={"User-Agent": "vendacerta-smoke/1.0"})
+    with opener.open(dash_req, timeout=30) as dash_resp:
+        dash_status = int(getattr(dash_resp, "status", 200))
+        dash_html = dash_resp.read().decode("utf-8", errors="replace")
+
+    if dash_status != 200:
+        raise RuntimeError(f"GET /dashboard pós-login retornou {dash_status}")
+    if "Bem-vindo" in dash_html and "Email ou senha incorretos" in dash_html:
+        raise RuntimeError("Login parece ter falhado (mensagem de erro detectada)")
+
+
 def _database_url() -> str:
     # Import local (evita efeitos colaterais de importar o app Flask)
     from db_utils import get_database_url
@@ -83,6 +155,7 @@ def _connect_args_for_url(url: str) -> dict:
 def main() -> int:
     base_url = _get_base_url()
     admin_email = os.getenv("ADMIN_EMAIL", "admin@sistema.com").strip().lower()
+    admin_password = (os.getenv("ADMIN_PASSWORD") or "").strip()
 
     # HTTP
     try:
@@ -207,6 +280,16 @@ def main() -> int:
         print(f"✅ DB OK (tabelas: {len(tables)}; admin id={_id})")
     except Exception as e:
         return _fail(f"Falha DB: {e}")
+
+    # Login E2E (opcional; depende de ADMIN_PASSWORD)
+    if admin_password:
+        try:
+            _login_and_validate(base_url, admin_email, admin_password)
+            print("✅ LOGIN OK (/login -> /dashboard)")
+        except Exception as e:
+            return _fail(f"Falha LOGIN: {e}")
+    else:
+        print("ℹ️  LOGIN SKIP (defina ADMIN_PASSWORD para validar ponta a ponta)")
 
     print("\n✅ SMOKE RAILWAY OK")
     return 0
